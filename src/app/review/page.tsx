@@ -121,15 +121,17 @@ function ReviewContent() {
     const card = cards[index];
     setAiLoading(true);
 
+    const isJP = card.language === "japanese";
+    const langLabel = isJP ? "일본어" : "영어";
     const prompt = card.type === "vocab"
-      ? `"${card.front}"를 활용한 자연스러운 영어 예문 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`
-      : `"${card.front}" 이 문장에서 사용된 숙어나 표현을 이용하여, 다른 상황에서 사용할 수 있는 영어 문장 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`;
+      ? `"${card.front}"를 활용한 자연스러운 ${langLabel} 예문 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`
+      : `"${card.front}" 이 문장에서 사용된 숙어나 표현을 이용하여, 다른 상황에서 사용할 수 있는 ${langLabel} 문장 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`;
 
     try {
       const res = await fetch("/api/ai", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt, userEmail: user?.email }),
+        body: JSON.stringify({ prompt, userEmail: user?.email, action: "review" }),
       });
       const data = await res.json();
       setAiResults((prev) => ({ ...prev, [index]: data.result || data.error || "No response" }));
@@ -182,16 +184,7 @@ function ReviewContent() {
     return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
   }
 
-  if (cards.length === 0) {
-    return (
-      <div className="text-center py-16">
-        <p className="text-gray-500 mb-2">복습할 카드가 없습니다.</p>
-        <p className="text-gray-600 text-sm">노트를 먼저 입력해주세요.</p>
-      </div>
-    );
-  }
-
-  const card = cards[index];
+  const card = cards.length > 0 ? cards[index] : null;
 
   return (
     <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ overscrollBehavior: "none" }}>
@@ -199,7 +192,7 @@ function ReviewContent() {
       <div className="flex items-center justify-between px-4 py-3">
         <h1 className="text-lg font-bold">카드</h1>
         <span className="text-sm text-gray-500">
-          {index + 1} / {cards.length}
+          {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
         </span>
       </div>
 
@@ -250,85 +243,91 @@ function ReviewContent() {
       </div>
 
       {/* Card + AI */}
-      <div
-        className="flex-1 px-4 flex flex-col items-center justify-center"
-        onTouchStart={handleTouchStart}
-        onTouchEnd={handleTouchEnd}
-      >
+      {card ? (
         <div
-          className="card-flip cursor-pointer select-none w-full max-w-lg"
-          onClick={() => setFlipped((f) => !f)}
-          style={{ height: "min(50vh, 350px)" }}
+          className="flex-1 px-4 flex flex-col items-center justify-center"
+          onTouchStart={handleTouchStart}
+          onTouchEnd={handleTouchEnd}
         >
-          <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
-            {/* Front */}
-            <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
-              <div className="flex items-center gap-2 mb-4">
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    card.language === "english"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "bg-red-500/20 text-red-400"
-                  }`}
-                >
-                  {card.language === "english" ? "EN" : "JP"}
-                </span>
-                <span
-                  className={`text-xs px-2 py-0.5 rounded-full ${
-                    card.type === "vocab"
-                      ? "bg-green-500/20 text-green-400"
-                      : "bg-blue-500/20 text-blue-400"
-                  }`}
-                >
-                  {card.type === "vocab" ? "어휘" : "문장"}
-                </span>
-                <span className="text-xs text-gray-600">{card.sessionDate}</span>
+          <div
+            className="card-flip cursor-pointer select-none w-full max-w-lg"
+            onClick={() => setFlipped((f) => !f)}
+            style={{ height: "min(50vh, 350px)" }}
+          >
+            <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
+              {/* Front */}
+              <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+                <div className="flex items-center gap-2 mb-4">
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      card.language === "english"
+                        ? "bg-blue-500/20 text-blue-400"
+                        : "bg-red-500/20 text-red-400"
+                    }`}
+                  >
+                    {card.language === "english" ? "EN" : "JP"}
+                  </span>
+                  <span
+                    className={`text-xs px-2 py-0.5 rounded-full ${
+                      card.type === "vocab"
+                        ? "bg-green-500/20 text-green-400"
+                        : "bg-blue-500/20 text-blue-400"
+                    }`}
+                  >
+                    {card.type === "vocab" ? "어휘" : "문장"}
+                  </span>
+                  <span className="text-xs text-gray-600">{card.sessionDate}</span>
+                </div>
+                <p className="text-xl text-center font-medium leading-relaxed">
+                  {card.front}
+                </p>
+                <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
               </div>
-              <p className="text-xl text-center font-medium leading-relaxed">
-                {card.front}
-              </p>
-              <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
-            </div>
 
-            {/* Back */}
-            <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-              <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
-                {card.back}
-              </pre>
-              <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
+              {/* Back */}
+              <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
+                <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
+                  {card.back}
+                </pre>
+                <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
+              </div>
             </div>
           </div>
+
+          {/* AI Panel - attached to card */}
+          {isAdmin && (
+            <div className="w-full max-w-lg mt-3">
+              {aiLoading ? (
+                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
+                  <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
+                </div>
+              ) : aiResults[index] ? (
+                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
+                </div>
+              ) : (
+                <button
+                  onClick={handleAi}
+                  className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                >
+                  AI 도우미
+                </button>
+              )}
+            </div>
+          )}
         </div>
-
-        {/* AI Panel - attached to card */}
-        {isAdmin && (
-          <div className="w-full max-w-lg mt-3">
-            {aiLoading ? (
-              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
-                <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
-              </div>
-            ) : aiResults[index] ? (
-              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
-                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
-              </div>
-            ) : (
-              <button
-                onClick={handleAi}
-                className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
-              >
-                AI 도우미
-              </button>
-            )}
-          </div>
-        )}
-      </div>
+      ) : (
+        <div className="flex-1 flex items-center justify-center">
+          <p className="text-gray-500 text-sm">해당 필터에 복습할 카드가 없습니다.</p>
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <div className="px-4 pb-6 pt-3 space-y-3">
         <div className="flex items-center justify-between">
           <button
             onClick={goPrev}
-            disabled={index === 0}
+            disabled={!card || index === 0}
             className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
           >
             이전
@@ -338,14 +337,14 @@ function ReviewContent() {
             <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
               <div
                 className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-                style={{ width: `${((index + 1) / cards.length) * 100}%` }}
+                style={{ width: cards.length > 0 ? `${((index + 1) / cards.length) * 100}%` : "0%" }}
               />
             </div>
           </div>
 
           <button
             onClick={goNext}
-            disabled={index === cards.length - 1}
+            disabled={!card || index === cards.length - 1}
             className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
           >
             다음

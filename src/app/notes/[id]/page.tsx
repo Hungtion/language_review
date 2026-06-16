@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
@@ -11,6 +11,10 @@ function NoteDetailContent() {
   const router = useRouter();
   const [session, setSession] = useState<StudySession | null>(null);
   const [loading, setLoading] = useState(true);
+  const [editing, setEditing] = useState(false);
+  const [editLines, setEditLines] = useState<string[]>([]);
+  const [saving, setSaving] = useState(false);
+  const [swipedIdx, setSwipedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -29,6 +33,55 @@ function NoteDetailContent() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     await supabase.from("study_sessions").delete().eq("id", params.id);
     router.push("/notes");
+  }
+
+  async function handleRemoveSentence(idx: number) {
+    if (!session?.sentence_grammar) return;
+    const sentences = parseSentences(session.sentence_grammar);
+    const updated = sentences.filter((_, i) => i !== idx);
+    const newValue = updated.length > 0 ? updated.join("\n") : null;
+
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ sentence_grammar: newValue })
+      .eq("id", params.id);
+
+    if (!error) {
+      setSession((prev) => prev ? { ...prev, sentence_grammar: newValue } : prev);
+    }
+  }
+
+  function startEditing() {
+    if (!session?.sentence_grammar) return;
+    setEditLines(parseSentences(session.sentence_grammar));
+    setEditing(true);
+  }
+
+  function handleEditLine(idx: number, value: string) {
+    setEditLines((prev) => prev.map((l, i) => (i === idx ? value : l)));
+  }
+
+  function handleEditRemove(idx: number) {
+    setEditLines((prev) => prev.filter((_, i) => i !== idx));
+  }
+
+  async function handleSaveEdit() {
+    const filtered = editLines.filter((l) => l.trim().length > 0);
+    const newValue = filtered.length > 0 ? filtered.join("\n") : null;
+
+    setSaving(true);
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ sentence_grammar: newValue })
+      .eq("id", params.id);
+    setSaving(false);
+
+    if (error) {
+      alert("저장 실패: " + error.message);
+    } else {
+      setSession((prev) => prev ? { ...prev, sentence_grammar: newValue } : prev);
+      setEditing(false);
+    }
   }
 
   if (loading) return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
@@ -96,14 +149,70 @@ function NoteDetailContent() {
 
       {/* Sentence Structure & Grammar */}
       {session.sentence_grammar && (
-        <SectionCard title="Sentence Structure & Grammar" icon="✏️" color="blue">
-          <div className="space-y-2">
-            {sentences.map((s, i) => (
-              <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
-                {s}
+        <SectionCard
+          title="Sentence Structure & Grammar"
+          icon="✏️"
+          color="blue"
+          action={!editing ? (
+            <button
+              onClick={startEditing}
+              className="text-xs text-gray-500 hover:text-blue-400 transition-colors"
+            >
+              편집
+            </button>
+          ) : undefined}
+        >
+          {editing ? (
+            <div className="space-y-2">
+              {editLines.map((line, i) => (
+                <div key={i} className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={line}
+                    onChange={(e) => handleEditLine(i, e.target.value)}
+                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+                  />
+                  <button
+                    onClick={() => handleEditRemove(i)}
+                    className="text-gray-600 hover:text-red-400 text-sm px-2 transition-colors"
+                  >
+                    X
+                  </button>
+                </div>
+              ))}
+              <div className="flex gap-3 pt-2">
+                <button
+                  onClick={handleSaveEdit}
+                  disabled={saving}
+                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+                >
+                  {saving ? "저장 중..." : "저장"}
+                </button>
+                <button
+                  onClick={() => setEditing(false)}
+                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+                >
+                  취소
+                </button>
               </div>
-            ))}
-          </div>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sentences.map((s, i) => (
+                <SwipeToDelete
+                  key={`${i}-${s}`}
+                  open={swipedIdx === i}
+                  onSwipeOpen={() => setSwipedIdx(i)}
+                  onSwipeClose={() => setSwipedIdx(null)}
+                  onDelete={() => { setSwipedIdx(null); handleRemoveSentence(i); }}
+                >
+                  <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
+                    {s}
+                  </div>
+                </SwipeToDelete>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 
@@ -119,6 +228,95 @@ function NoteDetailContent() {
   );
 }
 
+function SwipeToDelete({ children, onDelete, open, onSwipeOpen, onSwipeClose }: {
+  children: React.ReactNode;
+  onDelete: () => void;
+  open: boolean;
+  onSwipeOpen: () => void;
+  onSwipeClose: () => void;
+}) {
+  const [offsetX, setOffsetX] = useState(0);
+  const [swiping, setSwiping] = useState(false);
+  const startX = useRef(0);
+  const startY = useRef(0);
+  const locked = useRef(false);
+
+  // Sync with parent controlled state
+  useEffect(() => {
+    if (!swiping) {
+      setOffsetX(open ? -80 : 0);
+    }
+  }, [open, swiping]);
+
+  function handleTouchStart(e: React.TouchEvent) {
+    startX.current = e.touches[0].clientX;
+    startY.current = e.touches[0].clientY;
+    locked.current = false;
+    setSwiping(true);
+    // Close any other open swipe
+    if (!open) onSwipeOpen();
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!swiping) return;
+    const dx = e.touches[0].clientX - startX.current;
+    const dy = e.touches[0].clientY - startY.current;
+
+    if (!locked.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
+      locked.current = true;
+      if (Math.abs(dy) > Math.abs(dx)) {
+        setSwiping(false);
+        return;
+      }
+    }
+
+    if (locked.current && dx < 0) {
+      setOffsetX(Math.max(dx, -100));
+    }
+  }
+
+  function handleTouchEnd() {
+    setSwiping(false);
+    if (offsetX < -60) {
+      onSwipeOpen();
+    } else {
+      onSwipeClose();
+    }
+  }
+
+  function handleClickOutside() {
+    if (open) onSwipeClose();
+  }
+
+  return (
+    <div
+      className="relative overflow-hidden rounded-lg"
+      onTouchStart={handleTouchStart}
+      onTouchMove={handleTouchMove}
+      onTouchEnd={handleTouchEnd}
+    >
+      <div className="absolute inset-y-0 right-0 flex items-center">
+        <button
+          onClick={onDelete}
+          className="h-full px-5 bg-red-600 text-white text-sm font-medium"
+        >
+          삭제
+        </button>
+      </div>
+      <div
+        className="relative bg-[#0a0a0a] transition-transform"
+        style={{
+          transform: `translateX(${offsetX}px)`,
+          transition: swiping ? "none" : "transform 0.2s ease-out",
+        }}
+        onClick={handleClickOutside}
+      >
+        {children}
+      </div>
+    </div>
+  );
+}
+
 export default function NoteDetailPage() {
   return (
     <RequireAuth>
@@ -128,9 +326,9 @@ export default function NoteDetailPage() {
 }
 
 function SectionCard({
-  title, icon, color, children,
+  title, icon, color, children, action,
 }: {
-  title: string; icon: string; color: string; children: React.ReactNode;
+  title: string; icon: string; color: string; children: React.ReactNode; action?: React.ReactNode;
 }) {
   const borderColors: Record<string, string> = {
     purple: "border-purple-500/30",
@@ -147,10 +345,11 @@ function SectionCard({
 
   return (
     <div className={`bg-gray-900 border ${borderColors[color]} rounded-xl overflow-hidden`}>
-      <div className="px-5 py-3 border-b border-gray-800/50">
+      <div className="px-5 py-3 border-b border-gray-800/50 flex items-center justify-between">
         <h2 className={`text-sm font-semibold ${titleColors[color]}`}>
           {icon} {title}
         </h2>
+        {action}
       </div>
       <div className="p-5">{children}</div>
     </div>

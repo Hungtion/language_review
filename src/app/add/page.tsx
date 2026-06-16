@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { parseRawInput, extractMetadata } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
@@ -40,61 +40,99 @@ Comment
 
 function AddContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { user } = useAuth();
-  const [language, setLanguage] = useState<"english" | "japanese">("english");
+  const initialLang = searchParams.get("lang") === "japanese" ? "japanese" : "english";
+  const [language, setLanguage] = useState<"english" | "japanese">(initialLang);
   const [rawInput, setRawInput] = useState("");
   const [title, setTitle] = useState("");
   const [studyDate, setStudyDate] = useState(new Date().toISOString().split("T")[0]);
   const [preview, setPreview] = useState<ReturnType<typeof parseRawInput> | null>(null);
   const [saving, setSaving] = useState(false);
+  const [showParseChoice, setShowParseChoice] = useState(false);
 
   function handlePreview() {
     const parsed = parseRawInput(rawInput);
     setPreview(parsed);
   }
 
-  async function handleSave() {
+  async function aiParse(raw: string, lang: "english" | "japanese"): Promise<string | null> {
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "parse", rawInput: raw, language: lang }),
+      });
+      const data = await res.json();
+      return data.result || null;
+    } catch {
+      return null;
+    }
+  }
+
+  function needsParseChoice(): boolean {
+    if (language === "japanese") return true;
+    const parsed = parseRawInput(rawInput);
+    return !(parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment);
+  }
+
+  function handleSaveClick() {
     if (!rawInput.trim()) return;
+    if (needsParseChoice()) {
+      setShowParseChoice(true);
+    } else {
+      doSave("none");
+    }
+  }
+
+  async function doSave(mode: "ai" | "line" | "none") {
     setSaving(true);
 
     let insertData;
-    if (language === "japanese") {
+    if (mode === "none") {
+      const parsed = parseRawInput(rawInput);
+      insertData = {
+        language,
+        study_date: studyDate,
+        title: title || null,
+        stress_pronunciation: parsed.stress_pronunciation,
+        vocabulary: parsed.vocabulary,
+        sentence_grammar: parsed.sentence_grammar,
+        comment: parsed.comment,
+        raw_input: rawInput,
+      };
+    } else if (mode === "line") {
+      const lines = rawInput
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0);
       insertData = {
         language,
         study_date: studyDate,
         title: title || null,
         stress_pronunciation: null,
         vocabulary: null,
-        sentence_grammar: null,
+        sentence_grammar: lines.length > 0 ? lines.join("\n") : null,
         comment: rawInput.trim(),
         raw_input: rawInput,
       };
     } else {
-      const parsed = parseRawInput(rawInput);
-      const hasAnySections = parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment;
-      if (hasAnySections) {
-        insertData = {
-          language,
-          study_date: studyDate,
-          title: title || null,
-          stress_pronunciation: parsed.stress_pronunciation,
-          vocabulary: parsed.vocabulary,
-          sentence_grammar: parsed.sentence_grammar,
-          comment: parsed.comment,
-          raw_input: rawInput,
-        };
-      } else {
-        insertData = {
-          language,
-          study_date: studyDate,
-          title: title || null,
-          stress_pronunciation: null,
-          vocabulary: null,
-          sentence_grammar: null,
-          comment: rawInput.trim(),
-          raw_input: rawInput,
-        };
-      }
+      // AI mode
+      const extracted = await aiParse(rawInput, language);
+      const lines = (extracted || "")
+        .split("\n")
+        .map((l: string) => l.trim())
+        .filter((l: string) => l.length > 0);
+      insertData = {
+        language,
+        study_date: studyDate,
+        title: title || null,
+        stress_pronunciation: null,
+        vocabulary: null,
+        sentence_grammar: lines.length > 0 ? lines.join("\n") : null,
+        comment: rawInput.trim(),
+        raw_input: rawInput,
+      };
     }
 
     const { error } = await supabase.from("study_sessions").insert({
@@ -226,13 +264,45 @@ Comment
           </button>
         )}
         <button
-          onClick={handleSave}
+          onClick={handleSaveClick}
           disabled={saving || !rawInput.trim()}
           className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg text-sm font-medium transition-colors"
         >
           {saving ? "저장 중..." : "저장"}
         </button>
       </div>
+
+      {/* Parse Choice Modal */}
+      {showParseChoice && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-lg font-bold">파싱 방식 선택</h3>
+            <p className="text-sm text-gray-400">정해진 양식이 감지되지 않았습니다. 복습카드 생성 방식을 선택해주세요.</p>
+            <div className="space-y-2">
+              <button
+                onClick={() => { setShowParseChoice(false); doSave("ai"); }}
+                className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+              >
+                AI로 문장 추출
+                <span className="block text-xs text-gray-500 mt-1">AI가 학습용 문장만 골라냅니다</span>
+              </button>
+              <button
+                onClick={() => { setShowParseChoice(false); doSave("line"); }}
+                className="w-full py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              >
+                줄 단위로 파싱
+                <span className="block text-xs text-gray-500 mt-1">모든 줄을 복습카드로 만듭니다</span>
+              </button>
+            </div>
+            <button
+              onClick={() => setShowParseChoice(false)}
+              className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              취소
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Preview */}
       {preview && (
