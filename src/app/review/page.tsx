@@ -38,9 +38,7 @@ function ReviewContent() {
         .select("*")
         .order("study_date", { ascending: false });
 
-      if (filter !== "all") {
-        query = query.eq("language", filter);
-      }
+      query = query.eq("language", filter);
 
       const { data } = await query;
       if (!data) {
