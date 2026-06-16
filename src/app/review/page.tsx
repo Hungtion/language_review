@@ -4,6 +4,9 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
+
+const ADMIN_EMAIL = "kei9oon@gmail.com";
 
 type Card = {
   front: string;
@@ -14,6 +17,8 @@ type Card = {
 };
 
 function ReviewContent() {
+  const { user } = useAuth();
+  const isAdmin = user?.email === ADMIN_EMAIL;
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -21,6 +26,9 @@ function ReviewContent() {
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const [aiResult, setAiResult] = useState("");
+  const [aiLoading, setAiLoading] = useState(false);
+  const [showAi, setShowAi] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
@@ -99,6 +107,8 @@ function ReviewContent() {
     if (index < cards.length - 1) {
       setIndex((i) => i + 1);
       setFlipped(false);
+      setShowAi(false);
+      setAiResult("");
     }
   }, [index, cards.length]);
 
@@ -106,8 +116,43 @@ function ReviewContent() {
     if (index > 0) {
       setIndex((i) => i - 1);
       setFlipped(false);
+      setShowAi(false);
+      setAiResult("");
     }
   }, [index]);
+
+  async function handleAi() {
+    if (!isAdmin || aiLoading) return;
+    const card = cards[index];
+    setAiLoading(true);
+    setShowAi(true);
+    setAiResult("");
+
+    const prompt = card.type === "vocab"
+      ? `You are an English tutor. For the word/expression "${card.front}" (meaning: ${card.back}):
+1. Give 3 natural example sentences using it
+2. List 2-3 similar expressions or synonyms
+3. Briefly explain any nuance or usage tips
+Keep it concise. Answer in English with Korean translations for key parts.`
+      : `You are an English tutor. For the sentence: "${card.front}"
+1. Explain the grammar structure briefly
+2. Give 2 similar sentences with variations
+3. Suggest a more natural or advanced alternative if possible
+Keep it concise. Answer in English with Korean translations for key parts.`;
+
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt, userEmail: user?.email }),
+      });
+      const data = await res.json();
+      setAiResult(data.result || data.error || "No response");
+    } catch {
+      setAiResult("AI 요청에 실패했습니다.");
+    }
+    setAiLoading(false);
+  }
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -270,6 +315,28 @@ function ReviewContent() {
           </div>
         </div>
       </div>
+
+      {/* AI Panel */}
+      {isAdmin && (
+        <div className="px-4">
+          {!showAi ? (
+            <button
+              onClick={handleAi}
+              className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+            >
+              AI 도우미
+            </button>
+          ) : (
+            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4 max-h-40 overflow-y-auto touch-auto">
+              {aiLoading ? (
+                <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
+              ) : (
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResult}</pre>
+              )}
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Bottom Navigation */}
       <div className="px-4 pb-6 pt-3 space-y-3">
