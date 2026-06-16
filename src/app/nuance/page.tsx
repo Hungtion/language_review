@@ -64,6 +64,11 @@ function NuanceContent() {
   // Load messages for selected date
   useEffect(() => {
     if (!user) return;
+    if (selectedDate === "new") {
+      setMessages([]);
+      setInitialLoading(false);
+      return;
+    }
     async function loadMessages() {
       setInitialLoading(true);
       didScroll.current = false;
@@ -144,10 +149,9 @@ function NuanceContent() {
       return;
     }
 
-    // Switch to today if on another date
-    if (selectedDate !== "today") {
-      setSelectedDate("today");
-      // Wait for messages to reload, then append after
+    // Switch to new if on a past date
+    if (selectedDate !== "today" && selectedDate !== "new") {
+      setSelectedDate("new");
     }
 
     setInput("");
@@ -234,32 +238,47 @@ function NuanceContent() {
     <div className="flex flex-col h-[calc(100vh-3.5rem-1.5rem-5rem)]">
 
       {/* Date Tabs */}
-      <div className="flex gap-1 overflow-x-auto pb-2 mb-2 scrollbar-hide">
+      <div className="flex items-center gap-1 pb-2 mb-2">
+        <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
+          <button
+            onClick={() => setSelectedDate("today")}
+            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+              selectedDate === "today"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+          >
+            오늘
+          </button>
+          {dateTabs
+            .filter((d) => d !== todayStr)
+            .map((date) => (
+              <button
+                key={date}
+                onClick={() => setSelectedDate(date)}
+                className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                  selectedDate === date
+                    ? "bg-indigo-600 text-white"
+                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                }`}
+              >
+                {formatDateTab(date)}
+              </button>
+            ))}
+        </div>
         <button
-          onClick={() => setSelectedDate("today")}
-          className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-            selectedDate === "today"
+          onClick={() => {
+            setMessages([]);
+            setSelectedDate("new");
+          }}
+          className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+            selectedDate === "new"
               ? "bg-indigo-600 text-white"
               : "bg-gray-800 text-gray-400 hover:bg-gray-700"
           }`}
         >
-          오늘
+          + 새 대화
         </button>
-        {dateTabs
-          .filter((d) => d !== todayStr)
-          .map((date) => (
-            <button
-              key={date}
-              onClick={() => setSelectedDate(date)}
-              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                selectedDate === date
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-              }`}
-            >
-              {formatDateTab(date)}
-            </button>
-          ))}
       </div>
 
       {/* Messages */}
@@ -272,12 +291,9 @@ function NuanceContent() {
 
         {!initialLoading && messages.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-400 text-lg mb-2">
-              {selectedDate === "today" ? "어떤 이야기를 하고 싶나요?" : "이 날의 대화가 없습니다."}
+            <p className="text-gray-400 text-lg">
+              어떤 이야기를 하고 싶나요?
             </p>
-            {selectedDate === "today" && (
-              <p className="text-gray-600 text-sm">궁금한 문장을 입력하세요.</p>
-            )}
           </div>
         )}
 
