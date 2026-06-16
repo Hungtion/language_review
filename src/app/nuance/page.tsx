@@ -100,6 +100,18 @@ function NuanceContent() {
     loadMessages();
   }, [user, selectedDate, todayStr]);
 
+  // Lock body scroll
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, []);
+
   // Scroll to bottom
   useEffect(() => {
     if (!initialLoading && !didScroll.current) {
@@ -235,7 +247,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem-1.5rem-5rem)]">
+    <div className="flex flex-col h-[calc(100vh-3.5rem-1.5rem-5rem)] overflow-hidden">
 
       {/* Date Tabs */}
       <div className="flex items-center gap-1 pb-2 mb-2">
