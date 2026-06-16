@@ -247,7 +247,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4 touch-none" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
 
       {/* Date Tabs */}
       <div className="flex items-center gap-1 pb-2 mb-2">
@@ -294,7 +294,7 @@ function NuanceContent() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-3">
+      <div className="flex-1 overflow-y-auto space-y-4 pb-3 touch-auto" style={{ WebkitOverflowScrolling: "touch" }}>
         {initialLoading && (
           <div className="text-center py-12">
             <p className="text-gray-500 text-sm">대화 불러오는 중...</p>
@@ -394,7 +394,7 @@ function NuanceContent() {
       </div>
 
       {/* Language & Tone + Input */}
-      <div className="pt-3 border-t border-gray-800">
+      <div className="pt-3 border-t border-gray-800 touch-auto">
         <div className="flex items-center justify-between mb-2">
           <div className="flex gap-1.5">
             {LANGS_OPTIONS.map((lang) => {
