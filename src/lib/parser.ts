@@ -95,7 +95,7 @@ export function parseRawInput(raw: string): ParsedNote {
   for (const [key, lines] of Object.entries(sectionContent)) {
     const content = lines.join('\n').trim();
     if (content) {
-      result[key as keyof ParsedNote] = content;
+      result[key as SectionKey] = content;
     }
   }
 
