@@ -12,6 +12,7 @@ export default function Nav() {
     { href: "/add", label: "입력" },
     { href: "/review", label: "카드" },
     { href: "/notes", label: "노트" },
+    { href: "/nuance", label: "Nuance" },
   ];
 
   return (

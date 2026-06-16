@@ -5,6 +5,23 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
 export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
+export type NuanceResult = {
+  language: string;
+  translation: string;
+  nuance: string;
+  alternatives: string[];
+};
+
+export type NuanceChat = {
+  id: string;
+  user_id: string;
+  input_text: string;
+  results: NuanceResult[];
+  target_langs: string[];
+  tone: string;
+  created_at: string;
+};
+
 export type StudySession = {
   id: string;
   language: 'english' | 'japanese';
