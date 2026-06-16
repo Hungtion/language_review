@@ -16,7 +16,7 @@ export default function Nav() {
   ];
 
   return (
-    <nav className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
+    <nav className="border-b border-gray-800 bg-gray-950 backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
         <Link href="/" className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0">
           <span className="text-blue-400">EN</span>

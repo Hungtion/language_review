@@ -187,7 +187,7 @@ function ReviewContent() {
   const card = cards.length > 0 ? cards[index] : null;
 
   return (
-    <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <h1 className="text-lg font-bold">카드</h1>
