@@ -14,12 +14,15 @@ function detectInApp(): InAppType {
   // 카카오톡 (iOS/Android 모두 전용 스킴 사용 가능)
   if (/KAKAOTALK/i.test(ua)) return "kakaotalk";
 
-  // 안드로이드 인앱 브라우저 (인스타, 페이스북, 라인, 네이버 등)
-  if (/Android/i.test(ua) && /Instagram|FBAN|FBAV|Line|NAVER|DaumApps|trill/i.test(ua)) return "android-inapp";
+  // 인스타/페북은 intent도 안 먹히므로 안내 UI로 통일
+  if (/Instagram|FBAN|FBAV/i.test(ua)) return "ios-inapp";
+
+  // 안드로이드 인앱 브라우저 (라인, 네이버 등)
+  if (/Android/i.test(ua) && /Line|NAVER|DaumApps|trill/i.test(ua)) return "android-inapp";
   if (/wv\)/.test(ua) && /Android/.test(ua)) return "android-inapp";
 
-  // iOS 인앱 브라우저 (인스타, 페이스북 등 — 자동 탈출 불가)
-  if (/iPhone|iPad/i.test(ua) && /Instagram|FBAN|FBAV|Line|NAVER/i.test(ua)) return "ios-inapp";
+  // iOS 인앱 브라우저 (라인, 네이버 등)
+  if (/iPhone|iPad/i.test(ua) && /Line|NAVER/i.test(ua)) return "ios-inapp";
 
   return null;
 }
@@ -120,8 +123,8 @@ export default function LoginPage() {
                 인앱 브라우저에서는 Google 로그인이 제한됩니다.
               </p>
               <p className="text-gray-400 text-xs leading-relaxed">
-                우측 하단 <span className="text-gray-300 font-medium">⋯</span> 메뉴에서<br />
-                <span className="text-gray-300 font-medium">&quot;Safari에서 열기&quot;</span>를 선택해주세요.
+                상단의 <span className="text-gray-300 font-medium">⋯</span> 메뉴에서<br />
+                <span className="text-gray-300 font-medium">&quot;기본 브라우저에서 열기&quot;</span>를 선택해주세요.
               </p>
             </div>
             <button
