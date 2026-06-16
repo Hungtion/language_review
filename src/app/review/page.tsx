@@ -122,7 +122,7 @@ function ReviewContent() {
     setAiLoading(true);
 
     const prompt = card.type === "vocab"
-      ? `"${card.front}"를 활용한 자연스러운 영어 예문 하나를 답해.`
+      ? `"${card.front}"를 활용한 자연스러운 영어 예문 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`
       : `"${card.front}" 이 문장에서 사용된 숙어나 표현을 이용하여, 다른 상황에서 사용할 수 있는 영어 문장 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`;
 
     try {
