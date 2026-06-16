@@ -110,6 +110,17 @@ function ReviewContent() {
   }, [index]);
 
   useEffect(() => {
+    document.body.style.overflow = "hidden";
+    document.body.style.position = "fixed";
+    document.body.style.width = "100%";
+    return () => {
+      document.body.style.overflow = "";
+      document.body.style.position = "";
+      document.body.style.width = "";
+    };
+  }, []);
+
+  useEffect(() => {
     function handleKey(e: KeyboardEvent) {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
@@ -153,7 +164,7 @@ function ReviewContent() {
   const card = cards[index];
 
   return (
-    <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden">
+    <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ overscrollBehavior: "none" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
         <h1 className="text-lg font-bold">카드</h1>
