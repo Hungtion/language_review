@@ -40,7 +40,7 @@ function HomeContent() {
     <div className="space-y-8">
       <div className="pt-8">
         <h1 className="text-3xl font-bold tracking-tight">
-          Sean&apos;s Language Lab
+          {user?.user_metadata?.name?.split(" ")[0] || "My"}&apos;s Language Lab
         </h1>
         <p className="text-gray-400 mt-2">영어 & 일본어 학습 복습 노트</p>
       </div>
