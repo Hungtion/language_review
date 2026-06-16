@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
@@ -21,6 +21,8 @@ function ReviewContent() {
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
+  const touchStartX = useRef(0);
+  const touchStartY = useRef(0);
 
   useEffect(() => {
     async function load() {
@@ -122,6 +124,19 @@ function ReviewContent() {
     return () => window.removeEventListener("keydown", handleKey);
   }, [goNext, goPrev]);
 
+  function handleTouchStart(e: React.TouchEvent) {
+    touchStartX.current = e.touches[0].clientX;
+    touchStartY.current = e.touches[0].clientY;
+  }
+
+  function handleTouchEnd(e: React.TouchEvent) {
+    const dx = e.changedTouches[0].clientX - touchStartX.current;
+    const dy = e.changedTouches[0].clientY - touchStartY.current;
+    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
+    if (dx < 0) goNext();
+    else goPrev();
+  }
+
   if (loading) {
     return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
   }
@@ -138,16 +153,17 @@ function ReviewContent() {
   const card = cards[index];
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">복습 카드</h1>
+    <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden">
+      {/* Header */}
+      <div className="flex items-center justify-between px-4 py-3">
+        <h1 className="text-lg font-bold">카드</h1>
         <span className="text-sm text-gray-500">
           {index + 1} / {cards.length}
         </span>
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-3 items-center">
+      <div className="flex flex-wrap gap-2 items-center px-4 pb-3">
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
           {(["all", "english", "japanese"] as const).map((f) => (
             <button
@@ -194,83 +210,89 @@ function ReviewContent() {
 
       {/* Card */}
       <div
-        className="card-flip cursor-pointer select-none"
-        onClick={() => setFlipped((f) => !f)}
-        style={{ minHeight: "280px" }}
+        className="flex-1 px-4 flex items-center justify-center"
+        onTouchStart={handleTouchStart}
+        onTouchEnd={handleTouchEnd}
       >
-        <div className={`card-inner relative w-full ${flipped ? "flipped" : ""}`} style={{ minHeight: "280px" }}>
-          {/* Front */}
-          <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
-            <div className="flex items-center gap-2 mb-4">
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  card.language === "english"
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-red-500/20 text-red-400"
-                }`}
-              >
-                {card.language === "english" ? "EN" : "JP"}
-              </span>
-              <span
-                className={`text-xs px-2 py-0.5 rounded-full ${
-                  card.type === "vocab"
-                    ? "bg-green-500/20 text-green-400"
-                    : "bg-blue-500/20 text-blue-400"
-                }`}
-              >
-                {card.type === "vocab" ? "어휘" : "문장"}
-              </span>
-              <span className="text-xs text-gray-600">{card.sessionDate}</span>
+        <div
+          className="card-flip cursor-pointer select-none w-full max-w-lg"
+          onClick={() => setFlipped((f) => !f)}
+          style={{ height: "min(60vh, 400px)" }}
+        >
+          <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
+            {/* Front */}
+            <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+              <div className="flex items-center gap-2 mb-4">
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    card.language === "english"
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}
+                >
+                  {card.language === "english" ? "EN" : "JP"}
+                </span>
+                <span
+                  className={`text-xs px-2 py-0.5 rounded-full ${
+                    card.type === "vocab"
+                      ? "bg-green-500/20 text-green-400"
+                      : "bg-blue-500/20 text-blue-400"
+                  }`}
+                >
+                  {card.type === "vocab" ? "어휘" : "문장"}
+                </span>
+                <span className="text-xs text-gray-600">{card.sessionDate}</span>
+              </div>
+              <p className="text-xl text-center font-medium leading-relaxed">
+                {card.front}
+              </p>
+              <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
             </div>
-            <p className="text-xl text-center font-medium leading-relaxed">
-              {card.front}
-            </p>
-            <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
-          </div>
 
-          {/* Back */}
-          <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-            <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
-              {card.back}
-            </pre>
-            <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
+            {/* Back */}
+            <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
+              <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
+                {card.back}
+              </pre>
+              <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
+            </div>
           </div>
         </div>
       </div>
 
-      {/* Navigation */}
-      <div className="flex items-center justify-between">
-        <button
-          onClick={goPrev}
-          disabled={index === 0}
-          className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
-        >
-          이전
-        </button>
+      {/* Bottom Navigation */}
+      <div className="px-4 pb-6 pt-3 space-y-3">
+        <div className="flex items-center justify-between">
+          <button
+            onClick={goPrev}
+            disabled={index === 0}
+            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
+          >
+            이전
+          </button>
 
-        {/* Progress bar */}
-        <div className="flex-1 mx-4">
-          <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-            <div
-              className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-              style={{ width: `${((index + 1) / cards.length) * 100}%` }}
-            />
+          <div className="flex-1 mx-4">
+            <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+              <div
+                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+                style={{ width: `${((index + 1) / cards.length) * 100}%` }}
+              />
+            </div>
           </div>
+
+          <button
+            onClick={goNext}
+            disabled={index === cards.length - 1}
+            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
+          >
+            다음
+          </button>
         </div>
 
-        <button
-          onClick={goNext}
-          disabled={index === cards.length - 1}
-          className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
-        >
-          다음
-        </button>
+        <p className="text-center text-xs text-gray-700">
+          스와이프 또는 화살표: 이전/다음 &nbsp;|&nbsp; 탭/Space: 뒤집기
+        </p>
       </div>
-
-      {/* Keyboard hint */}
-      <p className="text-center text-xs text-gray-700">
-        Space/Enter: 뒤집기 &nbsp;|&nbsp; 화살표: 이전/다음
-      </p>
     </div>
   );
 }
