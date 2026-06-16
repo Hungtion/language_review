@@ -8,35 +8,20 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 
 const SAMPLE_EN = `Stress and Pronunciation
-quote- kwoht
-qu= kw
+apple- AE-pl
 
 Vocabulary
-ledger (noun) = a written or digital record of transactions by a company
+brave (adjective) = not afraid of danger
 
-to fluctuate (verb) = to go up and down ; to change constantly/continually
-
---> The stock market fluctuates a lot
-
-speculative (adjective) = based on guesses or ideas of what might happen rather than facts or proof
-
-iffy (adjective) = uncertain ; unclear ; unknown
+--> She was brave enough to speak up
 
 Sentence Structure & Grammar
-I was drinking a lot and not getting enough sleep.
+I want to get better at English.
 
-Same as usual.
-
-It had been a while since we last got together / We got together for the first time in a while
-
-The alcohol was cheaper there compared to other restaurants
-
-I didn't feel like drinking / I wasn't in the mood to drink
-
-I felt like I was getting sick
+It depends on the situation.
 
 Comment
-1,003,374,736,000 won = one trillion .... won`;
+Practice makes perfect.`;
 
 function AddContent() {
   const router = useRouter();
