@@ -5,28 +5,55 @@ import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 
-function isInAppBrowser() {
-  if (typeof navigator === "undefined") return false;
+type InAppType = "kakaotalk" | "android-inapp" | "ios-inapp" | null;
+
+function detectInApp(): InAppType {
+  if (typeof navigator === "undefined") return null;
   const ua = navigator.userAgent || "";
-  return /KAKAOTALK|Instagram|FBAN|FBAV|Line|NAVER|Whale\/1|DaumApps|trill|SamsungBrowser\/\d+.*SamsungBrowser/i.test(ua)
-    || (/wv\)/.test(ua) && /Android/.test(ua));
+
+  // 카카오톡 (iOS/Android 모두 전용 스킴 사용 가능)
+  if (/KAKAOTALK/i.test(ua)) return "kakaotalk";
+
+  // 안드로이드 인앱 브라우저 (인스타, 페이스북, 라인, 네이버 등)
+  if (/Android/i.test(ua) && /Instagram|FBAN|FBAV|Line|NAVER|DaumApps|trill/i.test(ua)) return "android-inapp";
+  if (/wv\)/.test(ua) && /Android/.test(ua)) return "android-inapp";
+
+  // iOS 인앱 브라우저 (인스타, 페이스북 등 — 자동 탈출 불가)
+  if (/iPhone|iPad/i.test(ua) && /Instagram|FBAN|FBAV|Line|NAVER/i.test(ua)) return "ios-inapp";
+
+  return null;
 }
 
 export default function LoginPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const [showInAppWarning, setShowInAppWarning] = useState(false);
+  const [inAppType, setInAppType] = useState<InAppType>(null);
 
   useEffect(() => {
-    if (user) router.replace("/");
-    setShowInAppWarning(isInAppBrowser());
+    if (user) {
+      router.replace("/");
+      return;
+    }
+
+    const type = detectInApp();
+    setInAppType(type);
+
+    // 자동 탈출: 카카오톡은 전용 스킴으로 바로 외부 브라우저 열기
+    if (type === "kakaotalk") {
+      const targetUrl = encodeURIComponent(window.location.href);
+      window.location.href = `kakaotalk://web/openExternal?url=${targetUrl}`;
+      return;
+    }
+
+    // 자동 탈출: 안드로이드 인앱은 intent로 Chrome 열기
+    if (type === "android-inapp") {
+      const url = window.location.href.replace(/https?:\/\//i, "");
+      window.location.href = `intent://${url}#Intent;scheme=https;package=com.android.chrome;end`;
+    }
   }, [user, router]);
 
   async function handleGoogleLogin() {
-    if (isInAppBrowser()) {
-      setShowInAppWarning(true);
-      return;
-    }
+    if (inAppType) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -35,23 +62,13 @@ export default function LoginPage() {
     });
   }
 
-  function handleOpenInBrowser() {
+  function handleCopyUrl() {
     const url = window.location.href;
-    const ua = navigator.userAgent || "";
-
-    // Android: intent scheme으로 Chrome 열기
-    if (/Android/i.test(ua)) {
-      window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
-      return;
-    }
-
-    // iOS: 클립보드에 복사 후 안내
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
         alert("주소가 복사되었습니다.\nSafari를 열고 붙여넣기 해주세요.");
       });
     } else {
-      // fallback: 선택 가능한 input에 표시
       prompt("아래 주소를 복사하여 Safari에서 열어주세요:", url);
     }
   }
@@ -71,28 +88,50 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {showInAppWarning ? (
+        {inAppType === "kakaotalk" || inAppType === "android-inapp" ? (
+          <div className="space-y-4">
+            <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
+              <p className="text-yellow-400 text-sm font-medium mb-2">
+                외부 브라우저로 이동 중...
+              </p>
+              <p className="text-gray-400 text-xs">
+                자동으로 전환되지 않으면 아래 버튼을 눌러주세요.
+              </p>
+            </div>
+            <button
+              onClick={() => {
+                if (inAppType === "kakaotalk") {
+                  const targetUrl = encodeURIComponent(window.location.href);
+                  window.location.href = `kakaotalk://web/openExternal?url=${targetUrl}`;
+                } else {
+                  const url = window.location.href.replace(/https?:\/\//i, "");
+                  window.location.href = `intent://${url}#Intent;scheme=https;package=com.android.chrome;end`;
+                }
+              }}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
+            >
+              외부 브라우저로 열기
+            </button>
+          </div>
+        ) : inAppType === "ios-inapp" ? (
           <div className="space-y-4">
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
               <p className="text-yellow-400 text-sm font-medium mb-2">
                 인앱 브라우저에서는 Google 로그인이 제한됩니다.
               </p>
-              <p className="text-gray-400 text-xs">
-                Chrome, Safari 등 외부 브라우저에서 열어주세요.
+              <p className="text-gray-400 text-xs leading-relaxed">
+                우측 하단 <span className="text-gray-300 font-medium">⋯</span> 메뉴에서<br />
+                <span className="text-gray-300 font-medium">&quot;Safari에서 열기&quot;</span>를 선택해주세요.
               </p>
             </div>
             <button
-              onClick={handleOpenInBrowser}
+              onClick={handleCopyUrl}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
             >
-              {typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)
-                ? "Chrome으로 열기"
-                : "주소 복사하기"}
+              주소 복사하기
             </button>
             <p className="text-gray-600 text-xs">
-              {typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)
-                ? "Chrome 브라우저에서 자동으로 열립니다."
-                : "복사 후 Safari에 붙여넣기 해주세요."}
+              또는 복사 후 Safari에 붙여넣기 해주세요.
             </p>
           </div>
         ) : (
