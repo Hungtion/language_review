@@ -37,9 +37,23 @@ export default function LoginPage() {
 
   function handleOpenInBrowser() {
     const url = window.location.href;
-    window.open(url, "_system");
-    // Android intent fallback
-    window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;end`;
+    const ua = navigator.userAgent || "";
+
+    // Android: intent scheme으로 Chrome 열기
+    if (/Android/i.test(ua)) {
+      window.location.href = `intent://${window.location.host}${window.location.pathname}#Intent;scheme=https;package=com.android.chrome;end`;
+      return;
+    }
+
+    // iOS: 클립보드에 복사 후 안내
+    if (navigator.clipboard) {
+      navigator.clipboard.writeText(url).then(() => {
+        alert("주소가 복사되었습니다.\nSafari를 열고 붙여넣기 해주세요.");
+      });
+    } else {
+      // fallback: 선택 가능한 input에 표시
+      prompt("아래 주소를 복사하여 Safari에서 열어주세요:", url);
+    }
   }
 
   return (
@@ -71,10 +85,14 @@ export default function LoginPage() {
               onClick={handleOpenInBrowser}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
             >
-              외부 브라우저로 열기
+              {typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)
+                ? "Chrome으로 열기"
+                : "주소 복사하기"}
             </button>
             <p className="text-gray-600 text-xs">
-              또는 주소를 복사하여 브라우저에 직접 붙여넣기 해주세요.
+              {typeof navigator !== "undefined" && /Android/i.test(navigator.userAgent)
+                ? "Chrome 브라우저에서 자동으로 열립니다."
+                : "복사 후 Safari에 붙여넣기 해주세요."}
             </p>
           </div>
         ) : (
