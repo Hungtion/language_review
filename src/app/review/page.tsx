@@ -26,9 +26,8 @@ function ReviewContent() {
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
-  const [aiResult, setAiResult] = useState("");
+  const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
-  const [showAi, setShowAi] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
@@ -98,6 +97,7 @@ function ReviewContent() {
       setCards(filtered);
       setIndex(0);
       setFlipped(false);
+      setAiResults({});
       setLoading(false);
     }
     load();
@@ -107,8 +107,6 @@ function ReviewContent() {
     if (index < cards.length - 1) {
       setIndex((i) => i + 1);
       setFlipped(false);
-      setShowAi(false);
-      setAiResult("");
     }
   }, [index, cards.length]);
 
@@ -116,29 +114,18 @@ function ReviewContent() {
     if (index > 0) {
       setIndex((i) => i - 1);
       setFlipped(false);
-      setShowAi(false);
-      setAiResult("");
     }
   }, [index]);
 
   async function handleAi() {
     if (!isAdmin || aiLoading) return;
+    if (aiResults[index]) return;
     const card = cards[index];
     setAiLoading(true);
-    setShowAi(true);
-    setAiResult("");
 
     const prompt = card.type === "vocab"
-      ? `You are an English tutor. For the word/expression "${card.front}" (meaning: ${card.back}):
-1. Give 3 natural example sentences using it
-2. List 2-3 similar expressions or synonyms
-3. Briefly explain any nuance or usage tips
-Keep it concise. Answer in English with Korean translations for key parts.`
-      : `You are an English tutor. For the sentence: "${card.front}"
-1. Explain the grammar structure briefly
-2. Give 2 similar sentences with variations
-3. Suggest a more natural or advanced alternative if possible
-Keep it concise. Answer in English with Korean translations for key parts.`;
+      ? `"${card.front}"를 활용한 자연스러운 영어 예문 하나를 답해.`
+      : `"${card.front}" 이 문장에서 사용된 숙어나 표현을 이용하여, 다른 상황에서 사용할 수 있는 영어 문장 하나를 답해. 다른 부연설명은 필요없고 문장만 말해.`;
 
     try {
       const res = await fetch("/api/ai", {
@@ -147,9 +134,9 @@ Keep it concise. Answer in English with Korean translations for key parts.`;
         body: JSON.stringify({ prompt, userEmail: user?.email }),
       });
       const data = await res.json();
-      setAiResult(data.result || data.error || "No response");
+      setAiResults((prev) => ({ ...prev, [index]: data.result || data.error || "No response" }));
     } catch {
-      setAiResult("AI 요청에 실패했습니다.");
+      setAiResults((prev) => ({ ...prev, [index]: "AI 요청에 실패했습니다." }));
     }
     setAiLoading(false);
   }
@@ -319,21 +306,21 @@ Keep it concise. Answer in English with Korean translations for key parts.`;
       {/* AI Panel */}
       {isAdmin && (
         <div className="px-4">
-          {!showAi ? (
+          {aiLoading ? (
+            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4">
+              <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
+            </div>
+          ) : aiResults[index] ? (
+            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4 max-h-40 overflow-y-auto touch-auto">
+              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
+            </div>
+          ) : (
             <button
               onClick={handleAi}
               className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
             >
               AI 도우미
             </button>
-          ) : (
-            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4 max-h-40 overflow-y-auto touch-auto">
-              {aiLoading ? (
-                <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
-              ) : (
-                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResult}</pre>
-              )}
-            </div>
           )}
         </div>
       )}
