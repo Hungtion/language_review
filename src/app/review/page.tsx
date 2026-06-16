@@ -3,6 +3,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
+import RequireAuth from "@/components/RequireAuth";
 
 type Card = {
   front: string;
@@ -12,7 +13,7 @@ type Card = {
   language: "english" | "japanese";
 };
 
-export default function ReviewPage() {
+function ReviewContent() {
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -271,5 +272,13 @@ export default function ReviewPage() {
         Space/Enter: 뒤집기 &nbsp;|&nbsp; 화살표: 이전/다음
       </p>
     </div>
+  );
+}
+
+export default function ReviewPage() {
+  return (
+    <RequireAuth>
+      <ReviewContent />
+    </RequireAuth>
   );
 }

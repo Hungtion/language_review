@@ -2,9 +2,11 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "./AuthProvider";
 
 export default function Nav() {
   const pathname = usePathname();
+  const { user, signOut } = useAuth();
 
   const links = [
     { href: "/", label: "홈" },
@@ -22,7 +24,7 @@ export default function Nav() {
           <span className="text-red-400">JP</span>
           <span className="text-gray-400 ml-1.5 text-sm font-normal">Lab</span>
         </Link>
-        {links.map(l => (
+        {user && links.map(l => (
           <Link
             key={l.href}
             href={l.href}
@@ -35,6 +37,17 @@ export default function Nav() {
             {l.label}
           </Link>
         ))}
+        {user && (
+          <div className="ml-auto flex items-center gap-3">
+            <span className="text-xs text-gray-500 hidden sm:inline">{user.email}</span>
+            <button
+              onClick={signOut}
+              className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
+        )}
       </div>
     </nav>
   );

@@ -3,7 +3,9 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
-import { parseRawInput } from "@/lib/parser";
+import { parseRawInput, extractMetadata } from "@/lib/parser";
+import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
 
 const SAMPLE_EN = `Stress and Pronunciation
 quote- kwoht
@@ -36,8 +38,9 @@ I felt like I was getting sick
 Comment
 1,003,374,736,000 won = one trillion .... won`;
 
-export default function AddPage() {
+function AddContent() {
   const router = useRouter();
+  const { user } = useAuth();
   const [language, setLanguage] = useState<"english" | "japanese">("english");
   const [rawInput, setRawInput] = useState("");
   const [title, setTitle] = useState("");
@@ -54,17 +57,49 @@ export default function AddPage() {
     if (!rawInput.trim()) return;
     setSaving(true);
 
-    const parsed = parseRawInput(rawInput);
+    let insertData;
+    if (language === "japanese") {
+      insertData = {
+        language,
+        study_date: studyDate,
+        title: title || null,
+        stress_pronunciation: null,
+        vocabulary: null,
+        sentence_grammar: null,
+        comment: rawInput.trim(),
+        raw_input: rawInput,
+      };
+    } else {
+      const parsed = parseRawInput(rawInput);
+      const hasAnySections = parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment;
+      if (hasAnySections) {
+        insertData = {
+          language,
+          study_date: studyDate,
+          title: title || null,
+          stress_pronunciation: parsed.stress_pronunciation,
+          vocabulary: parsed.vocabulary,
+          sentence_grammar: parsed.sentence_grammar,
+          comment: parsed.comment,
+          raw_input: rawInput,
+        };
+      } else {
+        insertData = {
+          language,
+          study_date: studyDate,
+          title: title || null,
+          stress_pronunciation: null,
+          vocabulary: null,
+          sentence_grammar: null,
+          comment: rawInput.trim(),
+          raw_input: rawInput,
+        };
+      }
+    }
 
     const { error } = await supabase.from("study_sessions").insert({
-      language,
-      study_date: studyDate,
-      title: title || null,
-      stress_pronunciation: parsed.stress_pronunciation,
-      vocabulary: parsed.vocabulary,
-      sentence_grammar: parsed.sentence_grammar,
-      comment: parsed.comment,
-      raw_input: rawInput,
+      ...insertData,
+      user_id: user?.id,
     });
 
     setSaving(false);
@@ -133,20 +168,34 @@ export default function AddPage() {
           <label className="text-sm font-medium text-gray-300">
             학습 내용 붙여넣기
           </label>
-          <button
-            onClick={() => setRawInput(SAMPLE_EN)}
-            className="text-xs text-gray-500 hover:text-gray-300"
-          >
-            샘플 채우기
-          </button>
+          {language === "english" && (
+            <button
+              onClick={() => setRawInput(SAMPLE_EN)}
+              className="text-xs text-gray-500 hover:text-gray-300"
+            >
+              샘플 채우기
+            </button>
+          )}
         </div>
         <textarea
           value={rawInput}
           onChange={(e) => {
-            setRawInput(e.target.value);
+            const val = e.target.value;
+            setRawInput(val);
             setPreview(null);
+
+            // Auto-fill date and title from metadata (English only)
+            if (language === "english") {
+              const meta = extractMetadata(val);
+              if (meta.date) setStudyDate(meta.date);
+              if (meta.teacher || meta.lesson) {
+                const parts = [meta.lesson, meta.teacher].filter(Boolean);
+                setTitle(parts.join(" - "));
+              }
+            }
           }}
-          placeholder={`아래와 같은 형식으로 붙여넣기:
+          placeholder={language === "english"
+            ? `아래와 같은 형식으로 붙여넣기:
 
 Stress and Pronunciation
 (발음/강세 내용)
@@ -159,7 +208,8 @@ Sentence Structure & Grammar
 (문장 구조 내용)
 
 Comment
-(코멘트)`}
+(코멘트)`
+            : `일본어 학습 내용을 자유롭게 붙여넣기`}
           rows={16}
           className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
         />
@@ -167,12 +217,14 @@ Comment
 
       {/* Actions */}
       <div className="flex gap-3">
-        <button
-          onClick={handlePreview}
-          className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
-        >
-          미리보기
-        </button>
+        {language === "english" && (
+          <button
+            onClick={handlePreview}
+            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+          >
+            미리보기
+          </button>
+        )}
         <button
           onClick={handleSave}
           disabled={saving || !rawInput.trim()}
@@ -205,6 +257,14 @@ Comment
         </div>
       )}
     </div>
+  );
+}
+
+export default function AddPage() {
+  return (
+    <RequireAuth>
+      <AddContent />
+    </RequireAuth>
   );
 }
 

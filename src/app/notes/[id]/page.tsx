@@ -4,8 +4,9 @@ import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
+import RequireAuth from "@/components/RequireAuth";
 
-export default function NoteDetailPage() {
+function NoteDetailContent() {
   const params = useParams();
   const router = useRouter();
   const [session, setSession] = useState<StudySession | null>(null);
@@ -115,6 +116,14 @@ export default function NoteDetailPage() {
         </SectionCard>
       )}
     </div>
+  );
+}
+
+export default function NoteDetailPage() {
+  return (
+    <RequireAuth>
+      <NoteDetailContent />
+    </RequireAuth>
   );
 }
 

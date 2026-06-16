@@ -3,12 +3,16 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase, StudySession } from "@/lib/supabase";
+import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
 
-export default function Home() {
+function HomeContent() {
+  const { user } = useAuth();
   const [recent, setRecent] = useState<StudySession[]>([]);
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
 
   useEffect(() => {
+    if (!user) return;
     async function load() {
       const { data } = await supabase
         .from("study_sessions")
@@ -30,7 +34,7 @@ export default function Home() {
       setCounts({ english: engCount ?? 0, japanese: jpnCount ?? 0 });
     }
     load();
-  }, []);
+  }, [user]);
 
   return (
     <div className="space-y-8">
@@ -104,5 +108,13 @@ export default function Home() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <RequireAuth>
+      <HomeContent />
+    </RequireAuth>
   );
 }

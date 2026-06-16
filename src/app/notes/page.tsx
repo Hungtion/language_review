@@ -3,8 +3,9 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { supabase, StudySession } from "@/lib/supabase";
+import RequireAuth from "@/components/RequireAuth";
 
-export default function NotesPage() {
+function NotesContent() {
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [filter, setFilter] = useState<"all" | "english" | "japanese">("all");
   const [loading, setLoading] = useState(true);
@@ -96,5 +97,13 @@ export default function NotesPage() {
         </div>
       )}
     </div>
+  );
+}
+
+export default function NotesPage() {
+  return (
+    <RequireAuth>
+      <NotesContent />
+    </RequireAuth>
   );
 }

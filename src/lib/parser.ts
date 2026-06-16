@@ -1,8 +1,15 @@
+export type NoteMetadata = {
+  date: string | null;
+  teacher: string | null;
+  lesson: string | null;
+};
+
 export type ParsedNote = {
   stress_pronunciation: string | null;
   vocabulary: string | null;
   sentence_grammar: string | null;
   comment: string | null;
+  metadata: NoteMetadata;
 };
 
 const SECTION_PATTERNS = [
@@ -12,16 +19,57 @@ const SECTION_PATTERNS = [
   { key: 'comment', patterns: ['Comment', 'Comments', '코멘트', '메모'] },
 ] as const;
 
+export function extractMetadata(raw: string): NoteMetadata {
+  const meta: NoteMetadata = { date: null, teacher: null, lesson: null };
+  const lines = raw.split('\n');
+
+  for (const line of lines) {
+    const trimmed = line.trim();
+
+    // Date: "Date    2026.03.24 Tue" or "Date 2026.03.24"
+    const dateMatch = trimmed.match(/^Date\s+(\d{4})[.\-/](\d{2})[.\-/](\d{2})/i);
+    if (dateMatch) {
+      meta.date = `${dateMatch[1]}-${dateMatch[2]}-${dateMatch[3]}`;
+      continue;
+    }
+
+    // Teacher: "Teacher    *Sarah" or "Teacher Sarah"
+    const teacherMatch = trimmed.match(/^Teacher\s+\*?\s*(.+)/i);
+    if (teacherMatch) {
+      meta.teacher = teacherMatch[1].trim();
+      continue;
+    }
+
+    // Lesson: "Lesson    SYM1 - U1 (trial)"
+    const lessonMatch = trimmed.match(/^Lesson\s+(.+)/i);
+    if (lessonMatch) {
+      meta.lesson = lessonMatch[1].trim();
+      continue;
+    }
+
+    // Stop scanning after hitting a section header
+    const isSection = SECTION_PATTERNS.some(s =>
+      s.patterns.some(p => trimmed.toLowerCase() === p.toLowerCase())
+    );
+    if (isSection) break;
+  }
+
+  return meta;
+}
+
 export function parseRawInput(raw: string): ParsedNote {
+  const metadata = extractMetadata(raw);
   const result: ParsedNote = {
     stress_pronunciation: null,
     vocabulary: null,
     sentence_grammar: null,
     comment: null,
+    metadata,
   };
 
   const lines = raw.split('\n');
-  let currentKey: keyof ParsedNote | null = null;
+  type SectionKey = 'stress_pronunciation' | 'vocabulary' | 'sentence_grammar' | 'comment';
+  let currentKey: SectionKey | null = null;
   const sectionContent: Record<string, string[]> = {};
 
   for (const line of lines) {
