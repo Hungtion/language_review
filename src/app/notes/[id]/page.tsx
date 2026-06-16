@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
@@ -14,7 +14,6 @@ function NoteDetailContent() {
   const [editing, setEditing] = useState(false);
   const [editLines, setEditLines] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
-  const [swipedIdx, setSwipedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -33,22 +32,6 @@ function NoteDetailContent() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     await supabase.from("study_sessions").delete().eq("id", params.id);
     router.push("/notes");
-  }
-
-  async function handleRemoveSentence(idx: number) {
-    if (!session?.sentence_grammar) return;
-    const sentences = parseSentences(session.sentence_grammar);
-    const updated = sentences.filter((_, i) => i !== idx);
-    const newValue = updated.length > 0 ? updated.join("\n") : null;
-
-    const { error } = await supabase
-      .from("study_sessions")
-      .update({ sentence_grammar: newValue })
-      .eq("id", params.id);
-
-    if (!error) {
-      setSession((prev) => prev ? { ...prev, sentence_grammar: newValue } : prev);
-    }
   }
 
   function startEditing() {
@@ -199,17 +182,9 @@ function NoteDetailContent() {
           ) : (
             <div className="space-y-2">
               {sentences.map((s, i) => (
-                <SwipeToDelete
-                  key={`${i}-${s}`}
-                  open={swipedIdx === i}
-                  onSwipeOpen={() => setSwipedIdx(i)}
-                  onSwipeClose={() => setSwipedIdx(null)}
-                  onDelete={() => { setSwipedIdx(null); handleRemoveSentence(i); }}
-                >
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
-                    {s}
-                  </div>
-                </SwipeToDelete>
+                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
+                  {s}
+                </div>
               ))}
             </div>
           )}
@@ -224,95 +199,6 @@ function NoteDetailContent() {
           </pre>
         </SectionCard>
       )}
-    </div>
-  );
-}
-
-function SwipeToDelete({ children, onDelete, open, onSwipeOpen, onSwipeClose }: {
-  children: React.ReactNode;
-  onDelete: () => void;
-  open: boolean;
-  onSwipeOpen: () => void;
-  onSwipeClose: () => void;
-}) {
-  const [offsetX, setOffsetX] = useState(0);
-  const [swiping, setSwiping] = useState(false);
-  const startX = useRef(0);
-  const startY = useRef(0);
-  const locked = useRef(false);
-
-  // Sync with parent controlled state
-  useEffect(() => {
-    if (!swiping) {
-      setOffsetX(open ? -80 : 0);
-    }
-  }, [open, swiping]);
-
-  function handleTouchStart(e: React.TouchEvent) {
-    startX.current = e.touches[0].clientX;
-    startY.current = e.touches[0].clientY;
-    locked.current = false;
-    setSwiping(true);
-    // Close any other open swipe
-    if (!open) onSwipeOpen();
-  }
-
-  function handleTouchMove(e: React.TouchEvent) {
-    if (!swiping) return;
-    const dx = e.touches[0].clientX - startX.current;
-    const dy = e.touches[0].clientY - startY.current;
-
-    if (!locked.current && (Math.abs(dx) > 10 || Math.abs(dy) > 10)) {
-      locked.current = true;
-      if (Math.abs(dy) > Math.abs(dx)) {
-        setSwiping(false);
-        return;
-      }
-    }
-
-    if (locked.current && dx < 0) {
-      setOffsetX(Math.max(dx, -100));
-    }
-  }
-
-  function handleTouchEnd() {
-    setSwiping(false);
-    if (offsetX < -60) {
-      onSwipeOpen();
-    } else {
-      onSwipeClose();
-    }
-  }
-
-  function handleClickOutside() {
-    if (open) onSwipeClose();
-  }
-
-  return (
-    <div
-      className="relative overflow-hidden rounded-lg"
-      onTouchStart={handleTouchStart}
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
-      <div className="absolute inset-y-0 right-0 flex items-center">
-        <button
-          onClick={onDelete}
-          className="h-full px-5 bg-red-600 text-white text-sm font-medium"
-        >
-          삭제
-        </button>
-      </div>
-      <div
-        className="relative bg-[#0a0a0a] transition-transform"
-        style={{
-          transform: `translateX(${offsetX}px)`,
-          transition: swiping ? "none" : "transform 0.2s ease-out",
-        }}
-        onClick={handleClickOutside}
-      >
-        {children}
-      </div>
     </div>
   );
 }
