@@ -9,16 +9,15 @@ export default function Nav() {
   const { user, signOut } = useAuth();
 
   const links = [
-    { href: "/", label: "홈" },
     { href: "/add", label: "입력" },
-    { href: "/review", label: "복습 카드" },
-    { href: "/notes", label: "전체 노트" },
+    { href: "/review", label: "카드" },
+    { href: "/notes", label: "노트" },
   ];
 
   return (
     <nav className="border-b border-gray-800 bg-gray-950/80 backdrop-blur-sm sticky top-0 z-50">
       <div className="max-w-4xl mx-auto px-4 flex items-center h-14 gap-1">
-        <Link href="/" className="font-bold text-lg mr-6 tracking-tight">
+        <Link href="/" className="font-bold text-lg mr-4 tracking-tight">
           <span className="text-blue-400">EN</span>
           <span className="text-gray-500">/</span>
           <span className="text-red-400">JP</span>

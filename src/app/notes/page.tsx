@@ -2,12 +2,15 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 
 function NotesContent() {
+  const searchParams = useSearchParams();
+  const initialFilter = (searchParams.get("filter") as "english" | "japanese") || "all";
   const [sessions, setSessions] = useState<StudySession[]>([]);
-  const [filter, setFilter] = useState<"all" | "english" | "japanese">("all");
+  const [filter, setFilter] = useState<"all" | "english" | "japanese">(initialFilter);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -31,9 +34,16 @@ function NotesContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">전체 노트</h1>
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
-          {(["all", "english", "japanese"] as const).map((f) => (
+        <h1 className="text-2xl font-bold">노트</h1>
+        <div className="flex gap-2 items-center">
+          <Link
+            href="/add"
+            className="px-3 py-1 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
+          >
+            + 입력
+          </Link>
+          <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
+            {(["all", "english", "japanese"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -46,6 +56,7 @@ function NotesContent() {
               {f === "all" ? "전체" : f === "english" ? "EN" : "JP"}
             </button>
           ))}
+          </div>
         </div>
       </div>
 

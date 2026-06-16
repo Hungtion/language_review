@@ -47,16 +47,22 @@ function HomeContent() {
 
       {/* Stats */}
       <div className="grid grid-cols-2 gap-4">
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        <Link
+          href="/notes?filter=english"
+          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+        >
           <div className="text-blue-400 text-sm font-medium">English</div>
           <div className="text-3xl font-bold mt-1">{counts.english}</div>
           <div className="text-gray-500 text-sm">세션 기록</div>
-        </div>
-        <div className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        </Link>
+        <Link
+          href="/notes?filter=japanese"
+          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+        >
           <div className="text-red-400 text-sm font-medium">日本語</div>
           <div className="text-3xl font-bold mt-1">{counts.japanese}</div>
           <div className="text-gray-500 text-sm">세션 기록</div>
-        </div>
+        </Link>
       </div>
 
       {/* Quick Actions */}
