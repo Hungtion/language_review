@@ -247,7 +247,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="flex flex-col h-[calc(100vh-3.5rem-1.5rem-5rem)] overflow-hidden">
+    <div className="fixed inset-0 top-14 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4">
 
       {/* Date Tabs */}
       <div className="flex items-center gap-1 pb-2 mb-2">
