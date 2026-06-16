@@ -276,7 +276,7 @@ function NuanceContent() {
               {selectedDate === "today" ? "어떤 이야기를 하고 싶나요?" : "이 날의 대화가 없습니다."}
             </p>
             {selectedDate === "today" && (
-              <p className="text-gray-600 text-sm">한국어로 입력하면 자연스러운 외국어 표현을 알려드립니다.</p>
+              <p className="text-gray-600 text-sm">궁금한 문장을 입력하세요.</p>
             )}
           </div>
         )}
@@ -413,7 +413,7 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder="한국어로 입력하세요..."
+            placeholder="궁금한 문장을 입력하세요."
             rows={1}
             className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
           />
