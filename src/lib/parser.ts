@@ -79,7 +79,7 @@ export function parseRawInput(raw: string): ParsedNote {
     let matched = false;
     for (const section of SECTION_PATTERNS) {
       if (section.patterns.some(p => trimmed.toLowerCase() === p.toLowerCase())) {
-        currentKey = section.key as keyof ParsedNote;
+        currentKey = section.key as SectionKey;
         sectionContent[currentKey] = [];
         matched = true;
         break;
