@@ -1,0 +1,15 @@
+{
+  "name": "Language Lab",
+  "short_name": "Lang Lab",
+  "display": "standalone",
+  "start_url": "/",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}
