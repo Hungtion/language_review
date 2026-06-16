@@ -22,7 +22,7 @@ function ReviewContent() {
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [filter, setFilter] = useState<"all" | "english" | "japanese">("all");
+  const [filter, setFilter] = useState<"english" | "japanese">("english");
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -208,7 +208,7 @@ function ReviewContent() {
       {/* Filters */}
       <div className="flex flex-wrap gap-2 items-center px-4 pb-3">
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
-          {(["all", "english", "japanese"] as const).map((f) => (
+          {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
               onClick={() => setFilter(f)}
@@ -218,7 +218,7 @@ function ReviewContent() {
                   : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              {f === "all" ? "전체" : f === "english" ? "EN" : "JP"}
+              {f === "english" ? "EN" : "JP"}
             </button>
           ))}
         </div>
@@ -251,16 +251,16 @@ function ReviewContent() {
         </button>
       </div>
 
-      {/* Card */}
+      {/* Card + AI */}
       <div
-        className="flex-1 px-4 flex items-center justify-center"
+        className="flex-1 px-4 flex flex-col items-center justify-center"
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
         <div
           className="card-flip cursor-pointer select-none w-full max-w-lg"
           onClick={() => setFlipped((f) => !f)}
-          style={{ height: "min(60vh, 400px)" }}
+          style={{ height: "min(50vh, 350px)" }}
         >
           <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
             {/* Front */}
@@ -301,29 +301,29 @@ function ReviewContent() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* AI Panel */}
-      {isAdmin && (
-        <div className="px-4">
-          {aiLoading ? (
-            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4">
-              <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
-            </div>
-          ) : aiResults[index] ? (
-            <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-4 max-h-40 overflow-y-auto touch-auto">
-              <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
-            </div>
-          ) : (
-            <button
-              onClick={handleAi}
-              className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
-            >
-              AI 도우미
-            </button>
-          )}
-        </div>
-      )}
+        {/* AI Panel - attached to card */}
+        {isAdmin && (
+          <div className="w-full max-w-lg mt-3">
+            {aiLoading ? (
+              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
+                <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
+              </div>
+            ) : aiResults[index] ? (
+              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
+              </div>
+            ) : (
+              <button
+                onClick={handleAi}
+                className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+              >
+                AI 도우미
+              </button>
+            )}
+          </div>
+        )}
+      </div>
 
       {/* Bottom Navigation */}
       <div className="px-4 pb-6 pt-3 space-y-3">
