@@ -34,7 +34,7 @@ function NuanceContent() {
     return localStorage.getItem("nuance_tone") || "Polite";
   });
   const [dateTabs, setDateTabs] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>("today");
+  const [selectedDate, setSelectedDate] = useState<string>("new");
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -56,7 +56,7 @@ function NuanceContent() {
         const dates = [...new Set(data.map((d) => d.created_at.split("T")[0]))];
         setDateTabs(dates);
       }
-      setSelectedDate("today");
+      setSelectedDate("new");
     }
     loadDates();
   }, [user]);

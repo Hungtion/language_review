@@ -115,8 +115,15 @@ Example format:
 }`;
 
     try {
-      const result = await callGemini(nuancePrompt, 2048, true);
-      const parsed = JSON.parse(result);
+      const result = await callGemini(nuancePrompt, 4096, true);
+      let parsed;
+      try {
+        parsed = JSON.parse(result);
+      } catch {
+        // JSON이 잘린 경우 닫는 괄호를 추가해서 복구 시도
+        const fixed = result.replace(/,?\s*$/, "") + "]}";
+        parsed = JSON.parse(fixed);
+      }
       return NextResponse.json({ result: parsed });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
