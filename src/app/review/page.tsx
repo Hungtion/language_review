@@ -53,6 +53,19 @@ function ReviewContent() {
         const lang = session.language as "english" | "japanese";
         const date = session.study_date;
 
+        if (session.stress_pronunciation) {
+          const sents = parseSentences(session.stress_pronunciation);
+          for (const s of sents) {
+            built.push({
+              front: s,
+              back: "발음 & 강세 연습",
+              type: "vocab",
+              sessionDate: date,
+              language: lang,
+            });
+          }
+        }
+
         if (session.vocabulary) {
           const entries = parseVocabulary(session.vocabulary);
           for (const v of entries) {

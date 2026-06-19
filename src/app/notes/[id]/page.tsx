@@ -11,7 +11,7 @@ function NoteDetailContent() {
   const router = useRouter();
   const [session, setSession] = useState<StudySession | null>(null);
   const [loading, setLoading] = useState(true);
-  const [editing, setEditing] = useState(false);
+  const [editingField, setEditingField] = useState<string | null>(null);
   const [editLines, setEditLines] = useState<string[]>([]);
   const [saving, setSaving] = useState(false);
 
@@ -34,10 +34,11 @@ function NoteDetailContent() {
     router.push("/notes");
   }
 
-  function startEditing() {
-    if (!session?.sentence_grammar) return;
-    setEditLines(parseSentences(session.sentence_grammar));
-    setEditing(true);
+  function startEditing(field: "stress_pronunciation" | "sentence_grammar") {
+    const value = session?.[field];
+    if (!value) return;
+    setEditLines(parseSentences(value));
+    setEditingField(field);
   }
 
   function handleEditLine(idx: number, value: string) {
@@ -49,27 +50,29 @@ function NoteDetailContent() {
   }
 
   async function handleSaveEdit() {
+    if (!editingField) return;
     const filtered = editLines.filter((l) => l.trim().length > 0);
     const newValue = filtered.length > 0 ? filtered.join("\n") : null;
 
     setSaving(true);
     const { error } = await supabase
       .from("study_sessions")
-      .update({ sentence_grammar: newValue })
+      .update({ [editingField]: newValue })
       .eq("id", params.id);
     setSaving(false);
 
     if (error) {
       alert("저장 실패: " + error.message);
     } else {
-      setSession((prev) => prev ? { ...prev, sentence_grammar: newValue } : prev);
-      setEditing(false);
+      setSession((prev) => prev ? { ...prev, [editingField]: newValue } : prev);
+      setEditingField(null);
     }
   }
 
   if (loading) return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
   if (!session) return <div className="text-gray-500 text-center py-12">노트를 찾을 수 없습니다.</div>;
 
+  const stressLines = session.stress_pronunciation ? parseSentences(session.stress_pronunciation) : [];
   const vocabEntries = session.vocabulary ? parseVocabulary(session.vocabulary) : [];
   const sentences = session.sentence_grammar ? parseSentences(session.sentence_grammar) : [];
 
@@ -100,10 +103,37 @@ function NoteDetailContent() {
 
       {/* Stress & Pronunciation */}
       {session.stress_pronunciation && (
-        <SectionCard title="Stress & Pronunciation" icon="🔊" color="purple">
-          <pre className="whitespace-pre-wrap font-sans text-sm leading-relaxed text-gray-300">
-            {session.stress_pronunciation}
-          </pre>
+        <SectionCard
+          title="Stress & Pronunciation"
+          icon="🔊"
+          color="purple"
+          action={editingField !== "stress_pronunciation" ? (
+            <button
+              onClick={() => startEditing("stress_pronunciation")}
+              className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+            >
+              편집
+            </button>
+          ) : undefined}
+        >
+          {editingField === "stress_pronunciation" ? (
+            <EditableLines
+              lines={editLines}
+              onChangeLine={handleEditLine}
+              onRemoveLine={handleEditRemove}
+              onSave={handleSaveEdit}
+              onCancel={() => setEditingField(null)}
+              saving={saving}
+            />
+          ) : (
+            <div className="space-y-2">
+              {stressLines.map((s, i) => (
+                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
+                  {s}
+                </div>
+              ))}
+            </div>
+          )}
         </SectionCard>
       )}
 
@@ -136,49 +166,24 @@ function NoteDetailContent() {
           title="Sentence Structure & Grammar"
           icon="✏️"
           color="blue"
-          action={!editing ? (
+          action={editingField !== "sentence_grammar" ? (
             <button
-              onClick={startEditing}
+              onClick={() => startEditing("sentence_grammar")}
               className="text-xs text-gray-500 hover:text-blue-400 transition-colors"
             >
               편집
             </button>
           ) : undefined}
         >
-          {editing ? (
-            <div className="space-y-2">
-              {editLines.map((line, i) => (
-                <div key={i} className="flex items-center gap-2">
-                  <input
-                    type="text"
-                    value={line}
-                    onChange={(e) => handleEditLine(i, e.target.value)}
-                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
-                  />
-                  <button
-                    onClick={() => handleEditRemove(i)}
-                    className="text-gray-600 hover:text-red-400 text-sm px-2 transition-colors"
-                  >
-                    X
-                  </button>
-                </div>
-              ))}
-              <div className="flex gap-3 pt-2">
-                <button
-                  onClick={handleSaveEdit}
-                  disabled={saving}
-                  className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
-                >
-                  {saving ? "저장 중..." : "저장"}
-                </button>
-                <button
-                  onClick={() => setEditing(false)}
-                  className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  취소
-                </button>
-              </div>
-            </div>
+          {editingField === "sentence_grammar" ? (
+            <EditableLines
+              lines={editLines}
+              onChangeLine={handleEditLine}
+              onRemoveLine={handleEditRemove}
+              onSave={handleSaveEdit}
+              onCancel={() => setEditingField(null)}
+              saving={saving}
+            />
           ) : (
             <div className="space-y-2">
               {sentences.map((s, i) => (
@@ -208,6 +213,53 @@ export default function NoteDetailPage() {
     <RequireAuth>
       <NoteDetailContent />
     </RequireAuth>
+  );
+}
+
+function EditableLines({
+  lines, onChangeLine, onRemoveLine, onSave, onCancel, saving,
+}: {
+  lines: string[];
+  onChangeLine: (idx: number, value: string) => void;
+  onRemoveLine: (idx: number) => void;
+  onSave: () => void;
+  onCancel: () => void;
+  saving: boolean;
+}) {
+  return (
+    <div className="space-y-2">
+      {lines.map((line, i) => (
+        <div key={i} className="flex items-center gap-2">
+          <input
+            type="text"
+            value={line}
+            onChange={(e) => onChangeLine(i, e.target.value)}
+            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+          />
+          <button
+            onClick={() => onRemoveLine(i)}
+            className="text-gray-600 hover:text-red-400 text-sm px-2 transition-colors"
+          >
+            X
+          </button>
+        </div>
+      ))}
+      <div className="flex gap-3 pt-2">
+        <button
+          onClick={onSave}
+          disabled={saving}
+          className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
+        >
+          {saving ? "저장 중..." : "저장"}
+        </button>
+        <button
+          onClick={onCancel}
+          className="px-4 py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          취소
+        </button>
+      </div>
+    </div>
   );
 }
 

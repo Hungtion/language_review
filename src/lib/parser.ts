@@ -117,8 +117,22 @@ export function parseVocabulary(vocabText: string): VocabEntry[] {
   for (const line of lines) {
     const trimmed = line.trim();
 
-    // Pattern: "word (part of speech) = definition"
-    const mainMatch = trimmed.match(/^([^(=]+)\s*\(([^)]+)\)\s*[=:]\s*(.+)/);
+    // Pattern: "Ex) example sentence" or "ex) example"
+    const exPrefixMatch = trimmed.match(/^[Ee]x\)\s*(.+)/);
+    if (exPrefixMatch && currentEntry.term) {
+      currentEntry.example = (currentEntry.example ? currentEntry.example + '\n' : '') + exPrefixMatch[1].trim();
+      continue;
+    }
+
+    // Pattern: "--> example sentence" or "-> example"
+    const exampleMatch = trimmed.match(/^-+>\s*(.+)/);
+    if (exampleMatch && currentEntry.term) {
+      currentEntry.example = (currentEntry.example ? currentEntry.example + '\n' : '') + exampleMatch[1].trim();
+      continue;
+    }
+
+    // Pattern: "word (part of speech) = definition" or with - separator
+    const mainMatch = trimmed.match(/^([^(=]+)\s*\(([^)]+)\)\s*[-=:]\s*(.+)/);
     if (mainMatch) {
       if (currentEntry.term) {
         entries.push(currentEntry as VocabEntry);
@@ -131,8 +145,8 @@ export function parseVocabulary(vocabText: string): VocabEntry[] {
       continue;
     }
 
-    // Pattern: "word = definition" (without part of speech)
-    const simpleMatch = trimmed.match(/^([^=:]+)\s*[=:]\s*(.+)/);
+    // Pattern: "word = definition" or "word - definition" (with clear separator)
+    const simpleMatch = trimmed.match(/^(.+?)\s+[-=:]\s+(.+)/);
     if (simpleMatch && !trimmed.startsWith('-->') && !trimmed.startsWith('->')) {
       if (currentEntry.term) {
         entries.push(currentEntry as VocabEntry);
@@ -145,12 +159,15 @@ export function parseVocabulary(vocabText: string): VocabEntry[] {
       continue;
     }
 
-    // Pattern: "--> example sentence" or "-> example"
-    const exampleMatch = trimmed.match(/^-+>\s*(.+)/);
-    if (exampleMatch && currentEntry.term) {
-      currentEntry.example = exampleMatch[1].trim();
-      continue;
+    // Fallback: standalone line becomes a card with no definition
+    if (currentEntry.term) {
+      entries.push(currentEntry as VocabEntry);
     }
+    currentEntry = {
+      term: trimmed,
+      definition: "",
+      example: null,
+    };
   }
 
   if (currentEntry.term) {
