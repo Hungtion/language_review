@@ -58,7 +58,7 @@ function ReviewContent() {
           for (const s of sents) {
             built.push({
               front: s,
-              back: "발음 & 강세 연습",
+              back: "",
               type: "vocab",
               sessionDate: date,
               language: lang,
@@ -84,7 +84,7 @@ function ReviewContent() {
           for (const s of sents) {
             built.push({
               front: s,
-              back: "Read aloud & internalize",
+              back: "",
               type: "sentence",
               sessionDate: date,
               language: lang,
@@ -169,7 +169,7 @@ function ReviewContent() {
     function handleKey(e: KeyboardEvent) {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        setFlipped((f) => !f);
+        if (cards[index]?.back) setFlipped((f) => !f);
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         goNext();
       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
@@ -263,8 +263,8 @@ function ReviewContent() {
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className="card-flip cursor-pointer select-none w-full max-w-lg"
-            onClick={() => setFlipped((f) => !f)}
+            className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""}`}
+            onClick={() => card.back && setFlipped((f) => !f)}
             style={{ height: "min(50vh, 350px)" }}
           >
             <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>

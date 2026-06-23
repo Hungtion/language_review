@@ -26,7 +26,7 @@ Practice makes perfect.`;
 function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user } = useAuth();
+  const { user, plan } = useAuth();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese" : "english";
   const [language, setLanguage] = useState<"english" | "japanese">(initialLang);
   const [rawInput, setRawInput] = useState("");
@@ -264,13 +264,29 @@ Comment
             <h3 className="text-lg font-bold">파싱 방식 선택</h3>
             <p className="text-sm text-gray-400">정해진 양식이 감지되지 않았습니다. 복습카드 생성 방식을 선택해주세요.</p>
             <div className="space-y-2">
-              <button
-                onClick={() => { setShowParseChoice(false); doSave("ai"); }}
-                className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
-              >
-                AI로 문장 추출
-                <span className="block text-xs text-gray-500 mt-1">AI가 학습용 문장만 골라냅니다</span>
-              </button>
+              {plan === "pro" ? (
+                <button
+                  onClick={() => { setShowParseChoice(false); doSave("ai"); }}
+                  className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    AI로 문장 추출
+                    <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
+                  </span>
+                  <span className="block text-xs text-gray-500 mt-1">AI가 학습용 문장만 골라냅니다</span>
+                </button>
+              ) : (
+                <button
+                  onClick={() => router.push("/pricing")}
+                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
+                >
+                  <span className="flex items-center justify-center gap-2">
+                    AI로 문장 추출
+                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
+                  </span>
+                  <span className="block text-xs text-indigo-200 mt-1">구독하기 - 월 1,000원</span>
+                </button>
+              )}
               <button
                 onClick={() => { setShowParseChoice(false); doSave("line"); }}
                 className="w-full py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-lg text-sm hover:bg-gray-700 transition-colors"

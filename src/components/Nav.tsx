@@ -6,13 +6,13 @@ import { useAuth } from "./AuthProvider";
 
 export default function Nav() {
   const pathname = usePathname();
-  const { user, signOut } = useAuth();
+  const { user, plan, signOut } = useAuth();
 
   const links = [
-    { href: "/add", label: "입력" },
-    { href: "/review", label: "카드" },
-    { href: "/notes", label: "노트" },
-    { href: "/nuance", label: "Nuance" },
+    { href: "/add", label: "입력", pro: false },
+    { href: "/review", label: "카드", pro: false },
+    { href: "/notes", label: "노트", pro: false },
+    { href: "/nuance", label: "Nuance", pro: true },
   ];
 
   return (
@@ -35,6 +35,13 @@ export default function Nav() {
             }`}
           >
             {l.label}
+            {l.pro && (
+              <span className={`ml-1 text-[10px] px-1 py-0.5 rounded ${
+                plan === "pro"
+                  ? "bg-indigo-500/20 text-indigo-400"
+                  : "bg-yellow-500/20 text-yellow-400"
+              }`}>Pro</span>
+            )}
           </Link>
         ))}
         {user && (

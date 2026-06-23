@@ -19,7 +19,7 @@ const TONE_OPTIONS = [
 ] as const;
 
 function NuanceContent() {
-  const { user } = useAuth();
+  const { user, plan } = useAuth();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -244,6 +244,24 @@ function NuanceContent() {
       e.preventDefault();
       handleSend();
     }
+  }
+
+  if (plan === "free") {
+    return (
+      <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
+        <div className="text-4xl mb-4">Pro</div>
+        <h2 className="text-xl font-bold mb-2">Nuance Chat은 Pro 기능입니다</h2>
+        <p className="text-gray-400 text-sm mb-6 max-w-sm">
+          AI가 자연스러운 번역과 뉘앙스를 설명해드립니다. Pro 플랜으로 업그레이드하면 무제한으로 이용할 수 있습니다.
+        </p>
+        <a
+          href="/pricing"
+          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
+        >
+          구독하기 - 월 1,000원
+        </a>
+      </div>
+    );
   }
 
   return (
