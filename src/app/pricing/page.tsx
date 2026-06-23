@@ -31,7 +31,7 @@ function PricingContent() {
     loadSub();
   }, [user]);
 
-  async function handleSubscribe(method: "CARD" | "TOSSPAY") {
+  async function handleSubscribe(method: "CARD" | "TRANSFER") {
     if (!user) return;
     setLoading(true);
 
