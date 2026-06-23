@@ -1,8 +1,9 @@
 "use client";
 
+import { Suspense } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 
-export default function PaymentFailPage() {
+function FailContent() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const code = searchParams.get("code");
@@ -21,5 +22,13 @@ export default function PaymentFailPage() {
         돌아가기
       </button>
     </div>
+  );
+}
+
+export default function PaymentFailPage() {
+  return (
+    <Suspense>
+      <FailContent />
+    </Suspense>
   );
 }

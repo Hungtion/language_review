@@ -31,7 +31,7 @@ function PricingContent() {
     loadSub();
   }, [user]);
 
-  async function handleSubscribe() {
+  async function handleSubscribe(method: "CARD" | "TOSSPAY") {
     if (!user) return;
     setLoading(true);
 
@@ -48,7 +48,7 @@ function PricingContent() {
       const payment = tossPayments.payment({ customerKey });
 
       await payment.requestBillingAuth({
-        method: "CARD",
+        method,
         successUrl: `${window.location.origin}/payment/success`,
         failUrl: `${window.location.origin}/payment/fail`,
         customerEmail: user.email || "",
@@ -138,13 +138,13 @@ function PricingContent() {
         )}
 
         {/* Actions */}
-        {plan === "free" && (
+        {(plan === "free" || isCancelled) && (
           <button
-            onClick={handleSubscribe}
+            onClick={() => handleSubscribe("CARD")}
             disabled={loading}
             className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
           >
-            {loading ? "처리 중..." : "구독하기"}
+            {loading ? "처리 중..." : isCancelled ? "다시 구독하기" : "구독하기"}
           </button>
         )}
 
@@ -155,16 +155,6 @@ function PricingContent() {
             className="w-full py-2 text-sm text-gray-500 hover:text-red-400 transition-colors"
           >
             {cancelling ? "처리 중..." : "구독 해지"}
-          </button>
-        )}
-
-        {isCancelled && (
-          <button
-            onClick={handleSubscribe}
-            disabled={loading}
-            className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 rounded-lg text-sm font-medium transition-colors"
-          >
-            {loading ? "처리 중..." : "다시 구독하기"}
           </button>
         )}
       </div>

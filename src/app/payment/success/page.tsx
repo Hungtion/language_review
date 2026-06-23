@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { Suspense, useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useAuth } from "@/components/AuthProvider";
 
@@ -82,5 +82,9 @@ function SuccessContent() {
 }
 
 export default function PaymentSuccessPage() {
-  return <SuccessContent />;
+  return (
+    <Suspense>
+      <SuccessContent />
+    </Suspense>
+  );
 }
