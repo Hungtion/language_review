@@ -1,16 +1,19 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 
 function NotesContent() {
   const searchParams = useSearchParams();
+  const router = useRouter();
   const initialFilter = (searchParams.get("filter") as "english" | "japanese") || "english";
+  const initialSearch = searchParams.get("q") || "";
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [filter, setFilter] = useState<"english" | "japanese">(initialFilter);
+  const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -29,6 +32,36 @@ function NotesContent() {
     load();
   }, [filter]);
 
+  const updateUrl = useCallback((f: string, q: string) => {
+    const params = new URLSearchParams();
+    params.set("filter", f);
+    if (q.trim()) params.set("q", q.trim());
+    router.replace(`/notes?${params.toString()}`, { scroll: false });
+  }, [router]);
+
+  function handleFilterChange(f: "english" | "japanese") {
+    setFilter(f);
+    updateUrl(f, search);
+  }
+
+  function handleSearchChange(q: string) {
+    setSearch(q);
+    updateUrl(filter, q);
+  }
+
+  const filtered = search.trim()
+    ? sessions.filter((s) => {
+        const q = search.toLowerCase();
+        return (
+          (s.title && s.title.toLowerCase().includes(q)) ||
+          (s.stress_pronunciation && s.stress_pronunciation.toLowerCase().includes(q)) ||
+          (s.vocabulary && s.vocabulary.toLowerCase().includes(q)) ||
+          (s.sentence_grammar && s.sentence_grammar.toLowerCase().includes(q)) ||
+          (s.comment && s.comment.toLowerCase().includes(q))
+        );
+      })
+    : sessions;
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -44,7 +77,7 @@ function NotesContent() {
             {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => handleFilterChange(f)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 filter === f
                   ? "bg-gray-700 text-white"
@@ -58,18 +91,32 @@ function NotesContent() {
         </div>
       </div>
 
+      <input
+        type="text"
+        value={search}
+        onChange={(e) => handleSearchChange(e.target.value)}
+        placeholder="노트 검색..."
+        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+      />
+
       {loading ? (
         <div className="text-gray-500 text-center py-12">로딩 중...</div>
-      ) : sessions.length === 0 ? (
+      ) : filtered.length === 0 ? (
         <div className="text-center py-16">
-          <p className="text-gray-500 mb-4">아직 노트가 없습니다.</p>
-          <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
-            첫 번째 노트 입력하기 →
-          </Link>
+          {search.trim() ? (
+            <p className="text-gray-500">검색 결과가 없습니다.</p>
+          ) : (
+            <>
+              <p className="text-gray-500 mb-4">아직 노트가 없습니다.</p>
+              <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
+                첫 번째 노트 입력하기 →
+              </Link>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
-          {sessions.map((s) => (
+          {filtered.map((s) => (
             <Link
               key={s.id}
               href={`/notes/${s.id}`}
