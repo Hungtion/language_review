@@ -294,7 +294,6 @@ function ReviewContent() {
                 <p className="text-xl text-center font-medium leading-relaxed">
                   {card.front}
                 </p>
-                <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
               </div>
 
               {/* Back */}
@@ -302,7 +301,6 @@ function ReviewContent() {
                 <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
                   {card.back}
                 </pre>
-                <p className="text-xs text-gray-600 mt-6">탭하여 뒤집기</p>
               </div>
             </div>
           </div>
@@ -335,38 +333,14 @@ function ReviewContent() {
         </div>
       )}
 
-      {/* Bottom Navigation */}
-      <div className="px-4 pb-6 pt-3 space-y-3">
-        <div className="flex items-center justify-between">
-          <button
-            onClick={goPrev}
-            disabled={!card || index === 0}
-            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
-          >
-            이전
-          </button>
-
-          <div className="flex-1 mx-4">
-            <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
-              <div
-                className="h-full bg-indigo-500 rounded-full transition-all duration-300"
-                style={{ width: cards.length > 0 ? `${((index + 1) / cards.length) * 100}%` : "0%" }}
-              />
-            </div>
-          </div>
-
-          <button
-            onClick={goNext}
-            disabled={!card || index === cards.length - 1}
-            className="px-5 py-2.5 bg-gray-800 hover:bg-gray-700 disabled:bg-gray-900 disabled:text-gray-700 rounded-lg text-sm transition-colors"
-          >
-            다음
-          </button>
+      {/* Bottom Progress */}
+      <div className="px-4 pb-6 pt-3">
+        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+          <div
+            className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+            style={{ width: cards.length > 0 ? `${((index + 1) / cards.length) * 100}%` : "0%" }}
+          />
         </div>
-
-        <p className="text-center text-xs text-gray-700">
-          스와이프 또는 화살표: 이전/다음 &nbsp;|&nbsp; 탭/Space: 뒤집기
-        </p>
       </div>
     </div>
   );
