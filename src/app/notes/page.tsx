@@ -139,7 +139,7 @@ function NotesContent() {
               <div className="flex gap-4 text-xs text-gray-600">
                 {s.stress_pronunciation && <span>🔊 발음</span>}
                 {s.vocabulary && <span>📖 어휘</span>}
-                {s.sentence_grammar && <span>✏️ 문법</span>}
+                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ 문법</span>}
                 {s.comment && <span>💬 코멘트</span>}
               </div>
 

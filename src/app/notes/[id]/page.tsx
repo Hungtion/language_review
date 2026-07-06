@@ -31,7 +31,7 @@ function NoteDetailContent() {
   async function handleDelete() {
     if (!confirm("정말 삭제하시겠습니까?")) return;
     await supabase.from("study_sessions").delete().eq("id", params.id);
-    router.push("/notes");
+    router.push(`/notes?filter=${session?.language || "english"}`);
   }
 
   function startEditing(field: "stress_pronunciation" | "sentence_grammar") {

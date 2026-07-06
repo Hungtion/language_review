@@ -28,6 +28,7 @@ function ReviewContent() {
   const [loading, setLoading] = useState(true);
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
+  const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
 
@@ -109,6 +110,7 @@ function ReviewContent() {
       setIndex(0);
       setFlipped(false);
       setAiResults({});
+      setAiSaved({});
       setLoading(false);
     }
     load();
@@ -152,6 +154,57 @@ function ReviewContent() {
       setAiResults((prev) => ({ ...prev, [index]: "AI 요청에 실패했습니다." }));
     }
     setAiLoading(false);
+  }
+
+  async function handleSaveAiResult() {
+    const result = aiResults[index];
+    const card = cards[index];
+    if (!result || !card || !user) return;
+
+    // Find existing "AI Examples" note for same language
+    const { data: existing } = await supabase
+      .from("study_sessions")
+      .select("id, sentence_grammar")
+      .eq("user_id", user.id)
+      .eq("title", "AI Examples")
+      .eq("language", card.language)
+      .single();
+
+    let error;
+    if (existing) {
+      const updated = existing.sentence_grammar
+        ? existing.sentence_grammar + "\n" + result
+        : result;
+      ({ error } = await supabase
+        .from("study_sessions")
+        .update({ sentence_grammar: updated, raw_input: updated })
+        .eq("id", existing.id));
+    } else {
+      const today = new Date().toISOString().split("T")[0];
+      ({ error } = await supabase.from("study_sessions").insert({
+        user_id: user.id,
+        language: card.language,
+        study_date: today,
+        title: "AI Examples",
+        sentence_grammar: result,
+        raw_input: result,
+      }));
+    }
+
+    if (error) {
+      alert("저장 실패: " + error.message);
+      return;
+    }
+
+    const newCard: Card = {
+      front: result,
+      back: "",
+      type: "sentence",
+      sessionDate: existing ? "" : new Date().toISOString().split("T")[0],
+      language: card.language,
+    };
+    setCards((prev) => [...prev, newCard]);
+    setAiSaved((prev) => ({ ...prev, [index]: true }));
   }
 
   useEffect(() => {
@@ -315,13 +368,25 @@ function ReviewContent() {
               ) : aiResults[index] ? (
                 <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
                   <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
+                  <div className="flex justify-end mt-2">
+                    {aiSaved[index] ? (
+                      <span className="text-xs text-green-400">저장됨</span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
+                        className="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded hover:bg-indigo-600/30 transition-colors"
+                      >
+                        카드에 추가
+                      </button>
+                    )}
+                  </div>
                 </div>
               ) : (
                 <button
                   onClick={handleAi}
                   className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
                 >
-                  AI 도우미
+                  AI Examples
                 </button>
               )}
             </div>

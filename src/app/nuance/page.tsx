@@ -221,19 +221,34 @@ function NuanceContent() {
     setSavingNote(key);
 
     const lang = result.language === "Japanese" ? "japanese" : "english";
-    const altsText = result.alternatives.length > 0
-      ? "\n\n대안 표현:\n" + result.alternatives.join("\n")
-      : "";
 
-    await supabase.from("study_sessions").insert({
-      user_id: user.id,
-      language: lang,
-      study_date: new Date().toISOString().split("T")[0],
-      title: `Nuance: ${inputText.slice(0, 30)}`,
-      sentence_grammar: result.translation,
-      comment: `원문: ${inputText}\n\n뉘앙스: ${result.nuance}${altsText}`,
-      raw_input: inputText,
-    });
+    // Find existing "Nuance" note for same language
+    const { data: existing } = await supabase
+      .from("study_sessions")
+      .select("id, sentence_grammar")
+      .eq("user_id", user.id)
+      .eq("title", "Nuance")
+      .eq("language", lang)
+      .single();
+
+    if (existing) {
+      const updated = existing.sentence_grammar
+        ? existing.sentence_grammar + "\n" + result.translation
+        : result.translation;
+      await supabase
+        .from("study_sessions")
+        .update({ sentence_grammar: updated })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("study_sessions").insert({
+        user_id: user.id,
+        language: lang,
+        study_date: new Date().toISOString().split("T")[0],
+        title: "Nuance",
+        sentence_grammar: result.translation,
+        raw_input: result.translation,
+      });
+    }
 
     setSavingNote(null);
     alert("복습 노트에 추가되었습니다!");
