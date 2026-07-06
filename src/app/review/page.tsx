@@ -30,6 +30,9 @@ function ReviewContent() {
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
+  const [autoplay, setAutoplay] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
+  );
   const [copied, setCopied] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
@@ -145,15 +148,10 @@ function ReviewContent() {
 
   useEffect(() => {
     if (!cards[index] || loading) return;
-    if (localStorage.getItem("tts-autoplay") === "true") {
+    if (autoplay) {
       speak(cards[index].front, cards[index].language);
     }
   }, [index, loading]);
-
-  function handleTts() {
-    if (!card) return;
-    speak(card.front, card.language);
-  }
 
   async function handleAi() {
     if (!isAdmin || aiLoading) return;
@@ -248,7 +246,11 @@ function ReviewContent() {
     function handleKey(e: KeyboardEvent) {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
-        if (cards[index]?.back) setFlipped((f) => !f);
+        const c = cards[index];
+        if (c?.back) {
+          if (flipped) { speak(c.back, c.language); setFlipped(false); }
+          else { speak(c.front, c.language); setFlipped(true); }
+        } else if (c) { speak(c.front, c.language); }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         goNext();
       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
@@ -330,8 +332,25 @@ function ReviewContent() {
       return;
     }
     setSwipeX(0);
-    // Quick tap → flip
-    if (!swiping.current && cards[index]?.back) setFlipped((f) => !f);
+    // Quick tap → TTS + flip
+    if (!swiping.current) {
+      const c = cards[index];
+      if (!c) return;
+      if (c.back) {
+        if (flipped) {
+          // Back is showing → read back, flip to front
+          speak(c.back, c.language);
+          setFlipped(false);
+        } else {
+          // Front is showing → read front, flip to back
+          speak(c.front, c.language);
+          setFlipped(true);
+        }
+      } else {
+        // No back → just read front
+        speak(c.front, c.language);
+      }
+    }
   }
 
   if (loading) {
@@ -395,6 +414,20 @@ function ReviewContent() {
           셔플
         </button>
 
+        <button
+          onClick={() => {
+            const next = !autoplay;
+            setAutoplay(next);
+            localStorage.setItem("tts-autoplay", String(next));
+          }}
+          className={`px-2 py-1 rounded-lg text-sm transition-colors shrink-0 ${
+            autoplay
+              ? "bg-indigo-600 text-white"
+              : "bg-gray-900 text-gray-400 hover:text-gray-200"
+          }`}
+        >
+          {autoplay ? "🔊" : "🔇"}
+        </button>
       </div>
 
       {/* Card + AI */}
@@ -443,13 +476,6 @@ function ReviewContent() {
                     {card.type === "vocab" ? "어휘" : "문장"}
                   </span>
                   <span className="text-xs text-gray-600">{card.sessionDate}</span>
-                  <button
-                    onClick={(e) => { e.stopPropagation(); handleTts(); }}
-                    className="text-gray-500 hover:text-white transition-colors ml-auto"
-                    aria-label="발음 듣기"
-                  >
-                    🔊
-                  </button>
                 </div>
                 <p className="text-xl text-center font-medium leading-relaxed">
                   {card.front}
