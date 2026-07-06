@@ -30,6 +30,14 @@ function ReviewContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
+  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
+  const [selectedVoiceEN, setSelectedVoiceEN] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
+  );
+  const [selectedVoiceJP, setSelectedVoiceJP] = useState<string>(() =>
+    typeof window !== "undefined" ? localStorage.getItem("tts-voice-jp") || "" : ""
+  );
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -132,28 +140,27 @@ function ReviewContent() {
     }
   }, [index]);
 
-  function getBestVoice(langCode: string) {
-    const voices = speechSynthesis.getVoices();
-    return (
-      voices.find(v => v.lang === langCode && (/Premium|Enhanced/i.test(v.name))) ||
-      voices.find(v => v.lang === langCode && (/Siri/i.test(v.name))) ||
-      voices.find(v => v.lang === langCode) ||
-      voices.find(v => v.lang.startsWith(langCode.split("-")[0]))
-    ) || null;
-  }
+  useEffect(() => {
+    function loadVoices() {
+      setVoices(speechSynthesis.getVoices());
+    }
+    loadVoices();
+    speechSynthesis.addEventListener("voiceschanged", loadVoices);
+    return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
+  }, []);
 
   function handleTts() {
     if (!card) return;
     speechSynthesis.cancel();
-    let text = card.front;
-    if (card.language === "japanese") {
-      text = text.replace(/[（(][^）)]*[）)]/g, "");
-    }
+    let text = card.front.replace(/[（(][^）)]*[）)]/g, "");
     const langCode = card.language === "japanese" ? "ja-JP" : "en-US";
+    const selectedName = card.language === "japanese" ? selectedVoiceJP : selectedVoiceEN;
     const utter = new SpeechSynthesisUtterance(text.trim());
     utter.lang = langCode;
-    const voice = getBestVoice(langCode);
-    if (voice) utter.voice = voice;
+    if (selectedName) {
+      const voice = voices.find(v => v.name === selectedName);
+      if (voice) utter.voice = voice;
+    }
     utter.rate = 0.9;
     speechSynthesis.speak(utter);
   }
@@ -348,7 +355,55 @@ function ReviewContent() {
         >
           셔플
         </button>
+
+        <button
+          onClick={() => setShowSettings((s) => !s)}
+          className={`px-2 py-1 rounded-lg text-sm transition-colors ${
+            showSettings
+              ? "bg-gray-700 text-white"
+              : "bg-gray-900 text-gray-400 hover:text-gray-200"
+          }`}
+        >
+          ⚙️
+        </button>
       </div>
+
+      {showSettings && (
+        <div className="px-4 pb-3 space-y-2">
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400 w-8">EN</label>
+            <select
+              value={selectedVoiceEN}
+              onChange={(e) => {
+                setSelectedVoiceEN(e.target.value);
+                localStorage.setItem("tts-voice-en", e.target.value);
+              }}
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
+            >
+              <option value="">기본 음성</option>
+              {voices.filter(v => v.lang.startsWith("en")).map(v => (
+                <option key={v.name} value={v.name}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+          <div className="flex items-center gap-2">
+            <label className="text-xs text-gray-400 w-8">JP</label>
+            <select
+              value={selectedVoiceJP}
+              onChange={(e) => {
+                setSelectedVoiceJP(e.target.value);
+                localStorage.setItem("tts-voice-jp", e.target.value);
+              }}
+              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
+            >
+              <option value="">기본 음성</option>
+              {voices.filter(v => v.lang.startsWith("ja")).map(v => (
+                <option key={v.name} value={v.name}>{v.name}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+      )}
 
       {/* Card + AI */}
       {card ? (
