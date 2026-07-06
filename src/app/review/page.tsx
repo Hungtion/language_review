@@ -128,6 +128,7 @@ function ReviewContent() {
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
+      speechSynthesis.cancel();
       setIndex((i) => i + 1);
       setFlipped(false);
     }
@@ -135,6 +136,7 @@ function ReviewContent() {
 
   const goPrev = useCallback(() => {
     if (index > 0) {
+      speechSynthesis.cancel();
       setIndex((i) => i - 1);
       setFlipped(false);
     }
@@ -250,6 +252,7 @@ function ReviewContent() {
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
+      speechSynthesis.cancel();
     };
   }, []);
 
@@ -377,6 +380,13 @@ function ReviewContent() {
               onChange={(e) => {
                 setSelectedVoiceEN(e.target.value);
                 localStorage.setItem("tts-voice-en", e.target.value);
+                speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance("Hello, this is my voice.");
+                utter.lang = "en-US";
+                const v = voices.find(v => v.name === e.target.value);
+                if (v) utter.voice = v;
+                utter.rate = 0.9;
+                speechSynthesis.speak(utter);
               }}
               className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
             >
@@ -393,6 +403,13 @@ function ReviewContent() {
               onChange={(e) => {
                 setSelectedVoiceJP(e.target.value);
                 localStorage.setItem("tts-voice-jp", e.target.value);
+                speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance("こんにちは、これは私の声です。");
+                utter.lang = "ja-JP";
+                const v = voices.find(v => v.name === e.target.value);
+                if (v) utter.voice = v;
+                utter.rate = 0.9;
+                speechSynthesis.speak(utter);
               }}
               className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
             >
