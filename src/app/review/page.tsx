@@ -132,6 +132,16 @@ function ReviewContent() {
     }
   }, [index]);
 
+  function getBestVoice(langCode: string) {
+    const voices = speechSynthesis.getVoices();
+    return (
+      voices.find(v => v.lang === langCode && (/Premium|Enhanced/i.test(v.name))) ||
+      voices.find(v => v.lang === langCode && (/Siri/i.test(v.name))) ||
+      voices.find(v => v.lang === langCode) ||
+      voices.find(v => v.lang.startsWith(langCode.split("-")[0]))
+    ) || null;
+  }
+
   function handleTts() {
     if (!card) return;
     speechSynthesis.cancel();
@@ -139,8 +149,11 @@ function ReviewContent() {
     if (card.language === "japanese") {
       text = text.replace(/[（(][^）)]*[）)]/g, "");
     }
+    const langCode = card.language === "japanese" ? "ja-JP" : "en-US";
     const utter = new SpeechSynthesisUtterance(text.trim());
-    utter.lang = card.language === "japanese" ? "ja-JP" : "en-US";
+    utter.lang = langCode;
+    const voice = getBestVoice(langCode);
+    if (voice) utter.voice = voice;
     utter.rate = 0.9;
     speechSynthesis.speak(utter);
   }
