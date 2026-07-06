@@ -13,6 +13,7 @@ export default function Nav() {
     { href: "/review", label: "카드", pro: false },
     { href: "/notes", label: "노트", pro: false },
     { href: "/nuance", label: "Nuance", pro: true },
+    { href: "/settings", label: "Settings", pro: false },
   ];
 
   return (

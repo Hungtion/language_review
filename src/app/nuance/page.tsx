@@ -4,6 +4,7 @@ import { useEffect, useState, useRef } from "react";
 import { supabase, NuanceChat, NuanceResult } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
+import { useTts } from "@/lib/useTts";
 
 type Message = {
   role: "user" | "ai";
@@ -20,6 +21,7 @@ const TONE_OPTIONS = [
 
 function NuanceContent() {
   const { user, plan } = useAuth();
+  const { speak } = useTts();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -372,9 +374,17 @@ function NuanceContent() {
                       </div>
                     )}
 
-                    <p className="text-lg font-medium text-gray-100 leading-relaxed mb-3">
-                      {result.translation}
-                    </p>
+                    <div className="flex items-start gap-2 mb-3">
+                      <p className="text-lg font-medium text-gray-100 leading-relaxed flex-1">
+                        {result.translation}
+                      </p>
+                      <button
+                        onClick={() => speak(result.translation, result.language === "Japanese" ? "japanese" : "english")}
+                        className="text-gray-500 hover:text-white transition-colors shrink-0 mt-1"
+                      >
+                        🔊
+                      </button>
+                    </div>
 
                     {result.nuance && (
                       <div className="bg-gray-800/50 rounded-lg p-3 mb-3">

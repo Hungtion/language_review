@@ -5,6 +5,7 @@ import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
+import { useTts } from "@/lib/useTts";
 
 const ADMIN_EMAIL = "kei9oon@gmail.com";
 
@@ -32,14 +33,7 @@ function ReviewContent() {
   const [copied, setCopied] = useState(false);
   const [pressed, setPressed] = useState(false);
   const longPressTriggered = useRef(false);
-  const [showSettings, setShowSettings] = useState(false);
-  const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
-  const [selectedVoiceEN, setSelectedVoiceEN] = useState<string>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
-  );
-  const [selectedVoiceJP, setSelectedVoiceJP] = useState<string>(() =>
-    typeof window !== "undefined" ? localStorage.getItem("tts-voice-jp") || "" : ""
-  );
+  const { speak, stop: stopTts } = useTts();
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -130,7 +124,7 @@ function ReviewContent() {
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
-      speechSynthesis.cancel();
+      stopTts();
       setIndex((i) => i + 1);
       setFlipped(false);
     }
@@ -138,48 +132,15 @@ function ReviewContent() {
 
   const goPrev = useCallback(() => {
     if (index > 0) {
-      speechSynthesis.cancel();
+      stopTts();
       setIndex((i) => i - 1);
       setFlipped(false);
     }
   }, [index]);
 
-  useEffect(() => {
-    function loadVoices() {
-      setVoices(speechSynthesis.getVoices());
-    }
-    loadVoices();
-    speechSynthesis.addEventListener("voiceschanged", loadVoices);
-    return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
-  }, []);
-
-  function getBestVoice(langCode: string) {
-    const isCompact = (name: string) => name.toLowerCase().includes("compact");
-    const langVoices = voices.filter(v => v.lang === langCode && !isCompact(v.name));
-    return (
-      langVoices.find(v => /Premium|Enhanced/i.test(v.name)) ||
-      langVoices.find(v => /Siri/i.test(v.name)) ||
-      langVoices[0]
-    ) || voices.find(v => v.lang.startsWith(langCode.split("-")[0])) || null;
-  }
-
   function handleTts() {
     if (!card) return;
-    speechSynthesis.cancel();
-    let text = card.front.replace(/[（(][^）)]*[）)]/g, "").replace(/\s*\/\s*/g, ", ");
-    const langCode = card.language === "japanese" ? "ja-JP" : "en-US";
-    const selectedName = card.language === "japanese" ? selectedVoiceJP : selectedVoiceEN;
-    const utter = new SpeechSynthesisUtterance(text.trim());
-    utter.lang = langCode;
-    if (selectedName) {
-      const voice = voices.find(v => v.name === selectedName);
-      if (voice) utter.voice = voice;
-    } else {
-      const best = getBestVoice(langCode);
-      if (best) utter.voice = best;
-    }
-    utter.rate = 0.9;
-    speechSynthesis.speak(utter);
+    speak(card.front, card.language);
   }
 
   async function handleAi() {
@@ -267,7 +228,7 @@ function ReviewContent() {
       document.body.style.overflow = "";
       document.body.style.position = "";
       document.body.style.width = "";
-      speechSynthesis.cancel();
+      stopTts();
     };
   }, []);
 
@@ -391,68 +352,7 @@ function ReviewContent() {
           셔플
         </button>
 
-        <button
-          onClick={() => setShowSettings((s) => !s)}
-          className={`px-2 py-1 rounded-lg text-sm transition-colors shrink-0 ${
-            showSettings
-              ? "bg-gray-700 text-white"
-              : "bg-gray-900 text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          ⚙️
-        </button>
       </div>
-
-      {showSettings && (
-        <div className="px-4 pb-3 space-y-2">
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 w-8">EN</label>
-            <select
-              value={selectedVoiceEN}
-              onChange={(e) => {
-                setSelectedVoiceEN(e.target.value);
-                localStorage.setItem("tts-voice-en", e.target.value);
-                speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance("Hello, this is my voice.");
-                utter.lang = "en-US";
-                const v = voices.find(v => v.name === e.target.value);
-                if (v) utter.voice = v;
-                utter.rate = 0.9;
-                speechSynthesis.speak(utter);
-              }}
-              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
-            >
-              <option value="">기본 음성</option>
-              {voices.filter(v => v.lang === "en-US" && !v.name.toLowerCase().includes("compact")).map(v => (
-                <option key={v.name} value={v.name}>{v.name}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex items-center gap-2">
-            <label className="text-xs text-gray-400 w-8">JP</label>
-            <select
-              value={selectedVoiceJP}
-              onChange={(e) => {
-                setSelectedVoiceJP(e.target.value);
-                localStorage.setItem("tts-voice-jp", e.target.value);
-                speechSynthesis.cancel();
-                const utter = new SpeechSynthesisUtterance("こんにちは、これは私の声です。");
-                utter.lang = "ja-JP";
-                const v = voices.find(v => v.name === e.target.value);
-                if (v) utter.voice = v;
-                utter.rate = 0.9;
-                speechSynthesis.speak(utter);
-              }}
-              className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
-            >
-              <option value="">기본 음성</option>
-              {voices.filter(v => v.lang.startsWith("ja") && !v.name.toLowerCase().includes("compact")).map(v => (
-                <option key={v.name} value={v.name}>{v.name}</option>
-              ))}
-            </select>
-          </div>
-        </div>
-      )}
 
       {/* Card + AI */}
       {card ? (
