@@ -153,10 +153,20 @@ function ReviewContent() {
     return () => speechSynthesis.removeEventListener("voiceschanged", loadVoices);
   }, []);
 
+  function getBestVoice(langCode: string) {
+    const isCompact = (name: string) => name.toLowerCase().includes("compact");
+    const langVoices = voices.filter(v => v.lang === langCode && !isCompact(v.name));
+    return (
+      langVoices.find(v => /Premium|Enhanced/i.test(v.name)) ||
+      langVoices.find(v => /Siri/i.test(v.name)) ||
+      langVoices[0]
+    ) || voices.find(v => v.lang.startsWith(langCode.split("-")[0])) || null;
+  }
+
   function handleTts() {
     if (!card) return;
     speechSynthesis.cancel();
-    let text = card.front.replace(/[（(][^）)]*[）)]/g, "");
+    let text = card.front.replace(/[（(][^）)]*[）)]/g, "").replace(/\s*\/\s*/g, ", ");
     const langCode = card.language === "japanese" ? "ja-JP" : "en-US";
     const selectedName = card.language === "japanese" ? selectedVoiceJP : selectedVoiceEN;
     const utter = new SpeechSynthesisUtterance(text.trim());
@@ -164,6 +174,9 @@ function ReviewContent() {
     if (selectedName) {
       const voice = voices.find(v => v.name === selectedName);
       if (voice) utter.voice = voice;
+    } else {
+      const best = getBestVoice(langCode);
+      if (best) utter.voice = best;
     }
     utter.rate = 0.9;
     speechSynthesis.speak(utter);
@@ -334,7 +347,7 @@ function ReviewContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex flex-wrap gap-2 items-center px-4 pb-3">
+      <div className="flex gap-2 items-center px-4 pb-3 overflow-x-auto scrollbar-hide">
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
           {(["english", "japanese"] as const).map((f) => (
             <button
@@ -346,7 +359,7 @@ function ReviewContent() {
                   : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              {f === "english" ? "EN" : "JP"}
+              {f === "english" ? "🇺🇸" : "🇯🇵"}
             </button>
           ))}
         </div>
@@ -410,7 +423,7 @@ function ReviewContent() {
               className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
             >
               <option value="">기본 음성</option>
-              {voices.filter(v => v.lang.startsWith("en")).map(v => (
+              {voices.filter(v => v.lang === "en-US" && !v.name.toLowerCase().includes("compact")).map(v => (
                 <option key={v.name} value={v.name}>{v.name}</option>
               ))}
             </select>
@@ -433,7 +446,7 @@ function ReviewContent() {
               className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-2 py-1 text-xs text-gray-300 outline-none"
             >
               <option value="">기본 음성</option>
-              {voices.filter(v => v.lang.startsWith("ja")).map(v => (
+              {voices.filter(v => v.lang.startsWith("ja") && !v.name.toLowerCase().includes("compact")).map(v => (
                 <option key={v.name} value={v.name}>{v.name}</option>
               ))}
             </select>
