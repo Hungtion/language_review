@@ -347,8 +347,8 @@ function ReviewContent() {
       </div>
 
       {/* Filters */}
-      <div className="flex gap-2 items-center px-4 pb-3 overflow-x-auto scrollbar-hide">
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
+      <div className="flex gap-2 items-center px-4 pb-3 overflow-x-auto scrollbar-hide flex-nowrap">
+        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
@@ -364,7 +364,7 @@ function ReviewContent() {
           ))}
         </div>
 
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
+        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
           {(["all", "vocab", "sentence"] as const).map((t) => (
             <button
               key={t}
@@ -382,7 +382,7 @@ function ReviewContent() {
 
         <button
           onClick={() => setShuffled((s) => !s)}
-          className={`px-3 py-1 rounded-lg text-sm transition-colors ${
+          className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
             shuffled
               ? "bg-indigo-600 text-white"
               : "bg-gray-900 text-gray-400 hover:text-gray-200"
@@ -393,7 +393,7 @@ function ReviewContent() {
 
         <button
           onClick={() => setShowSettings((s) => !s)}
-          className={`px-2 py-1 rounded-lg text-sm transition-colors ${
+          className={`px-2 py-1 rounded-lg text-sm transition-colors shrink-0 ${
             showSettings
               ? "bg-gray-700 text-white"
               : "bg-gray-900 text-gray-400 hover:text-gray-200"
