@@ -264,12 +264,14 @@ function ReviewContent() {
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    longPressTimer.current = setTimeout(() => {
+    longPressTimer.current = setTimeout(async () => {
       const card = cards[index];
-      if (card) {
-        navigator.clipboard.writeText(card.front);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
+      if (!card) return;
+      navigator.clipboard.writeText(card.front);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1500);
+      if (navigator.share) {
+        try { await navigator.share({ text: card.front }); } catch {}
       }
     }, 600);
   }
