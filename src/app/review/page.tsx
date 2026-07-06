@@ -30,6 +30,8 @@ function ReviewContent() {
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState(false);
+  const [pressed, setPressed] = useState(false);
+  const longPressTriggered = useRef(false);
   const [showSettings, setShowSettings] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedVoiceEN, setSelectedVoiceEN] = useState<string>(() =>
@@ -274,22 +276,39 @@ function ReviewContent() {
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
-    longPressTimer.current = setTimeout(async () => {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      setPressed(true);
       const card = cards[index];
-      if (!card) return;
-      navigator.clipboard.writeText(card.front);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 1500);
-      if (navigator.share) {
-        try { await navigator.share({ text: card.front }); } catch {}
+      if (card) {
+        navigator.clipboard.writeText(card.front);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
       }
     }, 600);
   }
 
-  function handleTouchEnd(e: React.TouchEvent) {
+  function handleTouchMove() {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
+    }
+  }
+
+  async function handleTouchEnd(e: React.TouchEvent) {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    setPressed(false);
+    if (longPressTriggered.current) {
+      longPressTriggered.current = false;
+      const card = cards[index];
+      if (card && navigator.share) {
+        try { await navigator.share({ text: card.front }); } catch {}
+      }
+      return;
     }
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
@@ -427,10 +446,11 @@ function ReviewContent() {
         <div
           className="flex-1 px-4 flex flex-col items-center justify-center"
           onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""}`}
+            className={`card-flip select-none w-full max-w-lg transition-transform duration-150 ${card.back ? "cursor-pointer" : ""} ${pressed ? "scale-95" : ""}`}
             onClick={() => card.back && setFlipped((f) => !f)}
             style={{ height: "min(50vh, 350px)" }}
           >
