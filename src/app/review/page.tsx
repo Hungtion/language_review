@@ -32,6 +32,10 @@ function ReviewContent() {
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
   const [copied, setCopied] = useState(false);
   const [pressed, setPressed] = useState(false);
+  const [swipeX, setSwipeX] = useState(0);
+  const [swipeAnim, setSwipeAnim] = useState<"left" | "right" | null>(null);
+  const [enterAnim, setEnterAnim] = useState<"from-left" | "from-right" | "entering" | null>(null);
+  const swiping = useRef(false);
   const longPressTriggered = useRef(false);
   const { speak, stop: stopTts } = useTts();
   const touchStartX = useRef(0);
@@ -251,9 +255,12 @@ function ReviewContent() {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
     longPressTriggered.current = false;
+    swiping.current = false;
+    setPressed(true);
+    setSwipeX(0);
+    setSwipeAnim(null);
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      setPressed(true);
       const card = cards[index];
       if (card) {
         navigator.clipboard.writeText(card.front);
@@ -263,10 +270,19 @@ function ReviewContent() {
     }, 600);
   }
 
-  function handleTouchMove() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
+  function handleTouchMove(e: React.TouchEvent) {
+    const dx = e.touches[0].clientX - touchStartX.current;
+    const dy = Math.abs(e.touches[0].clientY - touchStartY.current);
+    if (Math.abs(dx) > 10 || dy > 10) {
+      setPressed(false);
+      if (longPressTimer.current) {
+        clearTimeout(longPressTimer.current);
+        longPressTimer.current = null;
+      }
+    }
+    if (Math.abs(dx) > 10 && Math.abs(dx) > dy) {
+      swiping.current = true;
+      setSwipeX(dx);
     }
   }
 
@@ -278,6 +294,7 @@ function ReviewContent() {
     setPressed(false);
     if (longPressTriggered.current) {
       longPressTriggered.current = false;
+      setSwipeX(0);
       const card = cards[index];
       if (card && navigator.share) {
         try { await navigator.share({ text: card.front }); } catch {}
@@ -285,10 +302,28 @@ function ReviewContent() {
       return;
     }
     const dx = e.changedTouches[0].clientX - touchStartX.current;
-    const dy = e.changedTouches[0].clientY - touchStartY.current;
-    if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
-    if (dx < 0) goNext();
-    else goPrev();
+    if (swiping.current && Math.abs(dx) > 50) {
+      const dir = dx < 0 ? "left" : "right";
+      if ((dir === "left" && index >= cards.length - 1) || (dir === "right" && index <= 0)) {
+        setSwipeX(0);
+        return;
+      }
+      setSwipeAnim(dir);
+      setTimeout(() => {
+        if (dir === "left") goNext(); else goPrev();
+        setSwipeAnim(null);
+        setSwipeX(0);
+        setEnterAnim(dir === "left" ? "from-right" : "from-left");
+        setTimeout(() => {
+          setEnterAnim("entering");
+          setTimeout(() => setEnterAnim(null), 200);
+        }, 20);
+      }, 200);
+      return;
+    }
+    setSwipeX(0);
+    // Quick tap → flip
+    if (!swiping.current && cards[index]?.back) setFlipped((f) => !f);
   }
 
   if (loading) {
@@ -363,9 +398,19 @@ function ReviewContent() {
           onTouchEnd={handleTouchEnd}
         >
           <div
-            className={`card-flip select-none w-full max-w-lg transition-transform duration-150 ${card.back ? "cursor-pointer" : ""} ${pressed ? "scale-95" : ""}`}
-            onClick={() => card.back && setFlipped((f) => !f)}
-            style={{ height: "min(50vh, 350px)" }}
+            className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
+            style={{
+              height: "min(50vh, 350px)",
+              transform: swipeAnim
+                ? `translateX(${swipeAnim === "left" ? "-120%" : "120%"})`
+                : enterAnim === "from-right"
+                  ? "translateX(120%)"
+                  : enterAnim === "from-left"
+                    ? "translateX(-120%)"
+                    : swipeX
+                      ? `translateX(${swipeX}px) rotate(${swipeX * 0.03}deg)`
+                      : pressed ? "scale(0.95)" : "",
+            }}
           >
             <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
               {/* Front */}
