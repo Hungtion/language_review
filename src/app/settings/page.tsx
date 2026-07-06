@@ -11,6 +11,9 @@ function SettingsContent() {
   const [selectedJP, setSelectedJP] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-voice-jp") || "" : ""
   );
+  const [autoplay, setAutoplay] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
+  );
 
   useEffect(() => {
     function loadVoices() {
@@ -89,6 +92,29 @@ function SettingsContent() {
         <p className="text-xs text-gray-600">
           iOS: Settings &gt; Accessibility &gt; Spoken Content &gt; Voices
         </p>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-gray-300">Auto Play</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">카드 넘길 때 자동 재생</span>
+          <button
+            onClick={() => {
+              const next = localStorage.getItem("tts-autoplay") === "true" ? "false" : "true";
+              localStorage.setItem("tts-autoplay", next);
+              setAutoplay(next === "true");
+            }}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              autoplay ? "bg-indigo-600" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                autoplay ? "translate-x-6" : "translate-x-0.5"
+              }`}
+            />
+          </button>
+        </div>
       </div>
     </div>
   );

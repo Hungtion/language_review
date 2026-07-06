@@ -116,6 +116,7 @@ function ReviewContent() {
         }
       }
 
+      stopTts();
       setCards(filtered);
       setIndex(0);
       setFlipped(false);
@@ -141,6 +142,13 @@ function ReviewContent() {
       setFlipped(false);
     }
   }, [index]);
+
+  useEffect(() => {
+    if (!cards[index] || loading) return;
+    if (localStorage.getItem("tts-autoplay") === "true") {
+      speak(cards[index].front, cards[index].language);
+    }
+  }, [index, loading]);
 
   function handleTts() {
     if (!card) return;
