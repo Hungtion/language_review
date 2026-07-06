@@ -29,8 +29,10 @@ function ReviewContent() {
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
+  const [copied, setCopied] = useState(false);
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     async function load() {
@@ -129,6 +131,19 @@ function ReviewContent() {
       setFlipped(false);
     }
   }, [index]);
+
+  function handleTts() {
+    if (!card) return;
+    speechSynthesis.cancel();
+    let text = card.front;
+    if (card.language === "japanese") {
+      text = text.replace(/[（(][^）)]*[）)]/g, "");
+    }
+    const utter = new SpeechSynthesisUtterance(text.trim());
+    utter.lang = card.language === "japanese" ? "ja-JP" : "en-US";
+    utter.rate = 0.9;
+    speechSynthesis.speak(utter);
+  }
 
   async function handleAi() {
     if (!isAdmin || aiLoading) return;
@@ -236,9 +251,21 @@ function ReviewContent() {
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
     touchStartY.current = e.touches[0].clientY;
+    longPressTimer.current = setTimeout(() => {
+      const card = cards[index];
+      if (card) {
+        navigator.clipboard.writeText(card.front);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 1500);
+      }
+    }, 600);
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
     const dx = e.changedTouches[0].clientX - touchStartX.current;
     const dy = e.changedTouches[0].clientY - touchStartY.current;
     if (Math.abs(dx) < 50 || Math.abs(dy) > Math.abs(dx)) return;
@@ -343,10 +370,20 @@ function ReviewContent() {
                     {card.type === "vocab" ? "어휘" : "문장"}
                   </span>
                   <span className="text-xs text-gray-600">{card.sessionDate}</span>
+                  <button
+                    onClick={(e) => { e.stopPropagation(); handleTts(); }}
+                    className="text-gray-500 hover:text-white transition-colors ml-auto"
+                    aria-label="발음 듣기"
+                  >
+                    🔊
+                  </button>
                 </div>
                 <p className="text-xl text-center font-medium leading-relaxed">
                   {card.front}
                 </p>
+                {copied && (
+                  <span className="absolute bottom-3 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">copied</span>
+                )}
               </div>
 
               {/* Back */}
