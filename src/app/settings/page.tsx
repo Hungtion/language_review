@@ -109,8 +109,8 @@ function SettingsContent() {
             }`}
           >
             <span
-              className={`absolute top-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                autoplay ? "translate-x-6" : "translate-x-0.5"
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                autoplay ? "translate-x-[24px]" : "translate-x-0"
               }`}
             />
           </button>
