@@ -129,11 +129,27 @@ function NuanceContent() {
     loadMessages();
   }, [user, selectedDate, todayStr]);
 
-  // Lock body scroll
+  // Lock body scroll + handle iOS keyboard resize
+  const [bottomOffset, setBottomOffset] = useState(0);
   useEffect(() => {
     document.body.style.overflow = "hidden";
+
+    function handleResize() {
+      if (window.visualViewport) {
+        const diff = window.innerHeight - window.visualViewport.height;
+        setBottomOffset(diff);
+        // Prevent iOS from scrolling the page up
+        window.scrollTo(0, 0);
+      }
+    }
+
+    window.visualViewport?.addEventListener("resize", handleResize);
+    window.visualViewport?.addEventListener("scroll", handleResize);
+
     return () => {
       document.body.style.overflow = "";
+      window.visualViewport?.removeEventListener("resize", handleResize);
+      window.visualViewport?.removeEventListener("scroll", handleResize);
     };
   }, []);
 
@@ -307,7 +323,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", bottom: bottomOffset > 0 ? `${bottomOffset}px` : undefined, paddingBottom: bottomOffset > 0 ? "0.5rem" : "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
 
       {/* Free user banner */}
       {plan !== "pro" && (
