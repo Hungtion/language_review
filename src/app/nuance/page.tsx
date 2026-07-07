@@ -129,18 +129,17 @@ function NuanceContent() {
     loadMessages();
   }, [user, selectedDate, todayStr]);
 
-  // Lock body scroll + handle iOS keyboard via visualViewport height
-  const [viewportHeight, setViewportHeight] = useState("100vh");
+  // Lock body scroll + handle iOS keyboard
+  const containerRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     document.body.style.overflow = "hidden";
 
     function handleResize() {
-      if (window.visualViewport) {
-        setViewportHeight(`${window.visualViewport.height}px`);
-        // Neutralize iOS forced scroll when keyboard is open
-        if (document.activeElement?.tagName === "INPUT" || document.activeElement?.tagName === "TEXTAREA") {
-          window.scrollTo(0, 0);
-        }
+      if (window.visualViewport && containerRef.current) {
+        const keyboardHeight = window.innerHeight - window.visualViewport.height;
+        containerRef.current.style.bottom = `${keyboardHeight}px`;
+        containerRef.current.style.paddingBottom = keyboardHeight > 0 ? "0.5rem" : "";
+        window.scrollTo(0, 0);
       }
     }
 
@@ -324,7 +323,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-x-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-2" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", height: `calc(${viewportHeight} - 7rem)`, overscrollBehavior: "none" }}>
+    <div ref={containerRef} className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
 
       {/* Free user banner */}
       {plan !== "pro" && (
