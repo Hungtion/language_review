@@ -517,19 +517,32 @@ function ReviewContent() {
                 <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
               </div>
             ) : aiResults[index] ? (
-              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
-                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
-                <div className="flex justify-end mt-2">
-                  {aiSaved[index] ? (
-                    <span className="text-xs text-green-400">{t("saved")}</span>
-                  ) : (
-                    <button
-                      onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
-                      className="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded hover:bg-indigo-600/30 transition-colors"
-                    >
-                      {t("addToCards")}
-                    </button>
-                  )}
+              <div
+                className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto cursor-pointer active:opacity-70 transition-opacity"
+                onClick={(e) => { e.stopPropagation(); speak(aiResults[index], card.language); }}
+              >
+                <div className="flex items-start gap-2">
+                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed flex-1">{aiResults[index]}</pre>
+                  <div className="flex items-center gap-1 shrink-0">
+                    {aiSaved[index] ? (
+                      <span className="text-xs text-green-400">✓</span>
+                    ) : (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
+                        className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm"
+                      >
+                        +
+                      </button>
+                    )}
+                    {typeof navigator !== "undefined" && navigator.share && (
+                      <button
+                        onClick={(e) => { e.stopPropagation(); navigator.share({ text: aiResults[index] }).catch(() => {}); }}
+                        className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors"
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             ) : plan !== "pro" && aiRemaining <= 0 ? (
@@ -538,7 +551,14 @@ function ReviewContent() {
                   {t("upgradeForUnlimited")}
                 </a>
                 <button
-                  onClick={() => { /* TODO: ad integration */ }}
+                  onClick={async () => {
+                    alert(locale === "ko" ? "준비중입니다" : "Coming soon");
+                    if (user) {
+                      const { resetAiUsage } = await import("@/lib/aiUsage");
+                      await resetAiUsage(user.id);
+                      setAiRemaining(DAILY_LIMIT);
+                    }
+                  }}
                   className="flex-1 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
                 >
                   {locale === "ko" ? "광고 보기" : "Watch Ad"}

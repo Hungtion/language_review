@@ -39,4 +39,23 @@ export async function incrementAiUsage(userId: string): Promise<void> {
   }
 }
 
+export async function resetAiUsage(userId: string): Promise<void> {
+  const today = new Date().toISOString().split("T")[0];
+
+  const { data } = await supabase
+    .from("ai_usage")
+    .select("count")
+    .eq("user_id", userId)
+    .eq("usage_date", today)
+    .single();
+
+  if (data) {
+    await supabase
+      .from("ai_usage")
+      .update({ count: 0 })
+      .eq("user_id", userId)
+      .eq("usage_date", today);
+  }
+}
+
 export const DAILY_LIMIT = DAILY_FREE_LIMIT;

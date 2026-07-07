@@ -260,12 +260,12 @@ function NuanceContent() {
     inputRef.current?.focus();
   }
 
-  async function handleAddToNotes(result: NuanceResult, inputText: string) {
+  async function handleAddToNotes(text: string, language: string) {
     if (!user) return;
-    const key = `${result.language}-${result.translation}`;
+    const key = `${language}-${text}`;
     setSavingNote(key);
 
-    const lang = result.language === "Japanese" ? "japanese" : "english";
+    const lang = language === "Japanese" ? "japanese" : "english";
 
     // Find existing "Nuance" note for same language
     const { data: existing } = await supabase
@@ -278,8 +278,8 @@ function NuanceContent() {
 
     if (existing) {
       const updated = existing.sentence_grammar
-        ? existing.sentence_grammar + "\n" + result.translation
-        : result.translation;
+        ? existing.sentence_grammar + "\n" + text
+        : text;
       await supabase
         .from("study_sessions")
         .update({ sentence_grammar: updated })
@@ -290,8 +290,8 @@ function NuanceContent() {
         language: lang,
         study_date: new Date().toISOString().split("T")[0],
         title: "Nuance",
-        sentence_grammar: result.translation,
-        raw_input: result.translation,
+        sentence_grammar: text,
+        raw_input: text,
       });
     }
 
@@ -323,7 +323,14 @@ function NuanceContent() {
                 {t("upgradeForUnlimited")}
               </a>
               <button
-                onClick={() => { /* TODO: ad integration */ }}
+                onClick={async () => {
+                  alert(locale === "ko" ? "준비중입니다" : "Coming soon");
+                  if (user) {
+                    const { resetAiUsage } = await import("@/lib/aiUsage");
+                    await resetAiUsage(user.id);
+                    setAiRemaining(DAILY_LIMIT);
+                  }
+                }}
                 className="flex-1 py-1.5 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
               >
                 {locale === "ko" ? "광고 보기" : "Watch Ad"}
@@ -424,14 +431,20 @@ function NuanceContent() {
                     )}
 
                     <div className="flex items-start gap-2 mb-3">
-                      <p className="text-lg font-medium text-gray-100 leading-relaxed flex-1">
-                        {result.translation}
-                      </p>
-                      <button
+                      <div
+                        className="flex-1 cursor-pointer active:opacity-70 transition-opacity"
                         onClick={() => speak(result.translation, result.language === "Japanese" ? "japanese" : "english")}
-                        className="text-gray-500 hover:text-white transition-colors shrink-0 mt-1"
                       >
-                        🔊
+                        <p className="text-lg font-medium text-gray-100 leading-relaxed">
+                          {result.translation}
+                        </p>
+                      </div>
+                      <button
+                        onClick={() => handleAddToNotes(result.translation, result.language)}
+                        disabled={savingNote === `${result.language}-${result.translation}`}
+                        className="shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm disabled:opacity-50"
+                      >
+                        {savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
                       </button>
                     </div>
 
@@ -446,27 +459,30 @@ function NuanceContent() {
                       <div className="mb-3">
                         <p className="text-xs font-medium text-gray-500 mb-1.5">{t("alternatives")}</p>
                         <div className="space-y-1">
-                          {result.alternatives.map((alt, altIdx) => (
-                            <div key={altIdx} className="text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5">
-                              {alt}
-                            </div>
-                          ))}
+                          {result.alternatives.map((alt, altIdx) => {
+                            const altText = alt.replace(/\s*\([^)]*[가-힣][^)]*\)\s*$/, "").trim();
+                            return (
+                              <div key={altIdx} className="flex items-center gap-1.5">
+                                <div
+                                  className="flex-1 text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5 cursor-pointer active:opacity-70 transition-opacity"
+                                  onClick={() => speak(altText, result.language === "Japanese" ? "japanese" : "english")}
+                                >
+                                  {alt}
+                                </div>
+                                <button
+                                  onClick={() => handleAddToNotes(altText, result.language)}
+                                  disabled={savingNote === `${result.language}-${altText}`}
+                                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-xs disabled:opacity-50"
+                                >
+                                  {savingNote === `${result.language}-${altText}` ? "·" : "+"}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       </div>
                     )}
 
-                    {result.language !== "Error" && (
-                      <button
-                        onClick={() => {
-                          const userMsg = messages.slice(0, i).reverse().find((m) => m.role === "user");
-                          handleAddToNotes(result, userMsg?.text || "");
-                        }}
-                        disabled={savingNote === `${result.language}-${result.translation}`}
-                        className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
-                      >
-                        {savingNote === `${result.language}-${result.translation}` ? t("adding") : t("addToNotes")}
-                      </button>
-                    )}
                   </div>
                 ))}
               </div>
