@@ -324,7 +324,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-x-0 top-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-2" style={{ height: viewportHeight, marginTop: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
+    <div className="fixed inset-x-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-2" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", height: `calc(${viewportHeight} - 3.5rem - env(safe-area-inset-top))`, overscrollBehavior: "none" }}>
 
       {/* Free user banner */}
       {plan !== "pro" && (
