@@ -348,8 +348,8 @@ function ReviewContent() {
       if (!c) return;
       if (c.back) {
         if (flipped) {
-          // Back is showing → read back, flip to front
-          speak(c.back, c.language);
+          // Back is showing → read front, flip to front
+          speak(c.front, c.language);
           setFlipped(false);
         } else {
           // Front is showing → read front, flip to back
