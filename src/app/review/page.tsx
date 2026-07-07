@@ -33,7 +33,6 @@ function ReviewContent() {
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
-  const [copied, setCopied] = useState(false);
   const [pressed, setPressed] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swipeAnim, setSwipeAnim] = useState<"left" | "right" | null>(null);
@@ -271,12 +270,7 @@ function ReviewContent() {
     setSwipeAnim(null);
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      const card = cards[index];
-      if (card) {
-        navigator.clipboard.writeText(card.front);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 1500);
-      }
+      if (navigator.vibrate) navigator.vibrate(50);
     }, 600);
   }
 
@@ -480,9 +474,6 @@ function ReviewContent() {
                 <p className="text-xl text-center font-medium leading-relaxed">
                   {card.front}
                 </p>
-                {copied && (
-                  <span className="absolute bottom-3 text-xs text-green-400 bg-green-400/10 px-2 py-1 rounded">copied</span>
-                )}
               </div>
 
               {/* Back */}
