@@ -6,6 +6,7 @@ import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
+import { useLocale } from "@/lib/useLocale";
 
 const ADMIN_EMAIL = "kei9oon@gmail.com";
 
@@ -40,6 +41,7 @@ function ReviewContent() {
   const swiping = useRef(false);
   const longPressTriggered = useRef(false);
   const { speak, stop: stopTts } = useTts();
+  const { t } = useLocale();
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -343,7 +345,7 @@ function ReviewContent() {
   }
 
   if (loading) {
-    return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
+    return <div className="text-gray-500 text-center py-12">{t("loading")}</div>;
   }
 
   const card = cards.length > 0 ? cards[index] : null;
@@ -352,7 +354,7 @@ function ReviewContent() {
     <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="text-lg font-bold">카드</h1>
+        <h1 className="text-lg font-bold">{t("cardTitle")}</h1>
         <span className="text-sm text-gray-500">
           {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
         </span>
@@ -377,17 +379,17 @@ function ReviewContent() {
         </div>
 
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
-          {(["all", "vocab", "sentence"] as const).map((t) => (
+          {(["all", "vocab", "sentence"] as const).map((ct) => (
             <button
-              key={t}
-              onClick={() => setCardType(t)}
+              key={ct}
+              onClick={() => setCardType(ct)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                cardType === t
+                cardType === ct
                   ? "bg-gray-700 text-white"
                   : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              {t === "all" ? "전체" : t === "vocab" ? "어휘" : "문장"}
+              {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
             </button>
           ))}
         </div>
@@ -400,7 +402,7 @@ function ReviewContent() {
               : "bg-gray-900 text-gray-400 hover:text-gray-200"
           }`}
         >
-          셔플
+          🔀
         </button>
 
         <button
@@ -479,7 +481,7 @@ function ReviewContent() {
                         : "bg-blue-500/20 text-blue-400"
                     }`}
                   >
-                    {card.type === "vocab" ? "어휘" : "문장"}
+                    {card.type === "vocab" ? t("vocab") : t("sentence")}
                   </span>
                   <span className="text-xs text-gray-600">{card.sessionDate}</span>
                 </div>
@@ -502,20 +504,20 @@ function ReviewContent() {
             <div className="w-full max-w-lg mt-3">
               {aiLoading ? (
                 <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
-                  <p className="text-purple-400 text-sm animate-pulse">AI 분석 중...</p>
+                  <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
                 </div>
               ) : aiResults[index] ? (
                 <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
                   <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
                   <div className="flex justify-end mt-2">
                     {aiSaved[index] ? (
-                      <span className="text-xs text-green-400">저장됨</span>
+                      <span className="text-xs text-green-400">{t("saved")}</span>
                     ) : (
                       <button
                         onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
                         className="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded hover:bg-indigo-600/30 transition-colors"
                       >
-                        카드에 추가
+                        {t("addToCards")}
                       </button>
                     )}
                   </div>
@@ -533,7 +535,7 @@ function ReviewContent() {
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">해당 필터에 복습할 카드가 없습니다.</p>
+          <p className="text-gray-500 text-sm">{t("noCards")}</p>
         </div>
       )}
 

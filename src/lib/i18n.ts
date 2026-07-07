@@ -1,0 +1,279 @@
+const translations = {
+  en: {
+    // Nav
+    add: "Add",
+    cards: "Cards",
+    notes: "Notes",
+    logout: "Logout",
+
+    // Card page
+    cardTitle: "Cards",
+    all: "All",
+    vocab: "Vocab",
+    sentence: "Sentence",
+    noCards: "No cards found for this filter.",
+    loading: "Loading...",
+    aiExamples: "AI Examples",
+    addToCards: "Add to Cards",
+    saved: "Saved",
+    analyzing: "Analyzing...",
+
+    // Notes page
+    notesTitle: "Notes",
+    searchNotes: "Search notes...",
+    noSearchResults: "No search results.",
+    noNotes: "No notes yet.",
+    firstNote: "Create your first note →",
+    pronunciation: "Pronunciation",
+    vocabulary: "Vocabulary",
+    grammar: "Grammar",
+    comment: "Comment",
+    delete: "Delete",
+    confirmDelete: "Are you sure you want to delete?",
+
+    // Note detail
+    edit: "Edit",
+    save: "Save",
+    saving: "Saving...",
+    cancel: "Cancel",
+    saveFailed: "Save failed: ",
+    noteNotFound: "Note not found.",
+
+    // Add page
+    addTitle: "Add",
+    addNewNote: "Add Study Note",
+    studyDate: "Date",
+    titleOptional: "Title (optional)",
+    pasteContent: "Paste study content",
+    fillSample: "Fill sample",
+    previewBtn: "Preview",
+    parseChoice: "Choose parsing method",
+    noFormatDetected: "No standard format detected. Choose how to create review cards.",
+    aiExtract: "AI sentence extraction",
+    aiExtractDesc: "AI picks out study sentences",
+    lineByLine: "Line-by-line parsing",
+    lineByLineDesc: "Every line becomes a review card",
+    previewResult: "Parse result preview",
+    pasteFormatEN: "Paste in this format:\n\nStress and Pronunciation\n(content)\n\nVocabulary\nword (noun) = definition\n--> example sentence\n\nSentence Structure & Grammar\n(content)\n\nComment\n(comment)",
+    pasteFreeformJP: "Paste Japanese study content freely",
+
+    // Login
+    signInWithGoogle: "Sign in with Google",
+    langLabDesc: "English & Japanese study review notes",
+    inAppRestricted: "Google Sign-in is restricted in in-app browsers.",
+    redirectingBrowser: "Redirecting to external browser...",
+    autoRedirectFail: "If not redirected automatically, tap the button below.",
+    openInBrowser: "Open in Browser",
+    tapMenu: "Tap",
+    menuAbove: "menu above and select",
+    openDefault: "Open in Default Browser",
+    copyUrl: "Copy URL",
+    urlCopied: "URL copied.\nOpen Safari and paste it.",
+    copyPrompt: "Copy the URL below and open in Safari:",
+    orPasteSafari: "Or paste the URL in Safari.",
+
+    // Nuance
+    newChat: "+ New Chat",
+    today: "Today",
+    askAnything: "What would you like to talk about?",
+    loadingChat: "Loading chat...",
+    selectOneLang: "Please select at least one language!",
+    translating: "Translating...",
+    send: "Send",
+    enterSentence: "Enter a sentence you're curious about.",
+    errorOccurred: "An error occurred",
+    requestFailed: "Request failed.",
+    addToNotes: "+ Add to review notes",
+    adding: "Adding...",
+    addedToNotes: "Added to review notes!",
+    whyExpression: "Why this expression?",
+    alternatives: "Alternatives",
+    proFeature: "Nuance Chat is a Pro feature",
+    proDesc: "AI explains natural translations and nuances. Upgrade to Pro for unlimited access.",
+    subscribe: "Subscribe - 1,000 KRW/month",
+
+    // Settings
+    settingsTitle: "Settings",
+    ttsVoice: "TTS Voice",
+    englishUS: "English (US)",
+    japanese: "Japanese",
+    default: "Default",
+    autoPlay: "Auto Play",
+    autoPlayDesc: "Auto-play TTS when swiping cards",
+    language: "Language",
+    iosVoiceGuide: "iOS: Settings > Accessibility > Spoken Content > Voices",
+
+    // Home
+    recentNotes: "Recent Notes",
+    sessions: "sessions",
+    addNote: "Add Note",
+    reviewCards: "Review Cards",
+
+    // Pricing
+    pricingTitle: "Pricing",
+    proSubTitle: "Pro Plan",
+    proSubDesc: "Unlimited access to AI features",
+    perMonth: "/month",
+    nuanceChatDesc: "Nuance Chat - AI translation + nuance explanation",
+    aiExtractDesc2: "AI automatic sentence extraction",
+    reviewCardAI: "Review card AI assistant",
+    proActive: "Pro subscription active",
+    nextBilling: "Next billing: ",
+    cancelScheduled: "Cancellation scheduled",
+    expiresOn: "Available until: ",
+    processing: "Processing...",
+    resubscribe: "Resubscribe",
+    subscribeBtn: "Subscribe",
+    cancelSub: "Cancel subscription",
+    confirmCancelSub: "Are you sure you want to cancel? You can use Pro features until the current billing period ends.",
+    cancelledMsg: "Subscription cancelled. You can use Pro features until the expiration date.",
+    cancelFailed: "Cancellation failed: ",
+    cancelError: "An error occurred during cancellation.",
+    unknownError: "Unknown error",
+  },
+  ko: {
+    // Nav
+    add: "입력",
+    cards: "카드",
+    notes: "노트",
+    logout: "로그아웃",
+
+    // Card page
+    cardTitle: "카드",
+    all: "전체",
+    vocab: "어휘",
+    sentence: "문장",
+    noCards: "해당 필터에 복습할 카드가 없습니다.",
+    loading: "로딩 중...",
+    aiExamples: "AI Examples",
+    addToCards: "카드에 추가",
+    saved: "저장됨",
+    analyzing: "AI 분석 중...",
+
+    // Notes page
+    notesTitle: "노트",
+    searchNotes: "노트 검색...",
+    noSearchResults: "검색 결과가 없습니다.",
+    noNotes: "아직 노트가 없습니다.",
+    firstNote: "첫 번째 노트 입력하기 →",
+    pronunciation: "발음",
+    vocabulary: "어휘",
+    grammar: "문법",
+    comment: "코멘트",
+    delete: "삭제",
+    confirmDelete: "정말 삭제하시겠습니까?",
+
+    // Note detail
+    edit: "수정",
+    save: "저장",
+    saving: "저장 중...",
+    cancel: "취소",
+    saveFailed: "저장 실패: ",
+    noteNotFound: "노트를 찾을 수 없습니다.",
+
+    // Add page
+    addTitle: "입력",
+    addNewNote: "새 학습 노트 입력",
+    studyDate: "학습일",
+    titleOptional: "제목 (선택)",
+    pasteContent: "학습 내용 붙여넣기",
+    fillSample: "샘플 채우기",
+    previewBtn: "미리보기",
+    parseChoice: "파싱 방식 선택",
+    noFormatDetected: "정해진 양식이 감지되지 않았습니다. 복습카드 생성 방식을 선택해주세요.",
+    aiExtract: "AI로 문장 추출",
+    aiExtractDesc: "AI가 학습용 문장만 골라냅니다",
+    lineByLine: "줄 단위로 파싱",
+    lineByLineDesc: "모든 줄을 복습카드로 만듭니다",
+    previewResult: "파싱 결과 미리보기",
+    pasteFormatEN: "아래와 같은 형식으로 붙여넣기:\n\nStress and Pronunciation\n(발음/강세 내용)\n\nVocabulary\nword (noun) = definition\n--> example sentence\n\nSentence Structure & Grammar\n(문장 구조 내용)\n\nComment\n(코멘트)",
+    pasteFreeformJP: "일본어 학습 내용을 자유롭게 붙여넣기",
+
+    // Login
+    signInWithGoogle: "Google 계정으로 로그인",
+    langLabDesc: "영어 & 일본어 학습 복습 노트",
+    inAppRestricted: "인앱 브라우저에서는 Google 로그인이 제한됩니다.",
+    redirectingBrowser: "외부 브라우저로 이동 중...",
+    autoRedirectFail: "자동으로 전환되지 않으면 아래 버튼을 눌러주세요.",
+    openInBrowser: "외부 브라우저로 열기",
+    tapMenu: "상단의",
+    menuAbove: "메뉴에서",
+    openDefault: "기본 브라우저에서 열기",
+    copyUrl: "주소 복사하기",
+    urlCopied: "주소가 복사되었습니다.\nSafari를 열고 붙여넣기 해주세요.",
+    copyPrompt: "아래 주소를 복사하여 Safari에서 열어주세요:",
+    orPasteSafari: "또는 복사 후 Safari에 붙여넣기 해주세요.",
+
+    // Nuance
+    newChat: "+ 새 대화",
+    today: "오늘",
+    askAnything: "어떤 이야기를 하고 싶나요?",
+    loadingChat: "대화 불러오는 중...",
+    selectOneLang: "최소 한 개 이상의 언어를 선택해주세요!",
+    translating: "번역 중...",
+    send: "전송",
+    enterSentence: "궁금한 문장을 입력하세요.",
+    errorOccurred: "오류 발생",
+    requestFailed: "요청에 실패했습니다.",
+    addToNotes: "+ 복습 노트에 추가",
+    adding: "추가 중...",
+    addedToNotes: "복습 노트에 추가되었습니다!",
+    whyExpression: "왜 이 표현일까요?",
+    alternatives: "다른 표현",
+    proFeature: "Nuance Chat은 Pro 기능입니다",
+    proDesc: "AI가 자연스러운 번역과 뉘앙스를 설명해드립니다. Pro 플랜으로 업그레이드하면 무제한으로 이용할 수 있습니다.",
+    subscribe: "구독하기 - 월 1,000원",
+
+    // Settings
+    settingsTitle: "설정",
+    ttsVoice: "TTS 음성",
+    englishUS: "영어 (US)",
+    japanese: "일본어",
+    default: "기본 음성",
+    autoPlay: "자동 재생",
+    autoPlayDesc: "카드 넘길 때 자동 재생",
+    language: "언어",
+    iosVoiceGuide: "iOS: 설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성",
+
+    // Home
+    recentNotes: "최근 노트",
+    sessions: "세션 기록",
+    addNote: "새 노트 입력",
+    reviewCards: "복습 카드",
+
+    // Pricing
+    pricingTitle: "구독",
+    proSubTitle: "Pro Plan",
+    proSubDesc: "AI 기능을 무제한으로 이용하세요",
+    perMonth: "원/월",
+    nuanceChatDesc: "Nuance Chat - AI 번역 + 뉘앙스 설명",
+    aiExtractDesc2: "AI 자동 문장 추출",
+    reviewCardAI: "복습 카드 AI 도우미",
+    proActive: "Pro 구독 중",
+    nextBilling: "다음 결제일: ",
+    cancelScheduled: "해지 예정",
+    expiresOn: "만료일: ",
+    processing: "처리 중...",
+    resubscribe: "다시 구독하기",
+    subscribeBtn: "구독하기",
+    cancelSub: "구독 해지",
+    confirmCancelSub: "정말 구독을 해지하시겠습니까? 현재 결제 기간 만료일까지는 Pro 기능을 사용할 수 있습니다.",
+    cancelledMsg: "구독이 해지되었습니다. 만료일까지 Pro 기능을 이용할 수 있습니다.",
+    cancelFailed: "해지 실패: ",
+    cancelError: "해지 중 오류가 발생했습니다.",
+    unknownError: "알 수 없는 오류",
+  },
+} as const;
+
+export type Locale = "en" | "ko";
+export type TranslationKey = keyof typeof translations.en;
+
+export function getLocale(): Locale {
+  if (typeof window === "undefined") return "en";
+  return (localStorage.getItem("locale") as Locale) || "en";
+}
+
+export function t(key: TranslationKey, locale?: Locale): string {
+  const l = locale || getLocale();
+  return translations[l][key] || translations.en[key];
+}

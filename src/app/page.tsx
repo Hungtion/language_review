@@ -5,9 +5,11 @@ import Link from "next/link";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
+import { useLocale } from "@/lib/useLocale";
 
 function HomeContent() {
   const { user, plan } = useAuth();
+  const { t } = useLocale();
   const [recent, setRecent] = useState<StudySession[]>([]);
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
 
@@ -45,7 +47,7 @@ function HomeContent() {
             <span className="text-xs px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-medium">Pro</span>
           )}
         </h1>
-        <p className="text-gray-400 mt-2">영어 & 일본어 학습 복습 노트</p>
+        <p className="text-gray-400 mt-2">{t("langLabDesc")}</p>
       </div>
 
       {/* Stats */}
@@ -56,7 +58,7 @@ function HomeContent() {
         >
           <div className="text-blue-400 text-sm font-medium">English</div>
           <div className="text-3xl font-bold mt-1">{counts.english}</div>
-          <div className="text-gray-500 text-sm">세션 기록</div>
+          <div className="text-gray-500 text-sm">{t("sessions")}</div>
         </Link>
         <Link
           href="/notes?filter=japanese"
@@ -64,7 +66,7 @@ function HomeContent() {
         >
           <div className="text-red-400 text-sm font-medium">日本語</div>
           <div className="text-3xl font-bold mt-1">{counts.japanese}</div>
-          <div className="text-gray-500 text-sm">세션 기록</div>
+          <div className="text-gray-500 text-sm">{t("sessions")}</div>
         </Link>
       </div>
 
@@ -75,21 +77,21 @@ function HomeContent() {
           className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl p-5 text-center transition-colors"
         >
           <div className="text-2xl mb-1">+</div>
-          <div className="font-medium">새 노트 입력</div>
+          <div className="font-medium">{t("addNote")}</div>
         </Link>
         <Link
           href="/review"
           className="bg-gray-800 hover:bg-gray-700 text-white rounded-xl p-5 text-center transition-colors"
         >
           <div className="text-2xl mb-1">📖</div>
-          <div className="font-medium">복습 카드</div>
+          <div className="font-medium">{t("reviewCards")}</div>
         </Link>
       </div>
 
       {/* Recent */}
       {recent.length > 0 && (
         <div>
-          <h2 className="text-lg font-semibold mb-3">최근 학습</h2>
+          <h2 className="text-lg font-semibold mb-3">{t("recentNotes")}</h2>
           <div className="space-y-2">
             {recent.map((s) => (
               <Link

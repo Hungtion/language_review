@@ -2,8 +2,10 @@
 
 import { useState, useEffect } from "react";
 import RequireAuth from "@/components/RequireAuth";
+import { useLocale } from "@/lib/useLocale";
 
 function SettingsContent() {
+  const { locale, setLocale, t } = useLocale();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedEN, setSelectedEN] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
@@ -44,65 +46,120 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold">Settings</h1>
+      <h1 className="text-2xl font-bold">{t("settingsTitle")}</h1>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">TTS Voice</h2>
+        <h2 className="text-sm font-medium text-gray-300">{t("language")}</h2>
+        <div className="flex gap-2">
+          {(["en", "ko"] as const).map((l) => (
+            <button
+              key={l}
+              onClick={() => setLocale(l)}
+              className={`px-4 py-2 rounded-lg text-sm transition-colors ${
+                locale === l
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {l === "en" ? "English" : "한국어"}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
+        <h2 className="text-sm font-medium text-gray-300">{t("ttsVoice")}</h2>
 
         <div className="space-y-2">
-          <label className="text-xs text-gray-400">English (US)</label>
-          <select
-            value={selectedEN}
-            onChange={(e) => {
-              setSelectedEN(e.target.value);
-              localStorage.setItem("tts-voice-en", e.target.value);
-              if (e.target.value) preview(e.target.value, "en");
-            }}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500"
-          >
-            <option value="">Default</option>
-            {enVoices.map((v) => (
-              <option key={v.name} value={v.name}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs text-gray-400">{t("englishUS")}</label>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-800 p-1.5 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => {
+                setSelectedEN("");
+                localStorage.setItem("tts-voice-en", "");
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                selectedEN === ""
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {t("default")}
+            </button>
+            {enVoices.map((v) => {
+              const label = v.name.replace(/^Microsoft\s+/i, "").replace(/\s+Online\s*\(Natural\)/i, "");
+              return (
+                <button
+                  key={v.name}
+                  onClick={() => {
+                    setSelectedEN(v.name);
+                    localStorage.setItem("tts-voice-en", v.name);
+                    preview(v.name, "en");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                    selectedEN === v.name
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs text-gray-400">Japanese</label>
-          <select
-            value={selectedJP}
-            onChange={(e) => {
-              setSelectedJP(e.target.value);
-              localStorage.setItem("tts-voice-jp", e.target.value);
-              if (e.target.value) preview(e.target.value, "ja");
-            }}
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-gray-300 outline-none focus:border-indigo-500"
-          >
-            <option value="">Default</option>
-            {jpVoices.map((v) => (
-              <option key={v.name} value={v.name}>
-                {v.name}
-              </option>
-            ))}
-          </select>
+          <label className="text-xs text-gray-400">{t("japanese")}</label>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-800 p-1.5 flex flex-wrap gap-1.5">
+            <button
+              onClick={() => {
+                setSelectedJP("");
+                localStorage.setItem("tts-voice-jp", "");
+              }}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                selectedJP === ""
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {t("default")}
+            </button>
+            {jpVoices.map((v) => {
+              const label = v.name.replace(/^Microsoft\s+/i, "").replace(/\s+Online\s*\(Natural\)/i, "");
+              return (
+                <button
+                  key={v.name}
+                  onClick={() => {
+                    setSelectedJP(v.name);
+                    localStorage.setItem("tts-voice-jp", v.name);
+                    preview(v.name, "ja");
+                  }}
+                  className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
+                    selectedJP === v.name
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  {label}
+                </button>
+              );
+            })}
+          </div>
         </div>
 
-        <p className="text-xs text-gray-600">
-          iOS: Settings &gt; Accessibility &gt; Spoken Content &gt; Voices
-        </p>
+        <p className="text-xs text-gray-600">{t("iosVoiceGuide")}</p>
       </div>
 
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">Auto Play</h2>
+        <h2 className="text-sm font-medium text-gray-300">{t("autoPlay")}</h2>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">카드 넘길 때 자동 재생</span>
+          <span className="text-sm text-gray-400">{t("autoPlayDesc")}</span>
           <button
             onClick={() => {
-              const next = localStorage.getItem("tts-autoplay") === "true" ? "false" : "true";
-              localStorage.setItem("tts-autoplay", next);
-              setAutoplay(next === "true");
+              const next = !autoplay;
+              localStorage.setItem("tts-autoplay", String(next));
+              setAutoplay(next);
             }}
             className={`w-12 h-6 rounded-full transition-colors relative ${
               autoplay ? "bg-indigo-600" : "bg-gray-700"

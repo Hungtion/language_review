@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase";
 import { parseRawInput, extractMetadata } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
+import { useLocale } from "@/lib/useLocale";
 
 const SAMPLE_EN = `Stress and Pronunciation
 apple- AE-pl
@@ -27,6 +28,7 @@ function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, plan } = useAuth();
+  const { t } = useLocale();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese" : "english";
   const [language, setLanguage] = useState<"english" | "japanese">(initialLang);
   const [rawInput, setRawInput] = useState("");
@@ -128,7 +130,7 @@ function AddContent() {
     setSaving(false);
 
     if (error) {
-      alert("저장 실패: " + error.message);
+      alert(t("saveFailed") + error.message);
     } else {
       router.push("/notes");
     }
@@ -136,7 +138,7 @@ function AddContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">새 학습 노트 입력</h1>
+      <h1 className="text-2xl font-bold">{t("addNewNote")}</h1>
 
       {/* Language & Date */}
       <div className="flex gap-4 items-end">
@@ -164,7 +166,7 @@ function AddContent() {
         </div>
 
         <div>
-          <label className="block text-xs text-gray-500 mb-1">학습일</label>
+          <label className="block text-xs text-gray-500 mb-1">{t("studyDate")}</label>
           <input
             type="date"
             value={studyDate}
@@ -174,7 +176,7 @@ function AddContent() {
         </div>
 
         <div className="flex-1">
-          <label className="block text-xs text-gray-500 mb-1">제목 (선택)</label>
+          <label className="block text-xs text-gray-500 mb-1">{t("titleOptional")}</label>
           <input
             type="text"
             value={title}
@@ -189,14 +191,14 @@ function AddContent() {
       <div>
         <div className="flex items-center justify-between mb-2">
           <label className="text-sm font-medium text-gray-300">
-            학습 내용 붙여넣기
+            {t("pasteContent")}
           </label>
           {language === "english" && (
             <button
               onClick={() => setRawInput(SAMPLE_EN)}
               className="text-xs text-gray-500 hover:text-gray-300"
             >
-              샘플 채우기
+              {t("fillSample")}
             </button>
           )}
         </div>
@@ -217,22 +219,7 @@ function AddContent() {
               }
             }
           }}
-          placeholder={language === "english"
-            ? `아래와 같은 형식으로 붙여넣기:
-
-Stress and Pronunciation
-(발음/강세 내용)
-
-Vocabulary
-word (noun) = definition
---> example sentence
-
-Sentence Structure & Grammar
-(문장 구조 내용)
-
-Comment
-(코멘트)`
-            : `일본어 학습 내용을 자유롭게 붙여넣기`}
+          placeholder={language === "english" ? t("pasteFormatEN") : t("pasteFreeformJP")}
           rows={16}
           className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
         />
@@ -245,7 +232,7 @@ Comment
             onClick={handlePreview}
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
           >
-            미리보기
+            {t("previewBtn")}
           </button>
         )}
         <button
@@ -253,7 +240,7 @@ Comment
           disabled={saving || !rawInput.trim()}
           className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg text-sm font-medium transition-colors"
         >
-          {saving ? "저장 중..." : "저장"}
+          {saving ? t("saving") : t("save")}
         </button>
       </div>
 
@@ -261,8 +248,8 @@ Comment
       {showParseChoice && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-sm w-full space-y-4">
-            <h3 className="text-lg font-bold">파싱 방식 선택</h3>
-            <p className="text-sm text-gray-400">정해진 양식이 감지되지 않았습니다. 복습카드 생성 방식을 선택해주세요.</p>
+            <h3 className="text-lg font-bold">{t("parseChoice")}</h3>
+            <p className="text-sm text-gray-400">{t("noFormatDetected")}</p>
             <div className="space-y-2">
               {plan === "pro" ? (
                 <button
@@ -270,10 +257,10 @@ Comment
                   className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    AI로 문장 추출
+                    {t("aiExtract")}
                     <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
                   </span>
-                  <span className="block text-xs text-gray-500 mt-1">AI가 학습용 문장만 골라냅니다</span>
+                  <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
                 </button>
               ) : (
                 <button
@@ -281,25 +268,25 @@ Comment
                   className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                 >
                   <span className="flex items-center justify-center gap-2">
-                    AI로 문장 추출
+                    {t("aiExtract")}
                     <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
                   </span>
-                  <span className="block text-xs text-indigo-200 mt-1">구독하기 - 월 1,000원</span>
+                  <span className="block text-xs text-indigo-200 mt-1">{t("subscribe")}</span>
                 </button>
               )}
               <button
                 onClick={() => { setShowParseChoice(false); doSave("line"); }}
                 className="w-full py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-lg text-sm hover:bg-gray-700 transition-colors"
               >
-                줄 단위로 파싱
-                <span className="block text-xs text-gray-500 mt-1">모든 줄을 복습카드로 만듭니다</span>
+                {t("lineByLine")}
+                <span className="block text-xs text-gray-500 mt-1">{t("lineByLineDesc")}</span>
               </button>
             </div>
             <button
               onClick={() => setShowParseChoice(false)}
               className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
             >
-              취소
+              {t("cancel")}
             </button>
           </div>
         </div>
@@ -309,7 +296,7 @@ Comment
       {preview && (
         <div className="border border-gray-800 rounded-xl overflow-hidden">
           <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-            <span className="text-sm font-medium text-gray-300">파싱 결과 미리보기</span>
+            <span className="text-sm font-medium text-gray-300">{t("previewResult")}</span>
           </div>
           <div className="p-4 space-y-4">
             {preview.stress_pronunciation && (

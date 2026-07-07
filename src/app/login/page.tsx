@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
+import { t, getLocale } from "@/lib/i18n";
 
 type InAppType = "kakaotalk" | "android-inapp" | "ios-inapp" | null;
 
@@ -65,14 +66,16 @@ export default function LoginPage() {
     });
   }
 
+  const locale = getLocale();
+
   function handleCopyUrl() {
     const url = window.location.href;
     if (navigator.clipboard) {
       navigator.clipboard.writeText(url).then(() => {
-        alert("주소가 복사되었습니다.\nSafari를 열고 붙여넣기 해주세요.");
+        alert(t("urlCopied", locale));
       });
     } else {
-      prompt("아래 주소를 복사하여 Safari에서 열어주세요:", url);
+      prompt(t("copyPrompt", locale), url);
     }
   }
 
@@ -87,7 +90,7 @@ export default function LoginPage() {
             <span className="text-gray-400 ml-2 text-lg font-normal">Lab</span>
           </h1>
           <p className="text-gray-500 text-sm mt-2">
-            영어 & 일본어 학습 복습 노트
+            {t("langLabDesc", locale)}
           </p>
         </div>
 
@@ -95,10 +98,10 @@ export default function LoginPage() {
           <div className="space-y-4">
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
               <p className="text-yellow-400 text-sm font-medium mb-2">
-                외부 브라우저로 이동 중...
+                {t("redirectingBrowser", locale)}
               </p>
               <p className="text-gray-400 text-xs">
-                자동으로 전환되지 않으면 아래 버튼을 눌러주세요.
+                {t("autoRedirectFail", locale)}
               </p>
             </div>
             <button
@@ -113,28 +116,28 @@ export default function LoginPage() {
               }}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
             >
-              외부 브라우저로 열기
+              {t("openInBrowser", locale)}
             </button>
           </div>
         ) : inAppType === "ios-inapp" ? (
           <div className="space-y-4">
             <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4">
               <p className="text-yellow-400 text-sm font-medium mb-2">
-                인앱 브라우저에서는 Google 로그인이 제한됩니다.
+                {t("inAppRestricted", locale)}
               </p>
               <p className="text-gray-400 text-xs leading-relaxed">
-                상단의 <span className="text-gray-300 font-medium">⋯</span> 메뉴에서<br />
-                <span className="text-gray-300 font-medium">&quot;기본 브라우저에서 열기&quot;</span>를 선택해주세요.
+                {t("tapMenu", locale)} <span className="text-gray-300 font-medium">⋯</span> {t("menuAbove", locale)}<br />
+                <span className="text-gray-300 font-medium">&quot;{t("openDefault", locale)}&quot;</span>.
               </p>
             </div>
             <button
               onClick={handleCopyUrl}
               className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
             >
-              주소 복사하기
+              {t("copyUrl", locale)}
             </button>
             <p className="text-gray-600 text-xs">
-              또는 복사 후 Safari에 붙여넣기 해주세요.
+              {t("orPasteSafari", locale)}
             </p>
           </div>
         ) : (
@@ -148,7 +151,7 @@ export default function LoginPage() {
               <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"/>
               <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"/>
             </svg>
-            Google 계정으로 로그인
+            {t("signInWithGoogle", locale)}
           </button>
         )}
       </div>

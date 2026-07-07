@@ -5,8 +5,10 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
+import { useLocale } from "@/lib/useLocale";
 
 function NotesContent() {
+  const { t } = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialFilter = (searchParams.get("filter") as "english" | "japanese") || "english";
@@ -65,13 +67,13 @@ function NotesContent() {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">노트</h1>
+        <h1 className="text-2xl font-bold">{t("notesTitle")}</h1>
         <div className="flex gap-2 items-center">
           <Link
             href={`/add?lang=${filter}`}
             className="px-3 py-1 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
           >
-            + 입력
+            + {t("add")}
           </Link>
           <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
             {(["english", "japanese"] as const).map((f) => (
@@ -95,21 +97,21 @@ function NotesContent() {
         type="text"
         value={search}
         onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder="노트 검색..."
+        placeholder={t("searchNotes")}
         className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
       />
 
       {loading ? (
-        <div className="text-gray-500 text-center py-12">로딩 중...</div>
+        <div className="text-gray-500 text-center py-12">{t("loading")}</div>
       ) : filtered.length === 0 ? (
         <div className="text-center py-16">
           {search.trim() ? (
-            <p className="text-gray-500">검색 결과가 없습니다.</p>
+            <p className="text-gray-500">{t("noSearchResults")}</p>
           ) : (
             <>
-              <p className="text-gray-500 mb-4">아직 노트가 없습니다.</p>
+              <p className="text-gray-500 mb-4">{t("noNotes")}</p>
               <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
-                첫 번째 노트 입력하기 →
+                {t("firstNote")}
               </Link>
             </>
           )}
@@ -137,10 +139,10 @@ function NotesContent() {
               </div>
 
               <div className="flex gap-4 text-xs text-gray-600">
-                {s.stress_pronunciation && <span>🔊 발음</span>}
-                {s.vocabulary && <span>📖 어휘</span>}
-                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ 문법</span>}
-                {s.comment && <span>💬 코멘트</span>}
+                {s.stress_pronunciation && <span>🔊 {t("pronunciation")}</span>}
+                {s.vocabulary && <span>📖 {t("vocabulary")}</span>}
+                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")}</span>}
+                {s.comment && <span>💬 {t("comment")}</span>}
               </div>
 
               {s.vocabulary && (

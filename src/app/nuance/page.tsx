@@ -5,6 +5,7 @@ import { supabase, NuanceChat, NuanceResult } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
+import { useLocale } from "@/lib/useLocale";
 
 type Message = {
   role: "user" | "ai";
@@ -22,6 +23,7 @@ const TONE_OPTIONS = [
 function NuanceContent() {
   const { user, plan } = useAuth();
   const { speak } = useTts();
+  const { t } = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -142,13 +144,13 @@ function NuanceContent() {
     });
   }
 
-  function changeTone(t: string) {
-    setTone(t);
-    localStorage.setItem("nuance_tone", t);
+  function changeTone(val: string) {
+    setTone(val);
+    localStorage.setItem("nuance_tone", val);
   }
 
   function formatDateTab(dateStr: string): string {
-    if (dateStr === "today") return "오늘";
+    if (dateStr === "today") return t("today");
     const d = new Date(dateStr + "T00:00:00");
     const month = d.getMonth() + 1;
     const day = d.getDate();
@@ -159,7 +161,7 @@ function NuanceContent() {
     const trimmed = input.trim();
     if (!trimmed || loading) return;
     if (targetLangs.length === 0) {
-      alert("최소 한 개 이상의 언어를 선택해주세요!");
+      alert(t("selectOneLang"));
       return;
     }
 
@@ -204,13 +206,13 @@ function NuanceContent() {
       } else {
         setMessages((prev) => [
           ...prev,
-          { role: "ai", results: [{ language: "Error", translation: data.error || "오류 발생", nuance: "", alternatives: [] }] },
+          { role: "ai", results: [{ language: "Error", translation: data.error || t("errorOccurred"), nuance: "", alternatives: [] }] },
         ]);
       }
     } catch {
       setMessages((prev) => [
         ...prev,
-        { role: "ai", results: [{ language: "Error", translation: "요청에 실패했습니다.", nuance: "", alternatives: [] }] },
+        { role: "ai", results: [{ language: "Error", translation: t("requestFailed"), nuance: "", alternatives: [] }] },
       ]);
     }
     setLoading(false);
@@ -253,7 +255,7 @@ function NuanceContent() {
     }
 
     setSavingNote(null);
-    alert("복습 노트에 추가되었습니다!");
+    alert(t("addedToNotes"));
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -267,15 +269,15 @@ function NuanceContent() {
     return (
       <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
         <div className="text-4xl mb-4">Pro</div>
-        <h2 className="text-xl font-bold mb-2">Nuance Chat은 Pro 기능입니다</h2>
+        <h2 className="text-xl font-bold mb-2">{t("proFeature")}</h2>
         <p className="text-gray-400 text-sm mb-6 max-w-sm">
-          AI가 자연스러운 번역과 뉘앙스를 설명해드립니다. Pro 플랜으로 업그레이드하면 무제한으로 이용할 수 있습니다.
+          {t("proDesc")}
         </p>
         <a
           href="/pricing"
           className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
         >
-          구독하기 - 월 1,000원
+          {t("subscribe")}
         </a>
       </div>
     );
@@ -295,7 +297,7 @@ function NuanceContent() {
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            오늘
+            {t("today")}
           </button>
           {dateTabs
             .filter((d) => d !== todayStr)
@@ -324,7 +326,7 @@ function NuanceContent() {
               : "bg-gray-800 text-gray-400 hover:bg-gray-700"
           }`}
         >
-          + 새 대화
+          {t("newChat")}
         </button>
       </div>
 
@@ -332,14 +334,14 @@ function NuanceContent() {
       <div className="flex-1 overflow-y-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
         {initialLoading && (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-sm">대화 불러오는 중...</p>
+            <p className="text-gray-500 text-sm">{t("loadingChat")}</p>
           </div>
         )}
 
         {!initialLoading && messages.length === 0 && (
           <div className="text-center py-16">
             <p className="text-gray-400 text-lg">
-              어떤 이야기를 하고 싶나요?
+              {t("askAnything")}
             </p>
           </div>
         )}
@@ -388,14 +390,14 @@ function NuanceContent() {
 
                     {result.nuance && (
                       <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
-                        <p className="text-xs font-medium text-indigo-400 mb-1">왜 이 표현일까요?</p>
+                        <p className="text-xs font-medium text-indigo-400 mb-1">{t("whyExpression")}</p>
                         <p className="text-sm text-gray-300 leading-relaxed">{result.nuance}</p>
                       </div>
                     )}
 
                     {result.alternatives?.length > 0 && (
                       <div className="mb-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1.5">다른 표현</p>
+                        <p className="text-xs font-medium text-gray-500 mb-1.5">{t("alternatives")}</p>
                         <div className="space-y-1">
                           {result.alternatives.map((alt, altIdx) => (
                             <div key={altIdx} className="text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5">
@@ -415,7 +417,7 @@ function NuanceContent() {
                         disabled={savingNote === `${result.language}-${result.translation}`}
                         className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
                       >
-                        {savingNote === `${result.language}-${result.translation}` ? "추가 중..." : "+ 복습 노트에 추가"}
+                        {savingNote === `${result.language}-${result.translation}` ? t("adding") : t("addToNotes")}
                       </button>
                     )}
                   </div>
@@ -428,7 +430,7 @@ function NuanceContent() {
         {loading && (
           <div className="flex justify-start">
             <div className="bg-gray-900 border border-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
-              <p className="text-sm text-purple-400 animate-pulse">번역 중...</p>
+              <p className="text-sm text-purple-400 animate-pulse">{t("translating")}</p>
             </div>
           </div>
         )}
@@ -463,17 +465,17 @@ function NuanceContent() {
             })}
           </div>
           <div className="flex gap-1.5">
-            {TONE_OPTIONS.map((t) => (
+            {TONE_OPTIONS.map((opt) => (
               <button
-                key={t.value}
-                onClick={() => changeTone(t.value)}
+                key={opt.value}
+                onClick={() => changeTone(opt.value)}
                 className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                  tone === t.value
+                  tone === opt.value
                     ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
                     : "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800"
                 }`}
               >
-                {t.label}
+                {opt.label}
               </button>
             ))}
           </div>
@@ -485,7 +487,7 @@ function NuanceContent() {
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             onBlur={() => window.scrollTo(0, 0)}
-            placeholder="궁금한 문장을 입력하세요."
+            placeholder={t("enterSentence")}
             rows={1}
             className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
           />
@@ -494,7 +496,7 @@ function NuanceContent() {
             disabled={loading || !input.trim()}
             className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
           >
-            전송
+            {t("send")}
           </button>
         </div>
       </div>

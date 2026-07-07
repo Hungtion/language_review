@@ -1,0 +1,37 @@
+"use client";
+
+import { useState, useCallback, useEffect } from "react";
+import { Locale, t as translate, TranslationKey } from "./i18n";
+
+const LOCALE_CHANGE_EVENT = "locale-changed";
+
+export function useLocale() {
+  const [locale, setLocaleState] = useState<Locale>(() =>
+    typeof window !== "undefined"
+      ? (localStorage.getItem("locale") as Locale) || "en"
+      : "en"
+  );
+
+  // Listen for locale changes from other components
+  useEffect(() => {
+    function onLocaleChange() {
+      const next = (localStorage.getItem("locale") as Locale) || "en";
+      setLocaleState(next);
+    }
+    window.addEventListener(LOCALE_CHANGE_EVENT, onLocaleChange);
+    return () => window.removeEventListener(LOCALE_CHANGE_EVENT, onLocaleChange);
+  }, []);
+
+  const setLocale = useCallback((l: Locale) => {
+    setLocaleState(l);
+    localStorage.setItem("locale", l);
+    window.dispatchEvent(new Event(LOCALE_CHANGE_EVENT));
+  }, []);
+
+  const t = useCallback(
+    (key: TranslationKey) => translate(key, locale),
+    [locale]
+  );
+
+  return { locale, setLocale, t };
+}
