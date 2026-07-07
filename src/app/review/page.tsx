@@ -270,7 +270,6 @@ function ReviewContent() {
     setSwipeAnim(null);
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      setPressed(false);
     }, 600);
   }
 
@@ -299,10 +298,6 @@ function ReviewContent() {
     if (longPressTriggered.current) {
       longPressTriggered.current = false;
       setSwipeX(0);
-      const card = cards[index];
-      if (card && navigator.share) {
-        navigator.share({ text: card.front }).catch(() => {});
-      }
       return;
     }
     const dx = e.changedTouches[0].clientX - touchStartX.current;
@@ -428,12 +423,12 @@ function ReviewContent() {
       {card ? (
         <div
           className="flex-1 px-4 flex flex-col items-center justify-center"
-          onTouchStart={handleTouchStart}
-          onTouchMove={handleTouchMove}
-          onTouchEnd={handleTouchEnd}
         >
           <div
             className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
+            onTouchStart={handleTouchStart}
+            onTouchMove={handleTouchMove}
+            onTouchEnd={handleTouchEnd}
             style={{
               height: "min(50vh, 350px)",
               transform: swipeAnim
@@ -449,7 +444,18 @@ function ReviewContent() {
           >
             <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
               {/* Front */}
-              <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+              <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center relative">
+                {navigator.share && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      navigator.share({ text: card.front }).catch(() => {});
+                    }}
+                    className="absolute top-3 right-3 text-gray-600 hover:text-gray-300 transition-colors text-sm"
+                  >
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                  </button>
+                )}
                 <div className="flex items-center gap-2 mb-4">
                   <span
                     className={`text-xs px-2 py-0.5 rounded-full font-medium ${
