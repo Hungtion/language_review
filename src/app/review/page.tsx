@@ -270,7 +270,7 @@ function ReviewContent() {
     setSwipeAnim(null);
     longPressTimer.current = setTimeout(() => {
       longPressTriggered.current = true;
-      if (navigator.vibrate) navigator.vibrate(50);
+      setPressed(false);
     }, 600);
   }
 
@@ -290,7 +290,7 @@ function ReviewContent() {
     }
   }
 
-  async function handleTouchEnd(e: React.TouchEvent) {
+  function handleTouchEnd(e: React.TouchEvent) {
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -301,7 +301,7 @@ function ReviewContent() {
       setSwipeX(0);
       const card = cards[index];
       if (card && navigator.share) {
-        try { await navigator.share({ text: card.front }); } catch {}
+        navigator.share({ text: card.front }).catch(() => {});
       }
       return;
     }
