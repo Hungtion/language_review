@@ -138,8 +138,6 @@ function NuanceContent() {
       if (window.visualViewport) {
         const diff = window.innerHeight - window.visualViewport.height;
         setBottomOffset(diff);
-        // Prevent iOS from scrolling the page up
-        window.scrollTo(0, 0);
       }
     }
 
@@ -549,6 +547,7 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => setTimeout(() => inputRef.current?.scrollIntoView({ block: "end" }), 300)}
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={t("enterSentence")}
             rows={1}
