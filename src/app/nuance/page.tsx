@@ -6,6 +6,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
 
 type Message = {
   role: "user" | "ai";
@@ -40,11 +41,18 @@ function NuanceContent() {
   const [dateTabs, setDateTabs] = useState<string[]>([]);
   const [selectedDate, setSelectedDate] = useState<string>("new");
   const [savingNote, setSavingNote] = useState<string | null>(null);
+  const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didScroll = useRef(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
+
+  // Load AI usage for free users
+  useEffect(() => {
+    if (!user || plan === "pro") return;
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
 
   // Load available dates
   useEffect(() => {
@@ -165,6 +173,15 @@ function NuanceContent() {
       return;
     }
 
+    // Check AI usage limit for free users
+    if (plan !== "pro" && user) {
+      const { remaining } = await getAiUsage(user.id);
+      if (remaining <= 0) {
+        alert(t("aiLimitReached"));
+        return;
+      }
+    }
+
     // Switch to new if on a past date
     if (selectedDate !== "today" && selectedDate !== "new") {
       setSelectedDate("new");
@@ -190,6 +207,13 @@ function NuanceContent() {
       if (data.result?.results) {
         const results: NuanceResult[] = data.result.results;
         setMessages((prev) => [...prev, { role: "ai", results }]);
+
+        // Increment AI usage for free users
+        if (plan !== "pro" && user) {
+          await incrementAiUsage(user.id);
+          const { remaining } = await getAiUsage(user.id);
+          setAiRemaining(remaining);
+        }
 
         await supabase.from("nuance_chats").insert({
           user_id: user?.id,
@@ -263,24 +287,6 @@ function NuanceContent() {
       e.preventDefault();
       handleSend();
     }
-  }
-
-  if (plan === "free") {
-    return (
-      <div className="flex flex-col items-center justify-center py-24 px-4 text-center">
-        <div className="text-4xl mb-4">Pro</div>
-        <h2 className="text-xl font-bold mb-2">{t("proFeature")}</h2>
-        <p className="text-gray-400 text-sm mb-6 max-w-sm">
-          {t("proDesc")}
-        </p>
-        <a
-          href="/pricing"
-          className="px-6 py-3 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-sm font-medium transition-colors"
-        >
-          {t("subscribe")}
-        </a>
-      </div>
-    );
   }
 
   return (
@@ -480,6 +486,20 @@ function NuanceContent() {
             ))}
           </div>
         </div>
+        {plan !== "pro" && (
+          <div className="flex items-center justify-between mb-1.5">
+            <span className={`text-xs ${aiRemaining > 0 ? "text-gray-500" : "text-red-400"}`}>
+              {aiRemaining > 0
+                ? `${t("aiFree")}${aiRemaining}/${DAILY_LIMIT}${t("aiRemaining")}`
+                : t("aiLimitReached")}
+            </span>
+            {aiRemaining <= 0 && (
+              <a href="/pricing" className="text-xs text-indigo-400 hover:text-indigo-300">
+                {t("upgradeForUnlimited")}
+              </a>
+            )}
+          </div>
+        )}
         <div className="flex gap-2">
           <textarea
             ref={inputRef}
@@ -489,11 +509,12 @@ function NuanceContent() {
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={t("enterSentence")}
             rows={1}
-            className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+            disabled={plan !== "pro" && aiRemaining <= 0}
+            className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none disabled:opacity-50"
           />
           <button
             onClick={handleSend}
-            disabled={loading || !input.trim()}
+            disabled={loading || !input.trim() || (plan !== "pro" && aiRemaining <= 0)}
             className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
           >
             {t("send")}

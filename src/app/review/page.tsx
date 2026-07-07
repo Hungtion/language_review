@@ -7,8 +7,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-
-const ADMIN_EMAIL = "kei9oon@gmail.com";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
 
 type Card = {
   front: string;
@@ -19,8 +18,7 @@ type Card = {
 };
 
 function ReviewContent() {
-  const { user } = useAuth();
-  const isAdmin = user?.email === ADMIN_EMAIL;
+  const { user, plan } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -31,6 +29,7 @@ function ReviewContent() {
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
+  const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
@@ -154,9 +153,23 @@ function ReviewContent() {
     }
   }, [index, loading]);
 
+  // Load AI usage for free users
+  useEffect(() => {
+    if (!user || plan === "pro") return;
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
+
   async function handleAi() {
-    if (!isAdmin || aiLoading) return;
-    if (aiResults[index]) return;
+    if (aiLoading || aiResults[index]) return;
+
+    // Check AI usage limit for free users
+    if (plan !== "pro" && user) {
+      const { remaining } = await getAiUsage(user.id);
+      if (remaining <= 0) {
+        alert(t("aiLimitReached"));
+        return;
+      }
+    }
     const card = cards[index];
     setAiLoading(true);
 
@@ -174,8 +187,15 @@ function ReviewContent() {
       });
       const data = await res.json();
       setAiResults((prev) => ({ ...prev, [index]: data.result || data.error || "No response" }));
+
+      // Increment AI usage for free users on success
+      if (plan !== "pro" && user && data.result) {
+        await incrementAiUsage(user.id);
+        const { remaining } = await getAiUsage(user.id);
+        setAiRemaining(remaining);
+      }
     } catch {
-      setAiResults((prev) => ({ ...prev, [index]: "AI 요청에 실패했습니다." }));
+      setAiResults((prev) => ({ ...prev, [index]: t("requestFailed") }));
     }
     setAiLoading(false);
   }
@@ -500,38 +520,44 @@ function ReviewContent() {
           </div>
 
           {/* AI Panel - attached to card */}
-          {isAdmin && (
-            <div className="w-full max-w-lg mt-3">
-              {aiLoading ? (
-                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
-                  <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
+          <div className="w-full max-w-lg mt-3">
+            {aiLoading ? (
+              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
+                <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
+              </div>
+            ) : aiResults[index] ? (
+              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
+                <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
+                <div className="flex justify-end mt-2">
+                  {aiSaved[index] ? (
+                    <span className="text-xs text-green-400">{t("saved")}</span>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
+                      className="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded hover:bg-indigo-600/30 transition-colors"
+                    >
+                      {t("addToCards")}
+                    </button>
+                  )}
                 </div>
-              ) : aiResults[index] ? (
-                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto">
-                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed">{aiResults[index]}</pre>
-                  <div className="flex justify-end mt-2">
-                    {aiSaved[index] ? (
-                      <span className="text-xs text-green-400">{t("saved")}</span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
-                        className="text-xs px-2 py-1 bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded hover:bg-indigo-600/30 transition-colors"
-                      >
-                        {t("addToCards")}
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ) : (
+              </div>
+            ) : (
+              <div className="flex items-center gap-2">
                 <button
                   onClick={handleAi}
-                  className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                  disabled={plan !== "pro" && aiRemaining <= 0}
+                  className="flex-1 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 disabled:opacity-40 disabled:hover:bg-purple-600/20 transition-colors"
                 >
                   AI Examples
                 </button>
-              )}
-            </div>
-          )}
+                {plan !== "pro" && (
+                  <span className={`text-xs shrink-0 ${aiRemaining > 0 ? "text-gray-500" : "text-red-400"}`}>
+                    {t("aiFree")}{aiRemaining}/{DAILY_LIMIT}
+                  </span>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       ) : (
         <div className="flex-1 flex items-center justify-center">

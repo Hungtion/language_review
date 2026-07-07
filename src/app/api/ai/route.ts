@@ -1,8 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-const ADMIN_EMAIL = "kei9oon@gmail.com";
-
 async function callGemini(prompt: string, maxTokens = 1024, jsonMode = false) {
   const generationConfig: Record<string, unknown> = {
     temperature: 0.3,
@@ -33,6 +31,31 @@ async function callGemini(prompt: string, maxTokens = 1024, jsonMode = false) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || "";
 }
 
+function robustJsonParse(raw: string): Record<string, unknown> | null {
+  // 1. Try direct parse
+  try { return JSON.parse(raw); } catch {}
+
+  // 2. Strip markdown code fences
+  let cleaned = raw.replace(/^```(?:json)?\s*/i, "").replace(/\s*```$/i, "").trim();
+  try { return JSON.parse(cleaned); } catch {}
+
+  // 3. Extract JSON object from the string
+  const match = cleaned.match(/\{[\s\S]*\}/);
+  if (match) {
+    try { return JSON.parse(match[0]); } catch {}
+    cleaned = match[0];
+  }
+
+  // 4. Try fixing truncated JSON by closing brackets
+  const closers = ["}", "]}", "]}}", "\"]}", "\"]}}", "\"}]}", "\"}]}"];
+  for (const closer of closers) {
+    const trimmed = cleaned.replace(/[,\s]*$/, "") + closer;
+    try { return JSON.parse(trimmed); } catch {}
+  }
+
+  return null;
+}
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
   const { prompt, userEmail, action, rawInput, language, text, targetLangs, tone } = body;
@@ -41,11 +64,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
   }
 
-  // AI 도우미 (카드 복습) - admin only
+  // AI 도우미 (카드 복습)
   if (action === "review") {
-    if (userEmail !== ADMIN_EMAIL) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 403 });
-    }
     try {
       const text = await callGemini(prompt);
       return NextResponse.json({ result: text });
@@ -116,13 +136,9 @@ Example format:
 
     try {
       const result = await callGemini(nuancePrompt, 4096, true);
-      let parsed;
-      try {
-        parsed = JSON.parse(result);
-      } catch {
-        // JSON이 잘린 경우 닫는 괄호를 추가해서 복구 시도
-        const fixed = result.replace(/,?\s*$/, "") + "]}";
-        parsed = JSON.parse(fixed);
+      const parsed = robustJsonParse(result);
+      if (!parsed) {
+        return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
       }
       return NextResponse.json({ result: parsed });
     } catch (e: unknown) {

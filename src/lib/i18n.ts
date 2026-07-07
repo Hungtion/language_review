@@ -91,6 +91,10 @@ const translations = {
     proFeature: "Nuance Chat is a Pro feature",
     proDesc: "AI explains natural translations and nuances. Upgrade to Pro for unlimited access.",
     subscribe: "Subscribe - 1,000 KRW/month",
+    aiLimitReached: "Free AI limit reached (5/5)",
+    aiFree: "Free ",
+    aiRemaining: " remaining today",
+    upgradeForUnlimited: "Upgrade to Pro for unlimited AI",
 
     // Settings
     settingsTitle: "Settings",
@@ -223,6 +227,10 @@ const translations = {
     proFeature: "Nuance Chat은 Pro 기능입니다",
     proDesc: "AI가 자연스러운 번역과 뉘앙스를 설명해드립니다. Pro 플랜으로 업그레이드하면 무제한으로 이용할 수 있습니다.",
     subscribe: "구독하기 - 월 1,000원",
+    aiLimitReached: "무료 AI 사용 횟수를 모두 소진했습니다 (5/5)",
+    aiFree: "무료 ",
+    aiRemaining: "회 남음 (오늘)",
+    upgradeForUnlimited: "Pro 구독으로 무제한 사용",
 
     // Settings
     settingsTitle: "설정",
