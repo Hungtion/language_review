@@ -145,13 +145,13 @@ function AddContent() {
           value={title}
           onChange={(e) => setTitle(e.target.value)}
           placeholder={`${t("titleOptional")} | Lesson 12 - Business English`}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
         />
         <input
           type="date"
           value={studyDate}
           onChange={(e) => setStudyDate(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0"
+          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
         />
         <div className="flex gap-1 shrink-0">
           <button
@@ -162,7 +162,7 @@ function AddContent() {
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            EN
+            🇺🇸
           </button>
           <button
             onClick={() => setLanguage("japanese")}
@@ -172,7 +172,7 @@ function AddContent() {
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            JP
+            🇯🇵
           </button>
         </div>
       </div>
