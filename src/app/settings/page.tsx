@@ -40,10 +40,10 @@ function SettingsContent() {
   }
 
   const enVoices = voices.filter(
-    (v) => v.lang === "en-US" && !v.name.toLowerCase().includes("compact")
+    (v) => v.lang === "en-US" && !v.name.toLowerCase().includes("compact") && !v.name.toLowerCase().includes("enhanced")
   );
   const jpVoices = voices.filter(
-    (v) => v.lang.startsWith("ja") && !v.name.toLowerCase().includes("compact")
+    (v) => v.lang.startsWith("ja") && !v.name.toLowerCase().includes("compact") && !v.name.toLowerCase().includes("enhanced")
   );
 
   return (
