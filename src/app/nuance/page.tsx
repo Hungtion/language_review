@@ -443,7 +443,11 @@ function NuanceContent() {
                       <button
                         onClick={() => handleAddToNotes(result.translation, result.language)}
                         disabled={savingNote === `${result.language}-${result.translation}` || savedKeys.has(`${result.language}-${result.translation}`)}
-                        className="shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm disabled:opacity-50"
+                        className={`shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors text-sm ${
+                          savedKeys.has(`${result.language}-${result.translation}`)
+                            ? "text-green-400 border border-green-500/30 bg-green-600/20"
+                            : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                        }`}
                       >
                         {savedKeys.has(`${result.language}-${result.translation}`) ? "✓" : savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
                       </button>
@@ -473,7 +477,11 @@ function NuanceContent() {
                                 <button
                                   onClick={() => handleAddToNotes(altText, result.language)}
                                   disabled={savingNote === `${result.language}-${altText}` || savedKeys.has(`${result.language}-${altText}`)}
-                                  className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-xs disabled:opacity-50"
+                                  className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-colors text-xs ${
+                                    savedKeys.has(`${result.language}-${altText}`)
+                                      ? "text-green-400 border border-green-500/30 bg-green-600/20"
+                                      : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                                  }`}
                                 >
                                   {savedKeys.has(`${result.language}-${altText}`) ? "✓" : savingNote === `${result.language}-${altText}` ? "·" : "+"}
                                 </button>
