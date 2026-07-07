@@ -48,10 +48,12 @@ function NuanceContent() {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Load AI usage for free users
+  // Load AI usage for free users + show banner
   useEffect(() => {
     if (!user || plan === "pro") return;
-    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+    getAiUsage(user.id).then(({ remaining }) => {
+      setAiRemaining(remaining);
+    });
   }, [user, plan]);
 
   // Load available dates — current month: daily, past months: monthly
@@ -307,6 +309,30 @@ function NuanceContent() {
   return (
     <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
 
+      {/* Free user banner */}
+      {plan !== "pro" && (
+        <div className="mb-3 bg-gray-900 border border-gray-700 rounded-xl p-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm text-gray-200">
+              {t("aiFree")}<span className="text-indigo-400 font-bold">{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}
+            </p>
+          </div>
+          {aiRemaining === 0 && (
+            <div className="flex gap-2 mt-2">
+              <a href="/pricing" className="flex-1 py-1.5 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
+                {t("upgradeForUnlimited")}
+              </a>
+              <button
+                onClick={() => { /* TODO: ad integration */ }}
+                className="flex-1 py-1.5 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
+              >
+                {locale === "ko" ? "광고 보기" : "Watch Ad"}
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+
       {/* Date Tabs */}
       <div className="flex items-center gap-1 pb-2 mb-2">
         <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
@@ -501,20 +527,6 @@ function NuanceContent() {
             ))}
           </div>
         </div>
-        {plan !== "pro" && (
-          <div className="flex items-center justify-between mb-1.5">
-            <span className={`text-xs ${aiRemaining > 0 ? "text-gray-500" : "text-red-400"}`}>
-              {aiRemaining > 0
-                ? `${t("aiFree")}${aiRemaining}/${DAILY_LIMIT}${t("aiRemaining")}`
-                : t("aiLimitReached")}
-            </span>
-            {aiRemaining <= 0 && (
-              <a href="/pricing" className="text-xs text-indigo-400 hover:text-indigo-300">
-                {t("upgradeForUnlimited")}
-              </a>
-            )}
-          </div>
-        )}
         <div className="flex gap-2">
           <textarea
             ref={inputRef}

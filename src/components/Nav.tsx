@@ -7,18 +7,33 @@ import { useLocale } from "@/lib/useLocale";
 
 export default function Nav() {
   const pathname = usePathname();
-  const { user, plan, signOut } = useAuth();
+  const { user, plan } = useAuth();
   const { t } = useLocale();
+
+  const pageTitle = pathname === "/add" ? t("addNewNote")
+    : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
+    : pathname === "/review" ? t("cardTitle")
+    : pathname === "/nuance" ? "Nuance Chat"
+    : pathname === "/settings" ? t("settingsTitle")
+    : null;
 
   return (
     <nav className="border-b border-gray-800 bg-gray-950 backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
-        <Link href="/" className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0">
+        <Link href="/" className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0 self-end pb-2 sm:self-center sm:pb-0">
           <span className="text-blue-400">EN</span>
           <span className="text-gray-500">/</span>
           <span className="text-red-400">JP</span>
           <span className="text-gray-400 ml-1.5 text-sm font-normal">Lab</span>
+          {plan === "pro" ? (
+            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded font-normal">Pro</span>
+          ) : user ? (
+            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-gray-700/50 text-gray-400 rounded font-normal">Free</span>
+          ) : null}
         </Link>
+        {pageTitle && (
+          <span className="ml-auto mr-3 text-sm text-gray-300 font-medium sm:hidden flex-shrink-0 self-end pb-2">{pageTitle}</span>
+        )}
         {user && (
           <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
             <Link
@@ -51,10 +66,7 @@ export default function Nav() {
                 pathname === "/nuance" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
               }`}
             >
-              Nuance
-              <span className={`ml-1 text-[10px] px-1 py-0.5 rounded ${
-                plan === "pro" ? "bg-indigo-500/20 text-indigo-400" : "bg-yellow-500/20 text-yellow-400"
-              }`}>Pro</span>
+              Nuance Chat
             </Link>
             <Link
               href="/settings"
@@ -62,19 +74,8 @@ export default function Nav() {
                 pathname === "/settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
               }`}
             >
-              ⚙
+              {t("settingsTitle")}
             </Link>
-          </div>
-        )}
-        {user && (
-          <div className="ml-auto hidden sm:flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <span className="text-xs text-gray-500">{user.email}</span>
-            <button
-              onClick={signOut}
-              className="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap transition-colors"
-            >
-              {t("logout")}
-            </button>
           </div>
         )}
       </div>

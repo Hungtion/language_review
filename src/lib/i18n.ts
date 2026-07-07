@@ -13,7 +13,7 @@ const translations = {
     sentence: "Sentence",
     noCards: "No cards found for this filter.",
     loading: "Loading...",
-    aiExamples: "AI Examples",
+    aiExamples: "AI Example",
     addToCards: "Add to Cards",
     saved: "Saved",
     analyzing: "Analyzing...",
@@ -41,7 +41,7 @@ const translations = {
 
     // Add page
     addTitle: "Add",
-    addNewNote: "Add Study Note",
+    addNewNote: "Add Note",
     studyDate: "Date",
     titleOptional: "Title (optional)",
     pasteContent: "Paste study content",
@@ -92,8 +92,8 @@ const translations = {
     proDesc: "AI explains natural translations and nuances. Upgrade to Pro for unlimited access.",
     subscribe: "Subscribe - 1,000 KRW/month",
     aiLimitReached: "Free AI limit reached (5/5)",
-    aiFree: "Free ",
-    aiRemaining: " remaining today",
+    aiFree: "Daily Free ",
+    aiRemaining: " remaining",
     upgradeForUnlimited: "Upgrade to Pro for unlimited AI",
 
     // Settings
@@ -150,7 +150,7 @@ const translations = {
     sentence: "문장",
     noCards: "해당 필터에 복습할 카드가 없습니다.",
     loading: "로딩 중...",
-    aiExamples: "AI Examples",
+    aiExamples: "AI Example",
     addToCards: "카드에 추가",
     saved: "저장됨",
     analyzing: "AI 분석 중...",
@@ -178,7 +178,7 @@ const translations = {
 
     // Add page
     addTitle: "입력",
-    addNewNote: "새 학습 노트 입력",
+    addNewNote: "새 노트",
     studyDate: "학습일",
     titleOptional: "제목 (선택)",
     pasteContent: "학습 내용 붙여넣기",
@@ -229,8 +229,8 @@ const translations = {
     proDesc: "AI가 자연스러운 번역과 뉘앙스를 설명해드립니다. Pro 플랜으로 업그레이드하면 무제한으로 이용할 수 있습니다.",
     subscribe: "구독하기 - 월 1,000원",
     aiLimitReached: "무료 AI 사용 횟수를 모두 소진했습니다 (5/5)",
-    aiFree: "무료 ",
-    aiRemaining: "회 남음 (오늘)",
+    aiFree: "일일 무료 ",
+    aiRemaining: "회 남음",
     upgradeForUnlimited: "Pro 구독으로 무제한 사용",
 
     // Settings

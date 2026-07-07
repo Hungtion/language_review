@@ -22,7 +22,10 @@ function ReviewContent() {
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
-  const [filter, setFilter] = useState<"english" | "japanese">("english");
+  const [filter, setFilter] = useState<"english" | "japanese">(() => {
+    if (typeof window === "undefined") return "english";
+    return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
+  });
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,7 +43,7 @@ function ReviewContent() {
   const swiping = useRef(false);
   const longPressTriggered = useRef(false);
   const { speak, stop: stopTts } = useTts();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -367,22 +370,14 @@ function ReviewContent() {
   const card = cards.length > 0 ? cards[index] : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
-      {/* Header */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <h1 className="text-lg font-bold">{t("cardTitle")}</h1>
-        <span className="text-sm text-gray-500">
-          {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
-        </span>
-      </div>
-
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none pb-14 sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
       {/* Filters */}
-      <div className="flex gap-2 items-center px-4 pb-3 overflow-x-auto scrollbar-hide flex-nowrap">
+      <div className="flex gap-2 items-center px-4 pt-3 pb-3 overflow-x-auto scrollbar-hide flex-nowrap">
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
-              onClick={() => setFilter(f)}
+              onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 filter === f
                   ? "bg-gray-700 text-white"
@@ -537,21 +532,30 @@ function ReviewContent() {
                   )}
                 </div>
               </div>
-            ) : (
-              <div className="flex items-center gap-2">
+            ) : plan !== "pro" && aiRemaining <= 0 ? (
+              <div className="flex gap-2">
+                <a href="/pricing" className="flex-1 py-2 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
+                  {t("upgradeForUnlimited")}
+                </a>
                 <button
-                  onClick={handleAi}
-                  disabled={plan !== "pro" && aiRemaining <= 0}
-                  className="flex-1 py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 disabled:opacity-40 disabled:hover:bg-purple-600/20 transition-colors"
+                  onClick={() => { /* TODO: ad integration */ }}
+                  className="flex-1 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
                 >
-                  AI Examples
+                  {locale === "ko" ? "광고 보기" : "Watch Ad"}
                 </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleAi}
+                className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+              >
+                AI Example
                 {plan !== "pro" && (
-                  <span className={`text-xs shrink-0 ${aiRemaining > 0 ? "text-gray-500" : "text-red-400"}`}>
-                    {t("aiFree")}{aiRemaining}/{DAILY_LIMIT}
+                  <span className="ml-1 text-xs text-purple-400/60">
+                    · {locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`}
                   </span>
                 )}
-              </div>
+              </button>
             )}
           </div>
         </div>
@@ -563,6 +567,9 @@ function ReviewContent() {
 
       {/* Bottom Progress */}
       <div className="px-4 pb-6 pt-3">
+        <div className="text-center text-xs text-gray-500 mb-1.5">
+          {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
+        </div>
         <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
           <div
             className="h-full bg-indigo-500 rounded-full transition-all duration-300"

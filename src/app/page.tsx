@@ -41,12 +41,7 @@ function HomeContent() {
   return (
     <div className="space-y-8">
       <div className="pt-8">
-        <h1 className="text-3xl font-bold tracking-tight flex items-center gap-3">
-          {user?.user_metadata?.name?.split(" ")[0] || "My"}&apos;s Language Lab
-          {plan === "pro" && (
-            <span className="text-xs px-2 py-1 bg-indigo-500/20 text-indigo-400 rounded-full font-medium">Pro</span>
-          )}
-        </h1>
+        <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-gray-400 mt-2">{t("langLabDesc")}</p>
       </div>
 

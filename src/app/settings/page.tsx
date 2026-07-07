@@ -48,8 +48,6 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
-      <h1 className="text-2xl font-bold">{t("settingsTitle")}</h1>
-
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-gray-300">{t("language")}</h2>
         <div className="flex gap-2">

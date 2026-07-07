@@ -11,7 +11,9 @@ function NotesContent() {
   const { t } = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const initialFilter = (searchParams.get("filter") as "english" | "japanese") || "english";
+  const initialFilter = (searchParams.get("filter") as "english" | "japanese")
+    || (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese")
+    || "english";
   const initialSearch = searchParams.get("q") || "";
   const [sessions, setSessions] = useState<StudySession[]>([]);
   const [filter, setFilter] = useState<"english" | "japanese">(initialFilter);
@@ -43,6 +45,7 @@ function NotesContent() {
 
   function handleFilterChange(f: "english" | "japanese") {
     setFilter(f);
+    localStorage.setItem("lang-filter", f);
     updateUrl(f, search);
   }
 
@@ -66,17 +69,22 @@ function NotesContent() {
 
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">{t("notesTitle")}</h1>
-        <div className="flex gap-2 items-center">
-          <Link
-            href={`/add?lang=${filter}`}
-            className="px-3 py-1 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors"
-          >
-            + {t("add")}
-          </Link>
-          <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
-            {(["english", "japanese"] as const).map((f) => (
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          value={search}
+          onChange={(e) => handleSearchChange(e.target.value)}
+          placeholder={t("searchNotes")}
+          className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+        />
+        <Link
+          href={`/add?lang=${filter}`}
+          className="px-3 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+        >
+          + {t("add")}
+        </Link>
+        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+          {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
               onClick={() => handleFilterChange(f)}
@@ -86,20 +94,11 @@ function NotesContent() {
                   : "text-gray-400 hover:text-gray-200"
               }`}
             >
-              {f === "english" ? "EN" : "JP"}
+              {f === "english" ? "🇺🇸" : "🇯🇵"}
             </button>
           ))}
-          </div>
         </div>
       </div>
-
-      <input
-        type="text"
-        value={search}
-        onChange={(e) => handleSearchChange(e.target.value)}
-        placeholder={t("searchNotes")}
-        className="w-full bg-gray-900 border border-gray-800 rounded-xl px-4 py-2.5 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-      />
 
       {loading ? (
         <div className="text-gray-500 text-center py-12">{t("loading")}</div>

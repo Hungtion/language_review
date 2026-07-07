@@ -138,52 +138,42 @@ function AddContent() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">{t("addNewNote")}</h1>
-
-      {/* Language & Date */}
-      <div className="flex gap-4 items-end">
-        <div className="flex gap-2">
+      {/* Title, Date & Language */}
+      <div className="flex gap-2 items-center">
+        <input
+          type="text"
+          value={title}
+          onChange={(e) => setTitle(e.target.value)}
+          placeholder={`${t("titleOptional")} | Lesson 12 - Business English`}
+          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
+        />
+        <input
+          type="date"
+          value={studyDate}
+          onChange={(e) => setStudyDate(e.target.value)}
+          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0"
+        />
+        <div className="flex gap-1 shrink-0">
           <button
             onClick={() => setLanguage("english")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               language === "english"
                 ? "bg-blue-600 text-white"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            English
+            EN
           </button>
           <button
             onClick={() => setLanguage("japanese")}
-            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
               language === "japanese"
                 ? "bg-red-600 text-white"
                 : "bg-gray-800 text-gray-400 hover:bg-gray-700"
             }`}
           >
-            日本語
+            JP
           </button>
-        </div>
-
-        <div>
-          <label className="block text-xs text-gray-500 mb-1">{t("studyDate")}</label>
-          <input
-            type="date"
-            value={studyDate}
-            onChange={(e) => setStudyDate(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
-          />
-        </div>
-
-        <div className="flex-1">
-          <label className="block text-xs text-gray-500 mb-1">{t("titleOptional")}</label>
-          <input
-            type="text"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            placeholder="예: Lesson 12 - Business English"
-            className="w-full bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm"
-          />
         </div>
       </div>
 

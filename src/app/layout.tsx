@@ -37,7 +37,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <Nav />
-          <main className="flex-1 max-w-4xl w-full mx-auto px-4 pb-24 sm:pb-20 pt-6">
+          <main className="flex-1 max-w-4xl w-full mx-auto px-4 pb-24 sm:pb-20 pt-3">
             {children}
           </main>
           <BottomTab />
