@@ -222,9 +222,10 @@ function ReviewContent() {
       const updated = existing.sentence_grammar
         ? existing.sentence_grammar + "\n" + result
         : result;
+      const today = new Date().toISOString().split("T")[0];
       ({ error } = await supabase
         .from("study_sessions")
-        .update({ sentence_grammar: updated, raw_input: updated })
+        .update({ sentence_grammar: updated, raw_input: updated, study_date: today })
         .eq("id", existing.id));
     } else {
       const today = new Date().toISOString().split("T")[0];

@@ -282,7 +282,7 @@ function NuanceContent() {
         : text;
       await supabase
         .from("study_sessions")
-        .update({ sentence_grammar: updated })
+        .update({ sentence_grammar: updated, study_date: new Date().toISOString().split("T")[0] })
         .eq("id", existing.id);
     } else {
       await supabase.from("study_sessions").insert({
