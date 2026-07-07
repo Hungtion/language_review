@@ -49,19 +49,17 @@ function HomeContent() {
       <div className="grid grid-cols-2 gap-4">
         <Link
           href="/notes?filter=english"
-          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-center"
         >
           <div className="text-blue-400 text-sm font-medium">English</div>
           <div className="text-3xl font-bold mt-1">{counts.english}</div>
-          <div className="text-gray-500 text-sm">{t("sessions")}</div>
         </Link>
         <Link
           href="/notes?filter=japanese"
-          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors"
+          className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-center"
         >
           <div className="text-red-400 text-sm font-medium">日本語</div>
           <div className="text-3xl font-bold mt-1">{counts.japanese}</div>
-          <div className="text-gray-500 text-sm">{t("sessions")}</div>
         </Link>
       </div>
 
@@ -78,7 +76,13 @@ function HomeContent() {
           href="/review"
           className="bg-gray-800 hover:bg-gray-700 text-white rounded-xl p-5 text-center transition-colors"
         >
-          <div className="text-2xl mb-1">📖</div>
+          <div className="flex justify-center mb-1">
+            <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
+              <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
+              <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
+            </svg>
+          </div>
           <div className="font-medium">{t("reviewCards")}</div>
         </Link>
       </div>
