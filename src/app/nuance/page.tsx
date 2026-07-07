@@ -129,27 +129,11 @@ function NuanceContent() {
     loadMessages();
   }, [user, selectedDate, todayStr]);
 
-  // Lock body scroll + handle iOS keyboard
-  const containerRef = useRef<HTMLDivElement>(null);
+  // Lock body scroll
   useEffect(() => {
     document.body.style.overflow = "hidden";
-
-    function handleResize() {
-      if (window.visualViewport && containerRef.current) {
-        const keyboardHeight = window.innerHeight - window.visualViewport.height;
-        containerRef.current.style.bottom = `${keyboardHeight}px`;
-        containerRef.current.style.paddingBottom = keyboardHeight > 0 ? "0.5rem" : "";
-        window.scrollTo(0, 0);
-      }
-    }
-
-    window.visualViewport?.addEventListener("resize", handleResize);
-    window.visualViewport?.addEventListener("scroll", handleResize);
-
     return () => {
       document.body.style.overflow = "";
-      window.visualViewport?.removeEventListener("resize", handleResize);
-      window.visualViewport?.removeEventListener("scroll", handleResize);
     };
   }, []);
 
@@ -323,7 +307,7 @@ function NuanceContent() {
   }
 
   return (
-    <div ref={containerRef} className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
 
       {/* Free user banner */}
       {plan !== "pro" && (
@@ -549,6 +533,7 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onBlur={() => window.scrollTo(0, 0)}
             placeholder={t("enterSentence")}
             rows={1}
             disabled={plan !== "pro" && aiRemaining <= 0}
