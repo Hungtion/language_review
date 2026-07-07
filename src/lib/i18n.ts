@@ -106,6 +106,7 @@ const translations = {
     autoPlayDesc: "Auto-play TTS when swiping cards",
     language: "Language",
     iosVoiceGuide: "iOS: Settings > Accessibility > Spoken Content > Voices",
+    account: "Account",
 
     // Home
     recentNotes: "Recent Notes",
@@ -242,6 +243,7 @@ const translations = {
     autoPlayDesc: "카드 넘길 때 자동 재생",
     language: "언어",
     iosVoiceGuide: "iOS: 설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성",
+    account: "계정 정보",
 
     // Home
     recentNotes: "최근 노트",

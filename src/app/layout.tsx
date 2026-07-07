@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
+import BottomTab from "@/components/BottomTab";
 import AuthProvider from "@/components/AuthProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -16,7 +17,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "Sean's Language Lab",
+  title: "Language Lab",
   description: "영어 & 일본어 학습 복습 노트",
   manifest: "/manifest.json",
   appleWebApp: {
@@ -36,9 +37,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <body className="min-h-screen flex flex-col">
         <AuthProvider>
           <Nav />
-          <main className="flex-1 max-w-4xl w-full mx-auto px-4 pb-20 pt-6">
+          <main className="flex-1 max-w-4xl w-full mx-auto px-4 pb-24 sm:pb-20 pt-6">
             {children}
           </main>
+          <BottomTab />
         </AuthProvider>
       </body>
     </html>

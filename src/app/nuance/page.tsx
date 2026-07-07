@@ -24,7 +24,7 @@ const TONE_OPTIONS = [
 function NuanceContent() {
   const { user, plan } = useAuth();
   const { speak } = useTts();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
@@ -54,7 +54,7 @@ function NuanceContent() {
     getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
   }, [user, plan]);
 
-  // Load available dates
+  // Load available dates — current month: daily, past months: monthly
   useEffect(() => {
     if (!user) return;
     async function loadDates() {
@@ -65,15 +65,18 @@ function NuanceContent() {
         .order("created_at", { ascending: false });
 
       if (data) {
-        const dates = [...new Set(data.map((d) => d.created_at.split("T")[0]))];
-        setDateTabs(dates);
+        const currentMonth = todayStr.slice(0, 7); // "YYYY-MM"
+        const allDates = [...new Set(data.map((d) => d.created_at.split("T")[0]))];
+        const thisMonthDates = allDates.filter((d) => d.startsWith(currentMonth));
+        const pastMonths = [...new Set(allDates.filter((d) => !d.startsWith(currentMonth)).map((d) => d.slice(0, 7)))];
+        setDateTabs([...thisMonthDates, ...pastMonths]);
       }
       setSelectedDate("new");
     }
     loadDates();
   }, [user]);
 
-  // Load messages for selected date
+  // Load messages for selected date or month
   useEffect(() => {
     if (!user) return;
     if (selectedDate === "new") {
@@ -86,15 +89,27 @@ function NuanceContent() {
       didScroll.current = false;
 
       const dateFilter = selectedDate === "today" ? todayStr : selectedDate;
-      const startOfDay = `${dateFilter}T00:00:00.000Z`;
-      const endOfDay = `${dateFilter}T23:59:59.999Z`;
+      const isMonth = /^\d{4}-\d{2}$/.test(dateFilter);
+
+      let startRange: string;
+      let endRange: string;
+      if (isMonth) {
+        // Monthly: load entire month
+        const [year, month] = dateFilter.split("-").map(Number);
+        const lastDay = new Date(year, month, 0).getDate();
+        startRange = `${dateFilter}-01T00:00:00.000Z`;
+        endRange = `${dateFilter}-${String(lastDay).padStart(2, "0")}T23:59:59.999Z`;
+      } else {
+        startRange = `${dateFilter}T00:00:00.000Z`;
+        endRange = `${dateFilter}T23:59:59.999Z`;
+      }
 
       const { data } = await supabase
         .from("nuance_chats")
         .select("*")
         .eq("user_id", user!.id)
-        .gte("created_at", startOfDay)
-        .lte("created_at", endOfDay)
+        .gte("created_at", startRange)
+        .lte("created_at", endRange)
         .order("created_at", { ascending: true });
 
       if (data && data.length > 0) {
@@ -159,10 +174,14 @@ function NuanceContent() {
 
   function formatDateTab(dateStr: string): string {
     if (dateStr === "today") return t("today");
+    // Monthly tab: "YYYY-MM" → "6월" or "Jun"
+    if (/^\d{4}-\d{2}$/.test(dateStr)) {
+      const month = parseInt(dateStr.split("-")[1], 10);
+      return locale === "ko" ? `${month}월` : new Date(2000, month - 1).toLocaleString("en", { month: "short" });
+    }
+    // Daily tab: "YYYY-MM-DD" → "M/D"
     const d = new Date(dateStr + "T00:00:00");
-    const month = d.getMonth() + 1;
-    const day = d.getDate();
-    return `${month}/${day}`;
+    return `${d.getMonth() + 1}/${d.getDate()}`;
   }
 
   async function handleSend() {
@@ -290,7 +309,7 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
 
       {/* Date Tabs */}
       <div className="flex items-center gap-1 pb-2 mb-2">

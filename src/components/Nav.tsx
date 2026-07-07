@@ -20,7 +20,7 @@ export default function Nav() {
           <span className="text-gray-400 ml-1.5 text-sm font-normal">Lab</span>
         </Link>
         {user && (
-          <>
+          <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
             <Link
               href="/add"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
@@ -64,11 +64,11 @@ export default function Nav() {
             >
               ⚙
             </Link>
-          </>
+          </div>
         )}
         {user && (
-          <div className="ml-auto flex items-center gap-2 sm:gap-3 flex-shrink-0">
-            <span className="text-xs text-gray-500 hidden sm:inline">{user.email}</span>
+          <div className="ml-auto hidden sm:flex items-center gap-2 sm:gap-3 flex-shrink-0">
+            <span className="text-xs text-gray-500">{user.email}</span>
             <button
               onClick={signOut}
               className="text-xs text-gray-500 hover:text-gray-300 whitespace-nowrap transition-colors"

@@ -2,9 +2,11 @@
 
 import { useState, useEffect } from "react";
 import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 
 function SettingsContent() {
+  const { user, signOut } = useAuth();
   const { locale, setLocale, t } = useLocale();
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedEN, setSelectedEN] = useState(() =>
@@ -170,6 +172,19 @@ function SettingsContent() {
                 autoplay ? "translate-x-[24px]" : "translate-x-0"
               }`}
             />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-gray-300">{t("account")}</h2>
+        <div className="flex items-center justify-between">
+          <p className="text-sm text-gray-400">{user?.email}</p>
+          <button
+            onClick={signOut}
+            className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+          >
+            {t("logout")}
           </button>
         </div>
       </div>
