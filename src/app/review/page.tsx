@@ -370,7 +370,7 @@ function ReviewContent() {
   const card = cards.length > 0 ? cards[index] : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none pb-14 sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
       {/* Filters */}
       <div className="flex gap-2 items-center px-4 pt-3 pb-3 overflow-x-auto scrollbar-hide flex-nowrap">
         <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
