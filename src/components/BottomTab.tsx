@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
+import { playTabClick } from "@/lib/unlockAudio";
 
 export default function BottomTab() {
   const pathname = usePathname();
@@ -28,6 +29,7 @@ export default function BottomTab() {
             <Link
               key={href}
               href={href}
+              onClick={playTabClick}
               className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors ${
                 active ? "text-indigo-400" : "text-gray-500"
               }`}

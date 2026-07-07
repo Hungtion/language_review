@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import { playTabClick } from "@/lib/unlockAudio";
 
 export default function Nav() {
   const pathname = usePathname();
@@ -20,7 +21,7 @@ export default function Nav() {
   return (
     <nav className="border-b border-gray-800 bg-gray-950 backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
-        <Link href="/" className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0 self-end pb-2 sm:self-center sm:pb-0">
+        <Link href="/" onClick={playTabClick} className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0 self-end pb-2 sm:self-center sm:pb-0">
           <span className="text-blue-400">EN</span>
           <span className="text-gray-500">/</span>
           <span className="text-red-400">JP</span>
