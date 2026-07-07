@@ -254,6 +254,17 @@ function ReviewContent() {
     setAiSaved((prev) => ({ ...prev, [index]: true }));
   }
 
+  // Unlock TTS on first user interaction (browser autoplay policy)
+  const ttsUnlocked = useRef(false);
+  function unlockTts() {
+    if (ttsUnlocked.current) return;
+    ttsUnlocked.current = true;
+    const utter = new SpeechSynthesisUtterance("");
+    utter.volume = 0;
+    speechSynthesis.speak(utter);
+    speechSynthesis.cancel();
+  }
+
   useEffect(() => {
     document.body.style.overflow = "hidden";
     return () => {
@@ -440,6 +451,8 @@ function ReviewContent() {
       {card ? (
         <div
           className="flex-1 px-4 flex flex-col items-center justify-center"
+          onTouchStart={unlockTts}
+          onClick={unlockTts}
         >
           <div
             className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
