@@ -42,6 +42,7 @@ function NuanceContent() {
   const [selectedDate, setSelectedDate] = useState<string>("new");
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didScroll = useRef(false);
@@ -296,7 +297,7 @@ function NuanceContent() {
     }
 
     setSavingNote(null);
-    alert(t("addedToNotes"));
+    setSavedKeys((prev) => new Set(prev).add(key));
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -441,10 +442,10 @@ function NuanceContent() {
                       </div>
                       <button
                         onClick={() => handleAddToNotes(result.translation, result.language)}
-                        disabled={savingNote === `${result.language}-${result.translation}`}
+                        disabled={savingNote === `${result.language}-${result.translation}` || savedKeys.has(`${result.language}-${result.translation}`)}
                         className="shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm disabled:opacity-50"
                       >
-                        {savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
+                        {savedKeys.has(`${result.language}-${result.translation}`) ? "✓" : savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
                       </button>
                     </div>
 
@@ -471,10 +472,10 @@ function NuanceContent() {
                                 </div>
                                 <button
                                   onClick={() => handleAddToNotes(altText, result.language)}
-                                  disabled={savingNote === `${result.language}-${altText}`}
+                                  disabled={savingNote === `${result.language}-${altText}` || savedKeys.has(`${result.language}-${altText}`)}
                                   className="shrink-0 w-5 h-5 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-xs disabled:opacity-50"
                                 >
-                                  {savingNote === `${result.language}-${altText}` ? "·" : "+"}
+                                  {savedKeys.has(`${result.language}-${altText}`) ? "✓" : savingNote === `${result.language}-${altText}` ? "·" : "+"}
                                 </button>
                               </div>
                             );
@@ -564,6 +565,7 @@ function NuanceContent() {
           </button>
         </div>
       </div>
+
     </div>
   );
 }
