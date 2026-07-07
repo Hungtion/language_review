@@ -30,6 +30,7 @@ const translations = {
     comment: "Comment",
     delete: "Delete",
     confirmDelete: "Are you sure you want to delete?",
+    deleteNote: "Delete Note",
 
     // Note detail
     edit: "Edit",
@@ -167,6 +168,7 @@ const translations = {
     comment: "코멘트",
     delete: "삭제",
     confirmDelete: "정말 삭제하시겠습니까?",
+    deleteNote: "노트 삭제",
 
     // Note detail
     edit: "수정",
