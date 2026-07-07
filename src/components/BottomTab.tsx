@@ -64,9 +64,9 @@ function AddIcon({ active }: { active: boolean }) {
 function CardsIcon({ active }: { active: boolean }) {
   return (
     <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={active ? 2.5 : 1.8} strokeLinecap="round" strokeLinejoin="round">
-      <rect x="2" y="3" width="20" height="14" rx="2" ry="2" />
-      <line x1="8" y1="21" x2="16" y2="21" />
-      <line x1="12" y1="17" x2="12" y2="21" />
+      <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
+      <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
+      <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
     </svg>
   );
 }
