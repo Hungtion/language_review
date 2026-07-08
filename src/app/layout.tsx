@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist, Geist_Mono, Gaegu } from "next/font/google";
 import "./globals.css";
 import Nav from "@/components/Nav";
 import BottomTab from "@/components/BottomTab";
@@ -7,6 +7,7 @@ import AuthProvider from "@/components/AuthProvider";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
+const gaegu = Gaegu({ variable: "--font-gaegu", weight: ["400", "700"], subsets: ["latin"] });
 
 export const viewport: Viewport = {
   width: "device-width",
@@ -29,7 +30,7 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+    <html lang="ko" className={`${geistSans.variable} ${geistMono.variable} ${gaegu.variable} antialiased`}>
       <head>
         <link rel="icon" href="/icon.svg" type="image/svg+xml" />
         <link rel="apple-touch-icon" href="/icon.svg" />

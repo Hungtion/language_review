@@ -1,12 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { parseRawInput, extractMetadata } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import GuideOverlay from "@/components/GuideOverlay";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
 
 const SAMPLE_EN = `Stress and Pronunciation
 apple- AE-pl
@@ -37,6 +39,13 @@ function AddContent() {
   const [preview, setPreview] = useState<ReturnType<typeof parseRawInput> | null>(null);
   const [saving, setSaving] = useState(false);
   const [showParseChoice, setShowParseChoice] = useState(false);
+  const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
+
+  useEffect(() => {
+    if (!user || plan === "pro") return;
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
 
   function handlePreview() {
     const parsed = parseRawInput(rawInput);
@@ -59,6 +68,7 @@ function AddContent() {
 
   function needsParseChoice(): boolean {
     if (language === "japanese") return true;
+    if (!isEngChannel) return true;
     const parsed = parseRawInput(rawInput);
     return !(parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment);
   }
@@ -104,7 +114,12 @@ function AddContent() {
         raw_input: rawInput,
       };
     } else {
-      // AI mode
+      // AI mode — increment usage for free users
+      if (plan !== "pro" && user) {
+        await incrementAiUsage(user.id);
+        const { remaining } = await getAiUsage(user.id);
+        setAiRemaining(remaining);
+      }
       const extracted = await aiParse(rawInput, language);
       const lines = (extracted || "")
         .split("\n")
@@ -138,8 +153,9 @@ function AddContent() {
 
   return (
     <div className="space-y-6">
+      <GuideOverlay pageKey="add" />
       {/* Title, Date & Language */}
-      <div className="flex gap-2 items-center">
+      <div data-guide="add-header" className="flex gap-2 items-center">
         <input
           type="text"
           value={title}
@@ -178,20 +194,7 @@ function AddContent() {
       </div>
 
       {/* Raw Input */}
-      <div>
-        <div className="flex items-center justify-between mb-2">
-          <label className="text-sm font-medium text-gray-300">
-            {t("pasteContent")}
-          </label>
-          {language === "english" && (
-            <button
-              onClick={() => setRawInput(SAMPLE_EN)}
-              className="text-xs text-gray-500 hover:text-gray-300"
-            >
-              {t("fillSample")}
-            </button>
-          )}
-        </div>
+      <div data-guide="add-textarea">
         <textarea
           value={rawInput}
           onChange={(e) => {
@@ -199,8 +202,8 @@ function AddContent() {
             setRawInput(val);
             setPreview(null);
 
-            // Auto-fill date and title from metadata (English only)
-            if (language === "english") {
+            // Auto-fill date and title from metadata (English Channel only)
+            if (language === "english" && isEngChannel) {
               const meta = extractMetadata(val);
               if (meta.date) setStudyDate(meta.date);
               if (meta.teacher || meta.lesson) {
@@ -209,7 +212,7 @@ function AddContent() {
               }
             }
           }}
-          placeholder={language === "english" ? t("pasteFormatEN") : t("pasteFreeformJP")}
+          placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
           rows={16}
           className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
         />
@@ -217,7 +220,7 @@ function AddContent() {
 
       {/* Actions */}
       <div className="flex gap-3">
-        {language === "english" && (
+        {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}
             className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
@@ -226,6 +229,7 @@ function AddContent() {
           </button>
         )}
         <button
+          data-guide="add-actions"
           onClick={handleSaveClick}
           disabled={saving || !rawInput.trim()}
           className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg text-sm font-medium transition-colors"
@@ -253,16 +257,35 @@ function AddContent() {
                   <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
                 </button>
               ) : (
-                <button
-                  onClick={() => router.push("/pricing")}
-                  className="w-full py-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
-                >
-                  <span className="flex items-center justify-center gap-2">
-                    {t("aiExtract")}
-                    <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
-                  </span>
-                  <span className="block text-xs text-indigo-200 mt-1">{t("subscribe")}</span>
-                </button>
+                <>
+                  <button
+                    onClick={() => router.push("/pricing")}
+                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {t("aiExtract")}
+                      <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
+                    </span>
+                    <span className="block text-xs text-indigo-200 mt-1">{t("subscribe")}</span>
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (aiRemaining <= 0) return;
+                      setShowParseChoice(false);
+                      doSave("ai");
+                    }}
+                    disabled={aiRemaining <= 0}
+                    className="w-full py-3 bg-purple-600/10 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                  >
+                    <span className="flex items-center justify-center gap-2">
+                      {t("aiFreeExtract")}
+                      <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
+                        {aiRemaining}/{DAILY_LIMIT}
+                      </span>
+                    </span>
+                    <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
+                  </button>
+                </>
               )}
               <button
                 onClick={() => { setShowParseChoice(false); doSave("line"); }}

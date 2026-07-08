@@ -6,6 +6,7 @@ import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import GuideOverlay from "@/components/GuideOverlay";
 
 function HomeContent() {
   const { user, plan } = useAuth();
@@ -40,13 +41,14 @@ function HomeContent() {
 
   return (
     <div className="space-y-8">
+      <GuideOverlay pageKey="home" />
       <div className="pt-8">
         <h1 className="text-3xl font-bold tracking-tight">Dashboard</h1>
         <p className="text-gray-400 mt-2">{t("langLabDesc")}</p>
       </div>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 gap-4">
+      <div data-guide="stats" className="grid grid-cols-2 gap-4">
         <Link
           href="/notes?filter=english"
           className="bg-gray-900 border border-gray-800 rounded-xl p-6 hover:border-gray-700 transition-colors text-center"
@@ -64,7 +66,7 @@ function HomeContent() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-2 gap-4">
+      <div data-guide="quick-actions" className="grid grid-cols-2 gap-4">
         <Link
           href="/add"
           className="bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl p-5 text-center transition-colors"
@@ -89,7 +91,7 @@ function HomeContent() {
 
       {/* Recent */}
       {recent.length > 0 && (
-        <div>
+        <div data-guide="recent-notes">
           <h2 className="text-lg font-semibold mb-3">{t("recentNotes")}</h2>
           <div className="space-y-2">
             {recent.map((s) => (

@@ -7,6 +7,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import GuideOverlay from "@/components/GuideOverlay";
 
 type Message = {
   role: "user" | "ai";
@@ -308,7 +309,8 @@ function NuanceContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+      <GuideOverlay pageKey="nuance" />
 
       {/* Free user banner */}
       {plan !== "pro" && (
@@ -513,7 +515,7 @@ function NuanceContent() {
       {/* Language & Tone + Input */}
       <div className="pt-3 border-t border-gray-800">
         <div className="flex items-center justify-between mb-2">
-          <div className="flex gap-1.5">
+          <div data-guide="nuance-langs" className="flex gap-1.5">
             {LANGS_OPTIONS.map((lang) => {
               const selected = targetLangs.includes(lang);
               return (
@@ -536,7 +538,7 @@ function NuanceContent() {
               );
             })}
           </div>
-          <div className="flex gap-1.5">
+          <div data-guide="nuance-tone" className="flex gap-1.5">
             {TONE_OPTIONS.map((opt) => (
               <button
                 key={opt.value}
@@ -552,7 +554,7 @@ function NuanceContent() {
             ))}
           </div>
         </div>
-        <div className="flex gap-2">
+        <div data-guide="nuance-input" className="flex gap-2">
           <textarea
             ref={inputRef}
             value={input}

@@ -6,6 +6,7 @@ import { useSearchParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useLocale } from "@/lib/useLocale";
+import GuideOverlay from "@/components/GuideOverlay";
 
 function NotesContent() {
   const { t } = useLocale();
@@ -69,21 +70,25 @@ function NotesContent() {
 
   return (
     <div className="space-y-6">
+      <GuideOverlay pageKey="notes" />
       <div className="flex gap-2 items-center">
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => handleSearchChange(e.target.value)}
-          placeholder={t("searchNotes")}
-          className="flex-1 bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
-        />
+        <div data-guide="notes-search" className="flex-1">
+          <input
+            type="text"
+            value={search}
+            onChange={(e) => handleSearchChange(e.target.value)}
+            placeholder="🔍"
+            className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+          />
+        </div>
         <Link
+          data-guide="notes-add"
           href={`/add?lang=${filter}`}
-          className="px-3 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+          className="px-5 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
         >
-          + {t("add")}
+          +
         </Link>
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+        <div data-guide="notes-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
@@ -100,24 +105,24 @@ function NotesContent() {
         </div>
       </div>
 
-      {loading ? (
-        <div className="text-gray-500 text-center py-12">{t("loading")}</div>
-      ) : filtered.length === 0 ? (
-        <div className="text-center py-16">
-          {search.trim() ? (
-            <p className="text-gray-500">{t("noSearchResults")}</p>
-          ) : (
-            <>
-              <p className="text-gray-500 mb-4">{t("noNotes")}</p>
-              <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
-                {t("firstNote")}
-              </Link>
-            </>
-          )}
-        </div>
-      ) : (
-        <div className="space-y-3">
-          {filtered.map((s) => (
+      <div data-guide="notes-list" className="space-y-3 flex-1" style={{ minHeight: "calc(100vh - 10rem)" }}>
+        {loading ? (
+          <div className="text-gray-500 text-center py-12">{t("loading")}</div>
+        ) : filtered.length === 0 ? (
+          <div className="text-center py-16">
+            {search.trim() ? (
+              <p className="text-gray-500">{t("noSearchResults")}</p>
+            ) : (
+              <>
+                <p className="text-gray-500 mb-4">{t("noNotes")}</p>
+                <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
+                  {t("firstNote")}
+                </Link>
+              </>
+            )}
+          </div>
+        ) : (
+          filtered.map((s) => (
             <Link
               key={s.id}
               href={`/notes/${s.id}`}
@@ -150,9 +155,9 @@ function NotesContent() {
                 </p>
               )}
             </Link>
-          ))}
-        </div>
-      )}
+          ))
+        )}
+      </div>
     </div>
   );
 }

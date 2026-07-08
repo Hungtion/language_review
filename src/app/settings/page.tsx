@@ -18,6 +18,9 @@ function SettingsContent() {
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
+  const [engChannel, setEngChannel] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("eng-channel") === "true" : false
+  );
 
   useEffect(() => {
     function loadVoices() {
@@ -168,6 +171,29 @@ function SettingsContent() {
             <span
               className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                 autoplay ? "translate-x-[24px]" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-gray-300">{t("engChannel")}</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">{t("engChannelDesc")}</span>
+          <button
+            onClick={() => {
+              const next = !engChannel;
+              localStorage.setItem("eng-channel", String(next));
+              setEngChannel(next);
+            }}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              engChannel ? "bg-indigo-600" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                engChannel ? "translate-x-[24px]" : "translate-x-0"
               }`}
             />
           </button>

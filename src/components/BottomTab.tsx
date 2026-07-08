@@ -12,24 +12,25 @@ export default function BottomTab() {
   if (!user) return null;
 
   const tabs = [
-    { href: "/", icon: HomeIcon, match: (p: string) => p === "/" },
-    { href: "/add", icon: AddIcon, match: (p: string) => p === "/add" },
-    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review" },
-    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/") },
-    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance" },
-    { href: "/settings", icon: SettingsIcon, match: (p: string) => p === "/settings" },
+    { href: "/", icon: HomeIcon, match: (p: string) => p === "/", guideLabel: "홈" },
+    { href: "/add", icon: AddIcon, match: (p: string) => p === "/add", guideLabel: "새 노트" },
+    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review", guideLabel: "복습카드" },
+    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트 목록" },
+    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance", guideLabel: "Nuance" },
+    { href: "/settings", icon: SettingsIcon, match: (p: string) => p === "/settings", guideLabel: "설정" },
   ];
 
   return (
-    <nav className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-sm border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-sm border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-14">
-        {tabs.map(({ href, icon: Icon, match }) => {
+        {tabs.map(({ href, icon: Icon, match, guideLabel }) => {
           const active = match(pathname);
           return (
             <Link
               key={href}
               href={href}
               onClick={playTabClick}
+              data-guide-tab={guideLabel}
               className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors ${
                 active ? "text-indigo-400" : "text-gray-500"
               }`}

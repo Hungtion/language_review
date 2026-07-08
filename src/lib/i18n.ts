@@ -45,7 +45,7 @@ const translations = {
     addNewNote: "Add Note",
     studyDate: "Date",
     titleOptional: "Title (optional)",
-    pasteContent: "Paste study content",
+    pasteContent: "Enter study content",
     fillSample: "Fill sample",
     previewBtn: "Preview",
     parseChoice: "Choose parsing method",
@@ -108,6 +108,9 @@ const translations = {
     language: "Language",
     iosVoiceGuide: "iOS: Settings > Accessibility > Spoken Content > Voices",
     account: "Account",
+    engChannel: "English Channel Student",
+    engChannelDesc: "Use structured format for English notes",
+    aiFreeExtract: "AI Extract (Free)",
 
     // Home
     recentNotes: "Recent Notes",
@@ -139,7 +142,7 @@ const translations = {
   },
   ko: {
     // Nav
-    add: "입력",
+    add: "새 노트",
     cards: "카드",
     notes: "노트",
     logout: "로그아웃",
@@ -183,7 +186,7 @@ const translations = {
     addNewNote: "새 노트",
     studyDate: "학습일",
     titleOptional: "제목 (선택)",
-    pasteContent: "학습 내용 붙여넣기",
+    pasteContent: "학습내용 입력하기",
     fillSample: "샘플 채우기",
     previewBtn: "미리보기",
     parseChoice: "파싱 방식 선택",
@@ -246,6 +249,9 @@ const translations = {
     language: "언어",
     iosVoiceGuide: "iOS: 설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성",
     account: "계정 정보",
+    engChannel: "English Channel 수강생",
+    engChannelDesc: "영어 노트에 정해진 양식 사용",
+    aiFreeExtract: "AI 추출 (무료)",
 
     // Home
     recentNotes: "최근 노트",

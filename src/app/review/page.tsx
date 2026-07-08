@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import GuideOverlay from "@/components/GuideOverlay";
 
 type Card = {
   front: string;
@@ -27,6 +28,7 @@ function ReviewContent() {
     return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
   });
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
+  const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
   const [shuffled, setShuffled] = useState(false);
   const [loading, setLoading] = useState(true);
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
@@ -372,219 +374,244 @@ function ReviewContent() {
 
   return (
     <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
+      <GuideOverlay pageKey="review" />
       {/* Filters */}
-      <div className="flex gap-2 items-center px-4 pt-3 pb-3 overflow-x-auto scrollbar-hide flex-nowrap">
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
-          {(["english", "japanese"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
-              className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                filter === f
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {f === "english" ? "🇺🇸" : "🇯🇵"}
-            </button>
-          ))}
+      <div className="flex items-center justify-between px-4 pt-3 pb-3">
+        <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
+          <div data-guide="review-filter-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+            {(["english", "japanese"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
+                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  filter === f
+                    ? "bg-gray-700 text-white"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {f === "english" ? "🇺🇸" : "🇯🇵"}
+              </button>
+            ))}
+          </div>
+
+          {isEngChannel && (
+            <>
+              <div className="w-px h-5 bg-gray-700 shrink-0" />
+
+              <div data-guide="review-filter-type" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+                {(["all", "vocab", "sentence"] as const).map((ct) => (
+                  <button
+                    key={ct}
+                    onClick={() => setCardType(ct)}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      cardType === ct
+                        ? "bg-gray-700 text-white"
+                        : "text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
+                  </button>
+                ))}
+              </div>
+            </>
+          )}
         </div>
 
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
-          {(["all", "vocab", "sentence"] as const).map((ct) => (
-            <button
-              key={ct}
-              onClick={() => setCardType(ct)}
-              className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                cardType === ct
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-gray-200"
-              }`}
-            >
-              {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
-            </button>
-          ))}
-        </div>
-
-        <button
-          onClick={() => setShuffled((s) => !s)}
-          className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
-            shuffled
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-900 text-gray-400 hover:text-gray-200"
-          }`}
-        >
-          🔀
-        </button>
-
-        <button
-          onClick={() => {
-            const next = !autoplay;
-            setAutoplay(next);
-            localStorage.setItem("tts-autoplay", String(next));
-          }}
-          className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${
-            autoplay ? "bg-indigo-600" : "bg-gray-700"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform flex items-center justify-center text-[8px] font-bold ${
-              autoplay ? "translate-x-4 bg-white text-indigo-600" : "translate-x-0 bg-gray-500 text-gray-300"
+        <div data-guide="review-filters-right" className="flex gap-2 items-center shrink-0 ml-2">
+          <button
+            onClick={() => setShuffled((s) => !s)}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
+              shuffled
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-900 text-gray-400 hover:text-gray-200"
             }`}
           >
-            A
-          </span>
-        </button>
+            🔀
+          </button>
+
+          <button
+            onClick={() => {
+              const next = !autoplay;
+              setAutoplay(next);
+              localStorage.setItem("tts-autoplay", String(next));
+            }}
+            className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${
+              autoplay ? "bg-indigo-600" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform flex items-center justify-center text-[8px] font-bold ${
+                autoplay ? "translate-x-4 bg-white text-indigo-600" : "translate-x-0 bg-gray-500 text-gray-300"
+              }`}
+            >
+              A
+            </span>
+          </button>
+        </div>
       </div>
 
       {/* Card + AI */}
-      {card ? (
-        <div
-          className="flex-1 px-4 flex flex-col items-center justify-center"
-        >
-          <div
-            className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
-            onTouchStart={handleTouchStart}
-            onTouchMove={handleTouchMove}
-            onTouchEnd={handleTouchEnd}
-            style={{
-              height: "min(50vh, 350px)",
-              transform: swipeAnim
-                ? `translateX(${swipeAnim === "left" ? "-120%" : "120%"})`
-                : enterAnim === "from-right"
-                  ? "translateX(120%)"
-                  : enterAnim === "from-left"
-                    ? "translateX(-120%)"
-                    : swipeX
-                      ? `translateX(${swipeX}px) rotate(${swipeX * 0.03}deg)`
-                      : pressed ? "scale(0.95)" : "",
-            }}
-          >
-            <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
-              {/* Front */}
-              <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
-                {typeof navigator !== "undefined" && navigator.share && (
-                  <button
-                    onTouchStart={(e) => e.stopPropagation()}
-                    onTouchEnd={(e) => e.stopPropagation()}
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      navigator.share({ text: card.front }).catch(() => {});
-                    }}
-                    className="absolute top-3 right-3 text-gray-600 hover:text-gray-300 transition-colors text-sm z-10"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                  </button>
-                )}
-                <div className="flex items-center gap-2 mb-4">
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      card.language === "english"
-                        ? "bg-blue-500/20 text-blue-400"
-                        : "bg-red-500/20 text-red-400"
-                    }`}
-                  >
-                    {card.language === "english" ? "EN" : "JP"}
-                  </span>
-                  <span
-                    className={`text-xs px-2 py-0.5 rounded-full ${
-                      card.type === "vocab"
-                        ? "bg-green-500/20 text-green-400"
-                        : "bg-blue-500/20 text-blue-400"
-                    }`}
-                  >
-                    {card.type === "vocab" ? t("vocab") : t("sentence")}
-                  </span>
-                  <span className="text-xs text-gray-600">{card.sessionDate}</span>
+      <div className="flex-1 px-4 flex flex-col items-center justify-center">
+        {card ? (
+          <>
+            <div
+              data-guide="review-card"
+              className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
+              onTouchStart={handleTouchStart}
+              onTouchMove={handleTouchMove}
+              onTouchEnd={handleTouchEnd}
+              style={{
+                height: "min(50vh, 350px)",
+                transform: swipeAnim
+                  ? `translateX(${swipeAnim === "left" ? "-120%" : "120%"})`
+                  : enterAnim === "from-right"
+                    ? "translateX(120%)"
+                    : enterAnim === "from-left"
+                      ? "translateX(-120%)"
+                      : swipeX
+                        ? `translateX(${swipeX}px) rotate(${swipeX * 0.03}deg)`
+                        : pressed ? "scale(0.95)" : "",
+              }}
+            >
+              <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
+                {/* Front */}
+                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+                  {typeof navigator !== "undefined" && navigator.share && (
+                    <button
+                      onTouchStart={(e) => e.stopPropagation()}
+                      onTouchEnd={(e) => e.stopPropagation()}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigator.share({ text: card.front }).catch(() => {});
+                      }}
+                      className="absolute top-3 right-3 text-gray-600 hover:text-gray-300 transition-colors text-sm z-10"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                    </button>
+                  )}
+                  <div className="flex items-center gap-2 mb-4">
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                        card.language === "english"
+                          ? "bg-blue-500/20 text-blue-400"
+                          : "bg-red-500/20 text-red-400"
+                      }`}
+                    >
+                      {card.language === "english" ? "EN" : "JP"}
+                    </span>
+                    <span
+                      className={`text-xs px-2 py-0.5 rounded-full ${
+                        card.type === "vocab"
+                          ? "bg-green-500/20 text-green-400"
+                          : "bg-blue-500/20 text-blue-400"
+                      }`}
+                    >
+                      {card.type === "vocab" ? t("vocab") : t("sentence")}
+                    </span>
+                    <span className="text-xs text-gray-600">{card.sessionDate}</span>
+                  </div>
+                  <p className="text-xl text-center font-medium leading-relaxed">
+                    {card.front}
+                  </p>
                 </div>
-                <p className="text-xl text-center font-medium leading-relaxed">
-                  {card.front}
-                </p>
-              </div>
 
-              {/* Back */}
-              <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-                <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
-                  {card.back}
-                </pre>
+                {/* Back */}
+                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
+                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
+                    {card.back}
+                  </pre>
+                </div>
               </div>
             </div>
-          </div>
 
-          {/* AI Panel - attached to card */}
-          <div className="w-full max-w-lg mt-3">
-            {aiLoading ? (
-              <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
-                <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
-              </div>
-            ) : aiResults[index] ? (
-              <div
-                className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto cursor-pointer active:opacity-70 transition-opacity"
-                onClick={(e) => { e.stopPropagation(); speak(aiResults[index], card.language); }}
-              >
-                <div className="flex items-start gap-2">
-                  <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed flex-1">{aiResults[index]}</pre>
-                  <div className="flex items-center gap-1 shrink-0">
-                    {aiSaved[index] ? (
-                      <span className="text-xs text-green-400">✓</span>
-                    ) : (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
-                        className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm"
-                      >
-                        +
-                      </button>
-                    )}
-                    {typeof navigator !== "undefined" && navigator.share && (
-                      <button
-                        onClick={(e) => { e.stopPropagation(); navigator.share({ text: aiResults[index] }).catch(() => {}); }}
-                        className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors"
-                      >
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                      </button>
-                    )}
+            {/* AI Panel - attached to card */}
+            <div data-guide="review-ai" className="w-full max-w-lg mt-3">
+              {aiLoading ? (
+                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
+                  <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
+                </div>
+              ) : aiResults[index] ? (
+                <div
+                  className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto cursor-pointer active:opacity-70 transition-opacity"
+                  onClick={(e) => { e.stopPropagation(); speak(aiResults[index], card.language); }}
+                >
+                  <div className="flex items-start gap-2">
+                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed flex-1">{aiResults[index]}</pre>
+                    <div className="flex items-center gap-1 shrink-0">
+                      {aiSaved[index] ? (
+                        <span className="text-xs text-green-400">✓</span>
+                      ) : (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm"
+                        >
+                          +
+                        </button>
+                      )}
+                      {typeof navigator !== "undefined" && navigator.share && (
+                        <button
+                          onClick={(e) => { e.stopPropagation(); navigator.share({ text: aiResults[index] }).catch(() => {}); }}
+                          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors"
+                        >
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ) : plan !== "pro" && aiRemaining <= 0 ? (
-              <div className="flex gap-2">
-                <a href="/pricing" className="flex-1 py-2 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
-                  {t("upgradeForUnlimited")}
-                </a>
+              ) : plan !== "pro" && aiRemaining <= 0 ? (
+                <div className="flex gap-2">
+                  <a href="/pricing" className="flex-1 py-2 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
+                    {t("upgradeForUnlimited")}
+                  </a>
+                  <button
+                    onClick={async () => {
+                      alert(locale === "ko" ? "준비중입니다" : "Coming soon");
+                      if (user) {
+                        const { resetAiUsage } = await import("@/lib/aiUsage");
+                        await resetAiUsage(user.id);
+                        setAiRemaining(DAILY_LIMIT);
+                      }
+                    }}
+                    className="flex-1 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
+                  >
+                    {locale === "ko" ? "광고 보기" : "Watch Ad"}
+                  </button>
+                </div>
+              ) : (
                 <button
-                  onClick={async () => {
-                    alert(locale === "ko" ? "준비중입니다" : "Coming soon");
-                    if (user) {
-                      const { resetAiUsage } = await import("@/lib/aiUsage");
-                      await resetAiUsage(user.id);
-                      setAiRemaining(DAILY_LIMIT);
-                    }
-                  }}
-                  className="flex-1 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
+                  onClick={handleAi}
+                  className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
                 >
-                  {locale === "ko" ? "광고 보기" : "Watch Ad"}
+                  AI Example
+                  {plan !== "pro" && (
+                    <span className="ml-1 text-xs text-purple-400/60">
+                      · {locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`}
+                    </span>
+                  )}
                 </button>
+              )}
+            </div>
+          </>
+        ) : (
+          <>
+            {/* Empty card placeholder — visible to guide overlay */}
+            <div data-guide="review-card" className="w-full max-w-lg" style={{ height: "min(50vh, 350px)" }}>
+              <div className="w-full h-full bg-gray-900 border border-gray-800 rounded-2xl flex items-center justify-center">
+                <p className="text-gray-500 text-sm">{t("noCards")}</p>
               </div>
-            ) : (
+            </div>
+            <div data-guide="review-ai" className="w-full max-w-lg mt-3">
               <button
-                onClick={handleAi}
-                className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                disabled
+                className="w-full py-2 bg-purple-600/10 text-purple-400/40 border border-purple-500/20 rounded-lg text-sm cursor-not-allowed"
               >
                 AI Example
-                {plan !== "pro" && (
-                  <span className="ml-1 text-xs text-purple-400/60">
-                    · {locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`}
-                  </span>
-                )}
               </button>
-            )}
-          </div>
-        </div>
-      ) : (
-        <div className="flex-1 flex items-center justify-center">
-          <p className="text-gray-500 text-sm">{t("noCards")}</p>
-        </div>
-      )}
+            </div>
+          </>
+        )}
+      </div>
 
       {/* Bottom Progress */}
       <div className="px-4 pb-6 pt-3">
