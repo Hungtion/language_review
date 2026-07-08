@@ -21,6 +21,7 @@ export async function POST(req: NextRequest) {
     await admin.from("study_sessions").delete().eq("user_id", userId);
     await admin.from("nuance_chats").delete().eq("user_id", userId);
     await admin.from("ai_usage").delete().eq("user_id", userId);
+    await admin.from("premium_interest").delete().eq("user_id", userId);
     await admin.from("users").delete().eq("id", userId);
 
     // Delete auth user
