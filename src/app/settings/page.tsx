@@ -4,6 +4,7 @@ import { useState, useEffect } from "react";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import { resetTutorial, dismissTutorial, isTutorialActive } from "@/lib/guide";
 
 function SettingsContent() {
   const { user, signOut } = useAuth();
@@ -20,6 +21,9 @@ function SettingsContent() {
   );
   const [engChannel, setEngChannel] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("eng-channel") === "true" : false
+  );
+  const [tutorialOn, setTutorialOn] = useState(() =>
+    typeof window !== "undefined" ? isTutorialActive() : false
   );
 
   useEffect(() => {
@@ -194,6 +198,33 @@ function SettingsContent() {
             <span
               className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                 engChannel ? "translate-x-[24px]" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-gray-300">{locale === "ko" ? "설명 가이드" : "Guide Tutorial"}</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">{locale === "ko" ? "각 화면의 설명을 표시합니다" : "Show guide on each screen"}</span>
+          <button
+            onClick={() => {
+              if (tutorialOn) {
+                dismissTutorial();
+                setTutorialOn(false);
+              } else {
+                resetTutorial();
+                setTutorialOn(true);
+              }
+            }}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              tutorialOn ? "bg-indigo-600" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                tutorialOn ? "translate-x-[24px]" : "translate-x-0"
               }`}
             />
           </button>

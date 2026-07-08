@@ -1,8 +1,17 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { GUIDE_STEPS, isGuideDismissed, dismissGuide, GuideStep } from "@/lib/guide";
+import { useRouter } from "next/navigation";
+import { GUIDE_STEPS, isGuideDismissed, dismissGuide, dismissTutorial, isTutorialActive, GuideStep } from "@/lib/guide";
 import { useLocale } from "@/lib/useLocale";
+
+const TUTORIAL_ORDER = [
+  { key: "home", path: "/" },
+  { key: "add", path: "/add" },
+  { key: "review", path: "/review" },
+  { key: "notes", path: "/notes" },
+  { key: "nuance", path: "/nuance" },
+];
 
 type Annotation = {
   step: GuideStep;
@@ -13,10 +22,18 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const { locale } = useLocale();
   const lang = locale === "ko" ? "ko" : "en";
   const steps = GUIDE_STEPS[pageKey];
+  const router = useRouter();
 
   const [visible, setVisible] = useState(false);
-  const [dontShow, setDontShow] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+
+  const tutorialOn = isTutorialActive();
+  const currentIdx = TUTORIAL_ORDER.findIndex((t) => t.key === pageKey);
+  const prevStep = currentIdx > 0 ? TUTORIAL_ORDER[currentIdx - 1] : null;
+  const nextStep = currentIdx >= 0 && currentIdx < TUTORIAL_ORDER.length - 1
+    ? TUTORIAL_ORDER[currentIdx + 1]
+    : null;
+  const isLastStep = currentIdx === TUTORIAL_ORDER.length - 1;
 
   useEffect(() => {
     if (!steps || steps.length === 0) return;
@@ -48,7 +65,9 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   }, [updateRects]);
 
   function close() {
-    if (dontShow) dismissGuide(pageKey);
+    if (!tutorialOn) {
+      dismissGuide(pageKey);
+    }
     setVisible(false);
   }
 
@@ -58,9 +77,22 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const vw = window.innerWidth;
 
   return (
-    <div className="fixed inset-0 z-[999]" onClick={close}>
+    <div
+      className="fixed inset-0 z-[999]"
+      style={{
+        top: "calc(3.5rem + env(safe-area-inset-top))",
+        bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
+      }}
+      onClick={close}
+    >
       {/* Semi-transparent overlay */}
-      <div className="fixed inset-0 bg-black/70 z-[999]" />
+      <div
+        className="fixed inset-0 bg-black/70 z-[999]"
+        style={{
+          top: "calc(3.5rem + env(safe-area-inset-top))",
+          bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
+        }}
+      />
 
       {/* SVG curly arrows */}
       <svg className="fixed inset-0 w-full h-full z-[1001] pointer-events-none">
@@ -92,6 +124,26 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
             const textY = label.y + label.h / 2;
 
             const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
+
+            return (
+              <path
+                key={i}
+                d={d}
+                fill="none"
+                stroke="rgba(251,191,36,0.7)"
+                strokeWidth="2"
+                strokeDasharray="5 4"
+                strokeLinecap="round"
+                markerEnd="url(#guide-chevron)"
+              />
+            );
+          } else if (pos === "top-left") {
+            const btnLeft = a.rect.left;
+            const btnCY = a.rect.top + a.rect.height / 2;
+            const textX = label.x;
+            const textY = label.y + label.h;
+
+            const d = `M ${textX} ${textY} Q ${textX} ${btnCY}, ${btnLeft} ${btnCY}`;
 
             return (
               <path
@@ -188,13 +240,13 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               key={`tab-${i}-${ti}`}
               className="fixed z-[1002] pointer-events-none text-center"
               style={{
-                top: tabRect.top - 22,
+                top: tabRect.top,
                 left: tabRect.left - 8,
                 width: tabRect.width + 16,
                 fontFamily: "var(--font-gaegu), cursive",
               }}
             >
-              <span className="text-[13px] font-bold text-amber-300">{label}</span>
+              <span className="text-[14px] font-bold text-white whitespace-pre-line leading-tight">{label}</span>
             </div>
           );
         });
@@ -247,32 +299,44 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
         );
       })}
 
-      {/* Top-right controls */}
-      <div
-        className="fixed top-0 right-0 z-[1002] pr-4 pt-3"
-        style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        <div className="flex items-center gap-3 bg-gray-900/60 backdrop-blur-sm rounded-xl px-3.5 py-2.5 border border-gray-700/30">
-          <label className="flex items-center gap-1.5 cursor-pointer select-none">
-            <input
-              type="checkbox"
-              checked={dontShow}
-              onChange={(e) => setDontShow(e.target.checked)}
-              className="w-3.5 h-3.5 rounded accent-indigo-500"
-            />
-            <span className="text-[11px] text-gray-400">
-              {lang === "ko" ? "다시 보지 않기" : "Don't show again"}
-            </span>
-          </label>
-          <button
-            onClick={close}
-            className="text-gray-400 hover:text-white transition-colors"
-          >
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-          </button>
+      {/* Tutorial next/done button */}
+      {tutorialOn && (
+        <div
+          className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+        >
+          <div className="flex items-center gap-3 pointer-events-auto">
+            <button
+              onClick={() => { if (prevStep) { close(); router.push(prevStep.path); } }}
+              disabled={!prevStep}
+              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                prevStep
+                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                  : "bg-gray-800/50 text-gray-600 cursor-not-allowed"
+              }`}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              {lang === "ko" ? "이전" : "Prev"}
+            </button>
+            {isLastStep ? (
+              <button
+                onClick={() => { dismissTutorial(); close(); }}
+                className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                {lang === "ko" ? "완료" : "Done"}
+              </button>
+            ) : (
+              <button
+                onClick={() => { if (nextStep) { close(); router.push(nextStep.path); } }}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+              >
+                {lang === "ko" ? "다음" : "Next"}
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </button>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
@@ -305,6 +369,10 @@ function getLabelPos(
     x = btnCenterX - 20 - leftW;
     const y2 = rect.top - labelH;
     return { x: Math.max(16, x), y: y2, w: leftW, h: labelH };
+  } else if (pos === "top-left") {
+    x = Math.max(16, rect.right - labelW);
+    y = rect.top - labelH;
+    return { x, y, w: labelW, h: labelH };
   } else if (pos === "top") {
     x = a.step.noArrow ? Math.max(16, rect.right - labelW) : Math.max(16, Math.min(rect.left, vw - labelW - 16));
     y = rect.top - labelH - (a.step.noArrow ? 0 : gap);

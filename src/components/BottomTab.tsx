@@ -1,5 +1,7 @@
 "use client";
 
+"use client";
+
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "./AuthProvider";
@@ -14,9 +16,9 @@ export default function BottomTab() {
   const tabs = [
     { href: "/", icon: HomeIcon, match: (p: string) => p === "/", guideLabel: "홈" },
     { href: "/add", icon: AddIcon, match: (p: string) => p === "/add", guideLabel: "새 노트" },
-    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review", guideLabel: "복습카드" },
-    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트 목록" },
-    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance", guideLabel: "Nuance" },
+    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review", guideLabel: "복습\n카드" },
+    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록" },
+    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat" },
     { href: "/settings", icon: SettingsIcon, match: (p: string) => p === "/settings", guideLabel: "설정" },
   ];
 

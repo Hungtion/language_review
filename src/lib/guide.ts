@@ -2,7 +2,7 @@ export type GuideStep = {
   selector: string;
   title: { en: string; ko: string };
   description: { en: string; ko: string };
-  position?: "top" | "bottom" | "center" | "right" | "left";
+  position?: "top" | "bottom" | "center" | "right" | "left" | "top-left";
   overlay?: boolean; // label directly on the element, no arrow
   noArrow?: boolean; // hide arrow even when not overlay
   noHighlight?: boolean; // hide highlight border
@@ -116,8 +116,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='review-ai']",
       title: { en: "", ko: "" },
       description: {
-        en: "AI generates a related example sentence. Tap [+] to save it.",
-        ko: "AI가 관련 예문을 만들어줍니다. [+]를 눌러 노트에 저장하세요.",
+        en: "AI generates a related example sentence.\nTap [+] to save it.",
+        ko: "AI가 관련 예문을 만들어줍니다.\n[+]를 눌러 노트에 저장하세요.",
       },
       overlay: true,
     },
@@ -177,37 +177,70 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
         en: "Choose the nuance you want to express.",
         ko: "표현하고 싶은 뉘앙스를 선택하세요.",
       },
-      position: "top",
-      noArrow: true,
+      position: "top-left",
     },
     {
       selector: "[data-guide='nuance-screen']",
       title: { en: "", ko: "" },
       description: {
-        en: "Translates Korean naturally,\nand corrects foreign languages\nto match context and nuance.\n\nTap [+] to save expressions to your notes.",
-        ko: "한국어는 자연스럽게 번역하고,\n외국어는 상황과 뉘앙스에 맞춰 교정해 드려요.\n\n마음에 드는 표현을 [+]를 눌러 노트에 저장해 보세요.",
+        en: "You can speak in any language.\n\nTranslates Korean naturally,\nand corrects foreign languages\nto match context and nuance.\n\nTap [+] to save expressions to your notes.",
+        ko: "어떤 언어로 말해도 좋아요.\n\n한국어는 자연스럽게 번역하고,\n외국어는 상황과 뉘앙스에 맞춰 교정해 드려요.\n\n마음에 드는 표현을 [+]를 눌러 노트에 저장해 보세요.",
       },
       overlay: true,
       position: "bottom",
       noHighlight: true,
     },
-    {
-      selector: "[data-guide='nuance-input']",
-      title: { en: "", ko: "" },
-      description: {
-        en: "You can speak in any language.",
-        ko: "나는 어떤 언어로 말해도 좋아요.",
-      },
-      overlay: true,
-    },
   ],
 };
 
+const TUTORIAL_PAGES = ["home", "add", "review", "notes", "nuance"];
+
+export function isTutorialActive(): boolean {
+  if (typeof window === "undefined") return false;
+  return localStorage.getItem("tutorial-dismissed") !== "true";
+}
+
+export function dismissTutorial(): void {
+  localStorage.setItem("tutorial-dismissed", "true");
+  TUTORIAL_PAGES.forEach((p) => {
+    localStorage.setItem(`guide-dismissed-${p}`, "true");
+    localStorage.setItem(`tutorial-visited-${p}`, "true");
+  });
+}
+
+export function resetTutorial(): void {
+  localStorage.removeItem("tutorial-dismissed");
+  TUTORIAL_PAGES.forEach((p) => {
+    localStorage.removeItem(`tutorial-visited-${p}`);
+    localStorage.removeItem(`guide-dismissed-${p}`);
+  });
+}
+
+export function markPageVisited(pageKey: string): void {
+  localStorage.setItem(`tutorial-visited-${pageKey}`, "true");
+}
+
+export function isPageVisited(pageKey: string): boolean {
+  if (typeof window === "undefined") return true;
+  return localStorage.getItem(`tutorial-visited-${pageKey}`) === "true";
+}
+
+export function getUnvisitedPages(): string[] {
+  return TUTORIAL_PAGES.filter((p) => !isPageVisited(p));
+}
+
 export function isGuideDismissed(pageKey: string): boolean {
   if (typeof window === "undefined") return true;
+  // In tutorial mode, show guide for unvisited pages
+  if (isTutorialActive() && !isPageVisited(pageKey)) return false;
   return localStorage.getItem(`guide-dismissed-${pageKey}`) === "true";
 }
 
 export function dismissGuide(pageKey: string): void {
   localStorage.setItem(`guide-dismissed-${pageKey}`, "true");
+  markPageVisited(pageKey);
+  // Auto-dismiss tutorial when all pages visited
+  if (getUnvisitedPages().length === 0) {
+    dismissTutorial();
+  }
 }
