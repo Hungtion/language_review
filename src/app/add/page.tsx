@@ -157,6 +157,7 @@ function AddContent() {
       {/* Title, Date & Language */}
       <div data-guide="add-header" className="flex gap-2 items-center">
         <input
+          data-guide-tab="제목"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -164,12 +165,13 @@ function AddContent() {
           className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
         />
         <input
+          data-guide-tab="날짜"
           type="date"
           value={studyDate}
           onChange={(e) => setStudyDate(e.target.value)}
           className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
         />
-        <div className="flex gap-1 shrink-0">
+        <div data-guide-tab="학습언어" className="flex gap-1 shrink-0">
           <button
             onClick={() => setLanguage("english")}
             className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${

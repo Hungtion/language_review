@@ -26,6 +26,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
 
   const [visible, setVisible] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
+  const [doneModal, setDoneModal] = useState(false);
 
   const tutorialOn = isTutorialActive();
   const currentIdx = TUTORIAL_ORDER.findIndex((t) => t.key === pageKey);
@@ -71,7 +72,30 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
     setVisible(false);
   }
 
-  if (!visible || annotations.length === 0) return null;
+  if (!visible && !doneModal) return null;
+  if (doneModal) {
+    return (
+      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setDoneModal(false)}>
+        <div
+          className="mx-6 max-w-xs w-full bg-gray-900 border border-gray-700 rounded-2xl p-6 text-center shadow-2xl"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <div className="text-3xl mb-3">🎉</div>
+          <p className="text-white text-[15px] leading-relaxed whitespace-pre-line">
+            {lang === "ko"
+              ? "준비 완료! 이제 학습을 시작해 보세요.\n가이드는 설정에서 다시 켤 수 있어요."
+              : "All set! Start learning now.\nYou can turn the guide back on in Settings."}
+          </p>
+          <button
+            onClick={() => setDoneModal(false)}
+            className="mt-5 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
+          >
+            {lang === "ko" ? "확인" : "OK"}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   const vh = window.innerHeight;
   const vw = window.innerWidth;
@@ -231,7 +255,8 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
       {/* Tab labels */}
       {annotations.map((a, i) => {
         if (!a.step.tabLabels) return null;
-        const tabEls = document.querySelectorAll("[data-guide-tab]");
+        const parent = document.querySelector(a.step.selector);
+        const tabEls = parent ? parent.querySelectorAll("[data-guide-tab]") : [];
         return Array.from(tabEls).map((el, ti) => {
           const tabRect = el.getBoundingClientRect();
           const label = el.getAttribute("data-guide-tab") || "";
@@ -324,9 +349,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
                   onClick={() => {
                     dismissTutorial();
                     close();
-                    alert(lang === "ko"
-                      ? "감사합니다!\n가이드는 설정에서 다시 켤 수 있습니다."
-                      : "Thank you!\nYou can turn the guide back on in Settings.");
+                    setDoneModal(true);
                   }}
                   className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
                 >

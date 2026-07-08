@@ -13,7 +13,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
   home: [
     {
       selector: "[data-guide='stats']",
-      title: { en: "Study Overview", ko: "학습 현황" },
+      title: { en: "", ko: "" },
       description: {
         en: "See your note counts at a glance.\nTap to jump to that language's notes.",
         ko: "학습 노트 현황을 한눈에 볼 수 있어요.\n탭하면 해당 언어 노트로 이동합니다.",
@@ -22,7 +22,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     },
     {
       selector: "[data-guide='quick-actions']",
-      title: { en: "Quick Actions", ko: "빠른 시작" },
+      title: { en: "", ko: "" },
       description: {
         en: "Add new study notes\nor review with flashcards.",
         ko: "새 노트를 입력하거나,\n카드로 복습할 수 있어요.",
@@ -31,7 +31,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     },
     {
       selector: "[data-guide='recent-notes']",
-      title: { en: "Recent Notes", ko: "최근 노트" },
+      title: { en: "", ko: "" },
       description: {
         en: "Your recent study notes appear here.\nTap to view details.",
         ko: "최근 학습 노트가 여기에 표시돼요.\n탭하면 상세 내용을 볼 수 있어요.",
@@ -43,16 +43,13 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
   add: [
     {
       selector: "[data-guide='add-header']",
-      title: { en: "Title / Date / Language", ko: "제목 / 날짜 / 학습언어" },
-      description: {
-        en: "",
-        ko: "",
-      },
-      overlay: true,
+      title: { en: "", ko: "" },
+      description: { en: "", ko: "" },
+      tabLabels: true,
     },
     {
       selector: "[data-guide='add-textarea']",
-      title: { en: "Enter Content", ko: "학습내용 입력하기" },
+      title: { en: "", ko: "" },
       description: {
         en: "Enter or paste your study content here.",
         ko: "학습 내용을 여기에 입력하거나\n붙여넣기 하세요.",
@@ -99,7 +96,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     },
     {
       selector: "[data-guide='review-card']",
-      title: { en: "Flashcard", ko: "복습 카드" },
+      title: { en: "", ko: "" },
       description: {
         en: "Swipe left/right to navigate cards.\nTap to hear pronunciation.",
         ko: "좌우 스와이프로 카드를 넘기세요.\n탭하면 발음을 읽어줍니다.",
