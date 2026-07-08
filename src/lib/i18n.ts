@@ -60,6 +60,7 @@ const translations = {
 
     // Login
     signInWithGoogle: "Sign in with Google",
+    signInWithKakao: "Sign in with Kakao",
     langLabDesc: "English & Japanese study review notes",
     inAppRestricted: "Google Sign-in is restricted in in-app browsers.",
     redirectingBrowser: "Redirecting to external browser...",
@@ -201,6 +202,7 @@ const translations = {
 
     // Login
     signInWithGoogle: "Google 계정으로 로그인",
+    signInWithKakao: "카카오 로그인",
     langLabDesc: "영어 & 일본어 학습 복습 노트",
     inAppRestricted: "인앱 브라우저에서는 Google 로그인이 제한됩니다.",
     redirectingBrowser: "외부 브라우저로 이동 중...",
