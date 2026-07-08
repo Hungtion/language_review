@@ -25,7 +25,6 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const router = useRouter();
 
   const [visible, setVisible] = useState(false);
-  const [dontShow, setDontShow] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
 
   const tutorialOn = isTutorialActive();
@@ -306,20 +305,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         >
-          <div className="flex flex-col items-center gap-2 pointer-events-auto">
-            {isLastStep && (
-              <label className="flex items-center gap-1.5 cursor-pointer select-none">
-                <input
-                  type="checkbox"
-                  checked={dontShow}
-                  onChange={(e) => setDontShow(e.target.checked)}
-                  className="w-3.5 h-3.5 rounded accent-indigo-500"
-                />
-                <span className="text-[11px] text-gray-400">
-                  {lang === "ko" ? "다시 보지 않기" : "Don't show again"}
-                </span>
-              </label>
-            )}
+          <div className="flex flex-col items-center gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             <div className="flex items-center gap-3">
               <button
                 onClick={() => { if (prevStep) { close(); router.push(prevStep.path); } }}
@@ -335,7 +321,13 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               </button>
               {isLastStep ? (
                 <button
-                  onClick={() => { if (dontShow) dismissTutorial(); close(); }}
+                  onClick={() => {
+                    dismissTutorial();
+                    close();
+                    alert(lang === "ko"
+                      ? "감사합니다!\n가이드는 설정에서 다시 켤 수 있습니다."
+                      : "Thank you!\nYou can turn the guide back on in Settings.");
+                  }}
                   className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
                 >
                   {lang === "ko" ? "완료" : "Done"}
