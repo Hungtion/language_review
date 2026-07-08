@@ -4,6 +4,7 @@ import "./globals.css";
 import Nav from "@/components/Nav";
 import BottomTab from "@/components/BottomTab";
 import AuthProvider from "@/components/AuthProvider";
+import InstallBanner from "@/components/InstallBanner";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
 const geistMono = Geist_Mono({ variable: "--font-geist-mono", subsets: ["latin"] });
@@ -42,6 +43,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <BottomTab />
+          <InstallBanner />
         </AuthProvider>
       </body>
     </html>
