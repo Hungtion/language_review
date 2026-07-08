@@ -287,8 +287,8 @@ export type Locale = "en" | "ko";
 export type TranslationKey = keyof typeof translations.en;
 
 export function getLocale(): Locale {
-  if (typeof window === "undefined") return "en";
-  return (localStorage.getItem("locale") as Locale) || "en";
+  if (typeof window === "undefined") return "ko";
+  return (localStorage.getItem("locale") as Locale) || "ko";
 }
 
 export function t(key: TranslationKey, locale?: Locale): string {

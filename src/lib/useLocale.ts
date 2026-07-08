@@ -8,14 +8,14 @@ const LOCALE_CHANGE_EVENT = "locale-changed";
 export function useLocale() {
   const [locale, setLocaleState] = useState<Locale>(() =>
     typeof window !== "undefined"
-      ? (localStorage.getItem("locale") as Locale) || "en"
-      : "en"
+      ? (localStorage.getItem("locale") as Locale) || "ko"
+      : "ko"
   );
 
   // Listen for locale changes from other components
   useEffect(() => {
     function onLocaleChange() {
-      const next = (localStorage.getItem("locale") as Locale) || "en";
+      const next = (localStorage.getItem("locale") as Locale) || "ko";
       setLocaleState(next);
     }
     window.addEventListener(LOCALE_CHANGE_EVENT, onLocaleChange);

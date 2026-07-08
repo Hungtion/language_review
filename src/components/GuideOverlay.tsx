@@ -284,7 +284,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           // Overlay: text on the element; position "top" = top 25%
           const elH = Math.min(a.rect.height, vh * 0.5);
           const alignItems = a.step.position === "top" || a.step.position === "bottom" ? "flex-start" : "center";
-          const paddingTop = a.step.position === "top" ? elH * 0.1 : a.step.position === "bottom" ? elH * 0.6 : 0;
+          const paddingTop = a.step.position === "top" ? elH * 0.2 : a.step.position === "bottom" ? elH * 0.6 : 0;
           const paddingBottom = 0;
           return (
             <div
