@@ -581,7 +581,7 @@ function ReviewContent() {
               ) : (
                 <button
                   onClick={handleAi}
-                  className="w-full py-2 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                  className="w-full py-2.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
                 >
                   AI Example
                   {plan !== "pro" && (
@@ -604,7 +604,7 @@ function ReviewContent() {
             <div data-guide="review-ai" className="w-full max-w-lg mt-3">
               <button
                 disabled
-                className="w-full py-2 bg-purple-600/10 text-purple-400/40 border border-purple-500/20 rounded-lg text-sm cursor-not-allowed"
+                className="w-full py-2.5 bg-purple-600/10 text-purple-400/40 border border-purple-500/20 rounded-lg text-sm cursor-not-allowed"
               >
                 AI Example
               </button>

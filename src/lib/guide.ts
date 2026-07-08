@@ -24,8 +24,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='quick-actions']",
       title: { en: "Quick Actions", ko: "빠른 시작" },
       description: {
-        en: "Add new study notes or review with flashcards.",
-        ko: "새 노트를 입력하거나, 카드로 복습할 수 있어요.",
+        en: "Add new study notes\nor review with flashcards.",
+        ko: "새 노트를 입력하거나,\n카드로 복습할 수 있어요.",
       },
       overlay: true,
     },
@@ -37,12 +37,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
         ko: "최근 학습 노트가 여기에 표시돼요.\n탭하면 상세 내용을 볼 수 있어요.",
       },
       overlay: true,
-    },
-    {
-      selector: "[data-guide='bottom-tab']",
-      title: { en: "", ko: "" },
-      description: { en: "", ko: "" },
-      tabLabels: true,
+      position: "top",
     },
   ],
   add: [

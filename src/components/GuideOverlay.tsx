@@ -25,6 +25,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const router = useRouter();
 
   const [visible, setVisible] = useState(false);
+  const [dontShow, setDontShow] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
 
   const tutorialOn = isTutorialActive();
@@ -259,7 +260,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           // Overlay: text on the element; position "top" = top 25%
           const elH = Math.min(a.rect.height, vh * 0.5);
           const alignItems = a.step.position === "top" || a.step.position === "bottom" ? "flex-start" : "center";
-          const paddingTop = a.step.position === "top" ? elH * 0.25 : a.step.position === "bottom" ? elH * 0.6 : 0;
+          const paddingTop = a.step.position === "top" ? elH * 0.1 : a.step.position === "bottom" ? elH * 0.6 : 0;
           const paddingBottom = 0;
           return (
             <div
@@ -305,35 +306,50 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         >
-          <div className="flex items-center gap-3 pointer-events-auto">
-            <button
-              onClick={() => { if (prevStep) { close(); router.push(prevStep.path); } }}
-              disabled={!prevStep}
-              className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                prevStep
-                  ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                  : "bg-gray-800/50 text-gray-600 cursor-not-allowed"
-              }`}
-            >
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-              {lang === "ko" ? "이전" : "Prev"}
-            </button>
-            {isLastStep ? (
-              <button
-                onClick={() => { dismissTutorial(); close(); }}
-                className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
-              >
-                {lang === "ko" ? "완료" : "Done"}
-              </button>
-            ) : (
-              <button
-                onClick={() => { if (nextStep) { close(); router.push(nextStep.path); } }}
-                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-              >
-                {lang === "ko" ? "다음" : "Next"}
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-              </button>
+          <div className="flex flex-col items-center gap-2 pointer-events-auto">
+            {isLastStep && (
+              <label className="flex items-center gap-1.5 cursor-pointer select-none">
+                <input
+                  type="checkbox"
+                  checked={dontShow}
+                  onChange={(e) => setDontShow(e.target.checked)}
+                  className="w-3.5 h-3.5 rounded accent-indigo-500"
+                />
+                <span className="text-[11px] text-gray-400">
+                  {lang === "ko" ? "다시 보지 않기" : "Don't show again"}
+                </span>
+              </label>
             )}
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => { if (prevStep) { close(); router.push(prevStep.path); } }}
+                disabled={!prevStep}
+                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
+                  prevStep
+                    ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
+                    : "bg-gray-800/50 text-gray-600 cursor-not-allowed"
+                }`}
+              >
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+                {lang === "ko" ? "이전" : "Prev"}
+              </button>
+              {isLastStep ? (
+                <button
+                  onClick={() => { if (dontShow) dismissTutorial(); close(); }}
+                  className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
+                >
+                  {lang === "ko" ? "완료" : "Done"}
+                </button>
+              ) : (
+                <button
+                  onClick={() => { if (nextStep) { close(); router.push(nextStep.path); } }}
+                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
+                >
+                  {lang === "ko" ? "다음" : "Next"}
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       )}
