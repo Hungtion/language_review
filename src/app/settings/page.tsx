@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
@@ -8,7 +9,10 @@ import { resetTutorial, dismissTutorial, isTutorialActive } from "@/lib/guide";
 
 function SettingsContent() {
   const { user, signOut } = useAuth();
+  const router = useRouter();
   const { locale, setLocale, t } = useLocale();
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedEN, setSelectedEN] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
@@ -242,7 +246,68 @@ function SettingsContent() {
             {t("logout")}
           </button>
         </div>
+        <div className="pt-2 border-t border-gray-800">
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+          >
+            {locale === "ko" ? "회원 탈퇴" : "Delete Account"}
+          </button>
+        </div>
       </div>
+
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
+            <h3 className="text-lg font-bold text-white">
+              {locale === "ko" ? "정말 탈퇴하시겠습니까?" : "Delete your account?"}
+            </h3>
+            <p className="text-sm text-gray-400 whitespace-pre-line">
+              {locale === "ko"
+                ? "모든 노트, 복습 카드, 채팅 기록이 삭제되며\n복구할 수 없습니다."
+                : "All notes, flashcards, and chat history will be permanently deleted.\nThis cannot be undone."}
+            </p>
+            <div className="flex gap-3 justify-center pt-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!user) return;
+                  setDeleting(true);
+                  try {
+                    const res = await fetch("/api/account/delete", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({ userId: user.id }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      await signOut();
+                      router.push("/login");
+                    } else {
+                      alert(data.error || "Failed to delete account");
+                    }
+                  } catch {
+                    alert("Failed to delete account");
+                  }
+                  setDeleting(false);
+                  setShowDeleteConfirm(false);
+                }}
+                disabled={deleting}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:bg-red-800 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                {deleting
+                  ? (locale === "ko" ? "처리 중..." : "Deleting...")
+                  : (locale === "ko" ? "탈퇴하기" : "Delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
