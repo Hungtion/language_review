@@ -9,9 +9,10 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import { getGuestNotes, deleteGuestNote } from "@/lib/guestStorage";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
 
 function NoteDetailContent() {
-  const { user } = useAuth();
+  const { user, plan } = useAuth();
   const { t, locale } = useLocale();
   const params = useParams();
   const router = useRouter();
@@ -23,6 +24,26 @@ function NoteDetailContent() {
   const [editLines, setEditLines] = useState<string[]>([]);
   const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [splitTarget, setSplitTarget] = useState<{ field: string; lineIdx: number; text: string } | null>(null);
+  const [splitLoading, setSplitLoading] = useState(false);
+  const [splitPreview, setSplitPreview] = useState<string[] | null>(null);
+  const [splitDeleteOrig, setSplitDeleteOrig] = useState(true);
+  const [splitSelected, setSplitSelected] = useState<Set<number>>(new Set());
+  const [splitDeleteConfirm, setSplitDeleteConfirm] = useState(false);
+  const [splitDontAsk, setSplitDontAsk] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<{ field: string; lineIdx: number } | null>(null);
+  const [splitAiConfirm, setSplitAiConfirm] = useState<{ field: string; lineIdx: number; text: string } | null>(null);
+  const [splitNoResult, setSplitNoResult] = useState(false);
+  const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+
+  useEffect(() => {
+    if (plan === "pro") return;
+    if (!user) {
+      setAiRemaining(getGuestUsage().remaining);
+    } else {
+      getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+    }
+  }, [user, plan]);
 
   useEffect(() => {
     if (!user) {
@@ -67,6 +88,15 @@ function NoteDetailContent() {
       }
 
       setLoading(false);
+
+      // Mark note as seen
+      try {
+        const seen = new Set(JSON.parse(localStorage.getItem("seen-notes") || "[]"));
+        if (!seen.has(params.id)) {
+          seen.add(params.id);
+          localStorage.setItem("seen-notes", JSON.stringify([...seen].slice(-500)));
+        }
+      } catch {}
     }
     load();
   }, [params.id, user]);
@@ -125,6 +155,128 @@ function NoteDetailContent() {
       setSession((prev) => prev ? { ...prev, [editingField]: newValue } : prev);
       setEditingField(null);
     }
+  }
+
+  async function handleDeleteLineConfirm() {
+    if (!deleteTarget) return;
+    const { field, lineIdx } = deleteTarget;
+    const fieldValue = session?.[field as keyof StudySession] as string;
+    if (!fieldValue) return;
+    const lines = parseSentences(fieldValue);
+    const newLines = lines.filter((_, i) => i !== lineIdx);
+    const newValue = newLines.length > 0 ? newLines.join("\n") : null;
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ [field]: newValue })
+      .eq("id", params.id);
+    if (error) { alert(error.message); return; }
+    setSession((prev) => prev ? { ...prev, [field]: newValue } : prev);
+    setDeleteTarget(null);
+  }
+
+  function handleShareLine(text: string) {
+    if (navigator.share) {
+      navigator.share({ text }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(text).then(() => {
+        alert(locale === "ko" ? "복사되었습니다" : "Copied");
+      });
+    }
+  }
+
+  function hasMultipleSentences(text: string) {
+    const matches = text.match(/[.!?。！？]\s/g);
+    const endsWithPunct = /[.!?。！？]$/.test(text.trim());
+    const count = (matches?.length || 0) + (endsWithPunct ? 1 : 0);
+    return count >= 2;
+  }
+
+  async function handleSplitLine(field: string, lineIdx: number, text: string) {
+    // Check AI usage limit
+    if (plan !== "pro") {
+      if (!user) {
+        const { remaining } = getGuestUsage();
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+      } else {
+        const { remaining } = await getAiUsage(user.id);
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+      }
+    }
+
+    setSplitTarget({ field, lineIdx, text });
+    setSplitLoading(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "split-sentence", text }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+        setSplitTarget(null);
+      } else if (data.result && data.result.length > 1) {
+        // Increment AI usage on success
+        if (plan !== "pro") {
+          if (!user) {
+            const { remaining } = incrementGuestUsage();
+            setAiRemaining(remaining);
+          } else {
+            await incrementAiUsage(user.id);
+            const { remaining } = await getAiUsage(user.id);
+            setAiRemaining(remaining);
+          }
+        }
+        setSplitPreview(data.result);
+        setSplitSelected(new Set(data.result.map((_: string, i: number) => i)));
+      } else {
+        setSplitNoResult(true);
+        setSplitTarget(null);
+      }
+    } catch {
+      alert(locale === "ko" ? "요청 실패" : "Request failed");
+      setSplitTarget(null);
+    }
+    setSplitLoading(false);
+  }
+
+  async function doSplitConfirm(target: { field: string; lineIdx: number; text: string }, sentences: string[], deleteOrig: boolean) {
+    const { field, lineIdx } = target;
+    const fieldValue = session?.[field as keyof StudySession] as string;
+    if (!fieldValue) return;
+
+    const lines = parseSentences(fieldValue);
+    const newLines = deleteOrig
+      ? [...lines.slice(0, lineIdx), ...sentences, ...lines.slice(lineIdx + 1)]
+      : [...lines.slice(0, lineIdx + 1), ...sentences, ...lines.slice(lineIdx + 1)];
+    const newValue = newLines.join("\n");
+
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ [field]: newValue })
+      .eq("id", params.id);
+
+    if (error) {
+      alert(t("saveFailed") + error.message);
+    } else {
+      setSession((prev) => prev ? { ...prev, [field]: newValue } : prev);
+    }
+    setSplitTarget(null);
+    setSplitPreview(null);
+  }
+
+  async function handleSplitConfirm() {
+    if (!splitTarget || !splitPreview) return;
+    const selected = splitPreview.filter((_, i) => splitSelected.has(i));
+    if (selected.length === 0) { setSplitTarget(null); setSplitPreview(null); return; }
+    await doSplitConfirm(splitTarget, selected, true);
+  }
+
+  async function doSplitKeep() {
+    if (!splitTarget || !splitPreview) return;
+    const selected = splitPreview.filter((_, i) => splitSelected.has(i));
+    if (selected.length === 0) { setSplitTarget(null); setSplitPreview(null); return; }
+    await doSplitConfirm(splitTarget, selected, false);
   }
 
   if (loading) return <div className="text-gray-500 text-center py-12">{t("loading")}</div>;
@@ -247,8 +399,15 @@ function NoteDetailContent() {
           ) : (
             <div className="space-y-2">
               {stressLines.map((s, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
-                  {s}
+                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300 flex items-center gap-2">
+                  <span className="flex-1">{s}</span>
+                  <LineActions
+                    text={s}
+                    showSplit={hasMultipleSentences(s)}
+                    onShare={() => handleShareLine(s)}
+                    onSplit={() => plan !== "pro" ? setSplitAiConfirm({ field: "stress_pronunciation", lineIdx: i, text: s }) : handleSplitLine("stress_pronunciation", i, s)}
+                    onDelete={() => setDeleteTarget({ field: "stress_pronunciation", lineIdx: i })}
+                  />
                 </div>
               ))}
             </div>
@@ -292,12 +451,21 @@ function NoteDetailContent() {
           ) : vocabEntries.length > 0 ? (
             <div className="space-y-3">
               {vocabEntries.map((v, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3">
-                  <div className="font-semibold text-green-400 text-sm">{v.term}</div>
-                  <div className="text-gray-300 text-sm mt-1">{v.definition}</div>
-                  {v.example && (
-                    <div className="text-gray-400 text-sm mt-1 italic">→ {v.example}</div>
-                  )}
+                <div key={i} className="bg-gray-800/50 rounded-lg p-3 flex items-start gap-2">
+                  <div className="flex-1">
+                    <div className="font-semibold text-green-400 text-sm">{v.term}</div>
+                    <div className="text-gray-300 text-sm mt-1">{v.definition}</div>
+                    {v.example && (
+                      <div className="text-gray-400 text-sm mt-1 italic">→ {v.example}</div>
+                    )}
+                  </div>
+                  <LineActions
+                    text={`${v.term}: ${v.definition}${v.example ? ` (${v.example})` : ""}`}
+                    showSplit={false}
+                    onShare={() => handleShareLine(`${v.term}: ${v.definition}${v.example ? ` (${v.example})` : ""}`)}
+                    onSplit={() => {}}
+                    onDelete={() => setDeleteTarget({ field: "vocabulary", lineIdx: i })}
+                  />
                 </div>
               ))}
             </div>
@@ -345,8 +513,15 @@ function NoteDetailContent() {
           ) : (
             <div className="space-y-2">
               {sentences.map((s, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">
-                  {s}
+                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300 flex items-center gap-2">
+                  <span className="flex-1">{s}</span>
+                  <LineActions
+                    text={s}
+                    showSplit={hasMultipleSentences(s)}
+                    onShare={() => handleShareLine(s)}
+                    onSplit={() => plan !== "pro" ? setSplitAiConfirm({ field: "sentence_grammar", lineIdx: i, text: s }) : handleSplitLine("sentence_grammar", i, s)}
+                    onDelete={() => setDeleteTarget({ field: "sentence_grammar", lineIdx: i })}
+                  />
                 </div>
               ))}
             </div>
@@ -372,6 +547,208 @@ function NoteDetailContent() {
           {t("deleteNote")}
         </button>
       </div>
+
+      {/* Split Preview Modal */}
+      {(splitTarget && (splitLoading || splitPreview)) && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSplitTarget(null); setSplitPreview(null); }}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-center">
+              {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
+            </h3>
+            <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400">
+              <span className="text-xs text-gray-600 block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
+              {splitTarget?.text}
+            </div>
+            {splitLoading ? (
+              <p className="text-center text-orange-400 text-sm animate-pulse">
+                {locale === "ko" ? "분석 중..." : "Analyzing..."}
+              </p>
+            ) : splitPreview ? (
+              <>
+                <div className="flex items-center justify-between">
+                  <span className="text-xs text-gray-500">
+                    {splitSelected.size}/{splitPreview.length} {locale === "ko" ? "선택" : "selected"}
+                  </span>
+                  <button
+                    onClick={() => setSplitSelected(splitSelected.size === splitPreview.length ? new Set() : new Set(splitPreview.map((_, i) => i)))}
+                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                  >
+                    {splitSelected.size === splitPreview.length
+                      ? (locale === "ko" ? "전체 해제" : "Deselect all")
+                      : (locale === "ko" ? "전체 선택" : "Select all")}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {splitPreview.map((s, i) => (
+                    <div
+                      key={i}
+                      onClick={() => setSplitSelected((prev) => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; })}
+                      className={`rounded-lg p-3 text-sm cursor-pointer transition-colors ${
+                        splitSelected.has(i)
+                          ? "bg-indigo-600/20 border border-indigo-500/40 text-gray-200"
+                          : "bg-gray-800/30 text-gray-600"
+                      }`}
+                    >
+                      {s}
+                    </div>
+                  ))}
+                </div>
+                <div className="flex items-center justify-between pt-1">
+                  <span className="text-sm text-gray-400">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
+                  <button
+                    onClick={() => setSplitDeleteOrig((v) => !v)}
+                    className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-gray-700"}`}
+                  >
+                    <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${splitDeleteOrig ? "translate-x-5" : "translate-x-0"}`} />
+                  </button>
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => { setSplitTarget(null); setSplitPreview(null); }}
+                    className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                  >
+                    {locale === "ko" ? "취소" : "Cancel"}
+                  </button>
+                  <button
+                    onClick={() => {
+                      if (splitSelected.size === 0) return;
+                      if (splitDeleteOrig && !localStorage.getItem("split-auto")) {
+                        setSplitDeleteConfirm(true);
+                      } else if (splitDeleteOrig) {
+                        handleSplitConfirm();
+                      } else {
+                        doSplitKeep();
+                      }
+                    }}
+                    disabled={splitSelected.size === 0}
+                    className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors disabled:opacity-40"
+                  >
+                    {locale === "ko" ? "나누기" : "Split"}
+                  </button>
+                </div>
+              </>
+            ) : null}
+          </div>
+        </div>
+      )}
+
+      {/* Split Delete Confirm Popup */}
+      {splitDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setSplitDeleteConfirm(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-gray-300 text-center">
+              {locale === "ko" ? "기존 카드는 삭제되고 나뉘어진 카드로 대체됩니다" : "The original card will be deleted and replaced with split cards"}
+            </p>
+            <label className="flex items-center justify-center gap-2 text-xs text-gray-500 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={splitDontAsk}
+                onChange={(e) => setSplitDontAsk(e.target.checked)}
+                className="w-3.5 h-3.5 accent-gray-500 rounded"
+              />
+              {locale === "ko" ? "다시 보지 않기" : "Don't show again"}
+            </label>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSplitDeleteConfirm(false)}
+                className="flex-1 py-2 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={() => {
+                  if (splitDontAsk) localStorage.setItem("split-auto", "delete");
+                  setSplitDeleteConfirm(false);
+                  handleSplitConfirm();
+                }}
+                className="flex-1 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
+              >
+                {locale === "ko" ? "확인" : "OK"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Split No Result Modal */}
+      {splitNoResult && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitNoResult(false)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-gray-400 text-center">
+              {locale === "ko" ? "나눌 문장이 없습니다" : "No sentences to split"}
+            </p>
+            <button
+              onClick={() => setSplitNoResult(false)}
+              className="w-full py-2.5 bg-gray-800 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+            >
+              {locale === "ko" ? "확인" : "OK"}
+            </button>
+          </div>
+        </div>
+      )}
+
+      {/* Split AI Confirm Modal */}
+      {splitAiConfirm && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-center">
+              {locale === "ko" ? "문장 나누기" : "Split Sentences"}
+            </h3>
+            <p className="text-sm text-gray-400 text-center">
+              {locale === "ko"
+                ? "AI를 이용한 문장 나누기 기능입니다."
+                : "This feature uses AI to split sentences."}
+            </p>
+            <p className="text-xs text-gray-500 text-center">
+              {locale === "ko"
+                ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}회`
+                : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setSplitAiConfirm(null)}
+                className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={() => { const t = splitAiConfirm; setSplitAiConfirm(null); handleSplitLine(t.field, t.lineIdx, t.text); }}
+                className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
+              >
+                {locale === "ko" ? "문장 나누기" : "Split"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete Confirm Modal */}
+      {deleteTarget && (
+        <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
+          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-semibold text-center">
+              {locale === "ko" ? "항목 삭제" : "Delete Item"}
+            </h3>
+            <p className="text-sm text-gray-400 text-center">
+              {locale === "ko" ? "이 항목을 삭제하시겠습니까?" : "Delete this item?"}
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => setDeleteTarget(null)}
+                className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={handleDeleteLineConfirm}
+                className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-500 transition-colors"
+              >
+                {locale === "ko" ? "삭제" : "Delete"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
@@ -500,6 +877,30 @@ function SectionCard({
         {action}
       </div>
       <div className="p-5">{children}</div>
+    </div>
+  );
+}
+
+function LineActions({ showSplit, onShare, onSplit, onDelete }: {
+  text: string;
+  showSplit: boolean;
+  onShare: () => void;
+  onSplit: () => void;
+  onDelete: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-1.5 shrink-0">
+      <button onClick={onShare} title="Share" className="text-gray-600 hover:text-gray-300 transition-colors">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+      </button>
+      {showSplit && (
+        <button onClick={onSplit} title="Split" className="text-gray-600 hover:text-orange-400 transition-colors">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="8" x2="12" y2="11"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="12" y1="22" x2="12" y2="23"/></svg>
+        </button>
+      )}
+      <button onClick={onDelete} title="Delete" className="text-gray-600 hover:text-red-400 transition-colors">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+      </button>
     </div>
   );
 }

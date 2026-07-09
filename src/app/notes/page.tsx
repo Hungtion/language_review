@@ -10,6 +10,20 @@ import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
 import { getGuestNotes } from "@/lib/guestStorage";
 
+function getSeenNotes(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem("seen-notes") || "[]"));
+  } catch { return new Set(); }
+}
+
+function markNoteSeen(id: string) {
+  const seen = getSeenNotes();
+  seen.add(id);
+  // Keep only last 500 to avoid bloat
+  const arr = [...seen].slice(-500);
+  localStorage.setItem("seen-notes", JSON.stringify(arr));
+}
+
 function NotesContent() {
   const { user } = useAuth();
   const { t, locale } = useLocale();
@@ -23,6 +37,11 @@ function NotesContent() {
   const [filter, setFilter] = useState<"english" | "japanese">(initialFilter);
   const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
+  const [seenNotes, setSeenNotes] = useState<Set<string>>(new Set());
+
+  useEffect(() => {
+    setSeenNotes(getSeenNotes());
+  }, []);
 
   useEffect(() => {
     if (!user) {
@@ -43,6 +62,13 @@ function NotesContent() {
       const { data } = await query;
       setSessions(data ?? []);
       setLoading(false);
+
+      // First time: seed seen-notes with existing IDs so old notes don't show NEW
+      if (data && !localStorage.getItem("seen-notes")) {
+        const ids = data.map((s) => s.id);
+        localStorage.setItem("seen-notes", JSON.stringify(ids));
+        setSeenNotes(new Set(ids));
+      }
     }
     load();
   }, [filter, user]);
@@ -138,6 +164,7 @@ function NotesContent() {
             <Link
               key={s.id}
               href={`/notes/${s.id}`}
+              onClick={() => { markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id)); }}
               className="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors group"
             >
               <div className="flex items-center gap-3 mb-2">
@@ -151,6 +178,9 @@ function NotesContent() {
                 <span className="text-sm text-gray-500">{s.study_date}</span>
                 {s.title && (
                   <span className="text-sm text-gray-300 font-medium">{s.title}</span>
+                )}
+                {!seenNotes.has(s.id) && (
+                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">NEW</span>
                 )}
               </div>
 

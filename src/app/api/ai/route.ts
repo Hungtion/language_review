@@ -153,6 +153,27 @@ ${rawInput}`;
     }
   }
 
+  // 문장 분할 (카드/노트에서 여러 문장이 합쳐진 경우 분리)
+  if (action === "split-sentence") {
+    const splitPrompt = `아래 텍스트를 개별 문장으로 분리해줘.
+- 한 줄에 하나의 문장만 출력해.
+- 문장 끝의 마침표(. ! ?)는 유지해.
+- 번호나 부연설명 없이 문장만 출력해.
+- 빈 줄 없이 출력해.
+
+텍스트:
+${text}`;
+
+    try {
+      const result = await callGemini(splitPrompt, 2048);
+      const sentences = result.split("\n").map((s: string) => s.trim()).filter((s: string) => s.length > 0);
+      return NextResponse.json({ result: sentences });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   // Nuance 번역 - all users
   if (action === "nuance") {
     const langs = (targetLangs as string[]) || ["English"];

@@ -29,6 +29,9 @@ function SettingsContent() {
   const [tutorialOn, setTutorialOn] = useState(() =>
     typeof window !== "undefined" ? isTutorialActive() : false
   );
+  const [splitAuto, setSplitAuto] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("split-auto") : null
+  );
 
   useEffect(() => {
     function loadVoices() {
@@ -229,6 +232,39 @@ function SettingsContent() {
             <span
               className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
                 tutorialOn ? "translate-x-[24px]" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-gray-300">{locale === "ko" ? "카드 나눌 때 기존 카드 삭제" : "Delete original when splitting"}</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-gray-400">
+            {splitAuto === "keep"
+              ? (locale === "ko" ? "기존 카드를 유지합니다" : "Keep original card")
+              : (locale === "ko" ? "나뉘어진 카드로 대체합니다" : "Replace with split cards")}
+          </span>
+          <button
+            onClick={() => {
+              if (splitAuto === "keep") {
+                // 켜기: split-auto 제거 → 다음에 다시 물어봄
+                localStorage.removeItem("split-auto");
+                setSplitAuto(null);
+              } else {
+                // 끄기: keep 저장 → 안 물어봄, 기존 카드 유지
+                localStorage.setItem("split-auto", "keep");
+                setSplitAuto("keep");
+              }
+            }}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              splitAuto !== "keep" ? "bg-orange-500" : "bg-gray-700"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                splitAuto !== "keep" ? "translate-x-[24px]" : "translate-x-0"
               }`}
             />
           </button>

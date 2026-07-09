@@ -18,13 +18,26 @@ type Card = {
   type: "vocab" | "sentence";
   sessionDate: string;
   language: "english" | "japanese";
+  sessionId?: string;
+  sourceField?: "stress_pronunciation" | "vocabulary" | "sentence_grammar";
+  lineIndex?: number;
 };
 
 function ReviewContent() {
   const router = useRouter();
   const { user, plan } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
-  const [index, setIndex] = useState(0);
+  const [index, setIndexRaw] = useState(() => {
+    if (typeof window === "undefined") return 0;
+    return parseInt(sessionStorage.getItem("review-index") || "0", 10) || 0;
+  });
+  const setIndex = useCallback((v: number | ((prev: number) => number)) => {
+    setIndexRaw((prev) => {
+      const next = typeof v === "function" ? v(prev) : v;
+      sessionStorage.setItem("review-index", String(next));
+      return next;
+    });
+  }, []);
   const [flipped, setFlipped] = useState(false);
   const [filter, setFilter] = useState<"english" | "japanese">(() => {
     if (typeof window === "undefined") return "english";
@@ -33,10 +46,20 @@ function ReviewContent() {
   const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
   const [shuffled, setShuffled] = useState(false);
+  const preShuffleCard = useRef<{ front: string; sessionId?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
   const [aiLoading, setAiLoading] = useState(false);
   const [aiSaved, setAiSaved] = useState<Record<number, boolean>>({});
+  const [splitLoading, setSplitLoading] = useState(false);
+  const [splitPreview, setSplitPreview] = useState<string[] | null>(null);
+  const [splitDeleteOrig, setSplitDeleteOrig] = useState(true);
+  const [splitSelected, setSplitSelected] = useState<Set<number>>(new Set());
+  const [splitDeleteConfirm, setSplitDeleteConfirm] = useState(false);
+  const [splitDontAsk, setSplitDontAsk] = useState(false);
+  const [deleteConfirm, setDeleteConfirm] = useState(false);
+  const [splitAiConfirm, setSplitAiConfirm] = useState(false);
+  const [splitNoResult, setSplitNoResult] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
@@ -82,13 +105,16 @@ function ReviewContent() {
 
         if (session.stress_pronunciation) {
           const sents = parseSentences(session.stress_pronunciation);
-          for (const s of sents) {
+          for (let si = 0; si < sents.length; si++) {
             built.push({
-              front: s,
+              front: sents[si],
               back: "",
               type: "vocab",
               sessionDate: date,
               language: lang,
+              sessionId: session.id,
+              sourceField: "stress_pronunciation",
+              lineIndex: si,
             });
           }
         }
@@ -102,19 +128,24 @@ function ReviewContent() {
               type: "vocab",
               sessionDate: date,
               language: lang,
+              sessionId: session.id,
+              sourceField: "vocabulary",
             });
           }
         }
 
         if (session.sentence_grammar) {
           const sents = parseSentences(session.sentence_grammar);
-          for (const s of sents) {
+          for (let si = 0; si < sents.length; si++) {
             built.push({
-              front: s,
+              front: sents[si],
               back: "",
               type: "sentence",
               sessionDate: date,
               language: lang,
+              sessionId: session.id,
+              sourceField: "sentence_grammar",
+              lineIndex: si,
             });
           }
         }
@@ -139,7 +170,19 @@ function ReviewContent() {
 
       stopTts();
       setCards(filtered);
-      setIndex(0);
+
+      // When un-shuffling, restore position to the card user was viewing
+      let startIndex = 0;
+      if (!shuffled && preShuffleCard.current) {
+        const ref = preShuffleCard.current;
+        const found = filtered.findIndex((c) => c.front === ref.front && c.sessionId === ref.sessionId);
+        startIndex = found >= 0 ? found : 0;
+        preShuffleCard.current = null;
+      } else {
+        const saved = parseInt(sessionStorage.getItem("review-index") || "0", 10) || 0;
+        startIndex = saved < filtered.length ? saved : 0;
+      }
+      setIndex(startIndex);
       setFlipped(false);
       setAiResults({});
       setAiSaved({});
@@ -279,6 +322,157 @@ function ReviewContent() {
     };
     setCards((prev) => [...prev, newCard]);
     setAiSaved((prev) => ({ ...prev, [index]: true }));
+  }
+
+  async function handleDeleteCard() {
+    const card = cards[index];
+    if (!card || !card.sessionId || !card.sourceField) return;
+
+    const { data: session } = await supabase
+      .from("study_sessions")
+      .select("*")
+      .eq("id", card.sessionId)
+      .single();
+    if (!session) return;
+
+    const fieldValue = (session as Record<string, unknown>)[card.sourceField] as string;
+    if (!fieldValue) return;
+
+    const lines = parseSentences(fieldValue);
+    const lineIdx = card.lineIndex ?? lines.findIndex((l) => l === card.front);
+    if (lineIdx === -1) return;
+
+    const newLines = lines.filter((_, i) => i !== lineIdx);
+    const newValue = newLines.length > 0 ? newLines.join("\n") : null;
+
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ [card.sourceField]: newValue })
+      .eq("id", card.sessionId);
+
+    if (error) { alert(error.message); return; }
+
+    const newCards = cards.filter((_, i) => i !== index);
+    setCards(newCards);
+    if (index >= newCards.length && newCards.length > 0) setIndex(newCards.length - 1);
+    setFlipped(false);
+  }
+
+  function hasMultipleSentences(text: string) {
+    const matches = text.match(/[.!?。！？]\s/g);
+    const endsWithPunct = /[.!?。！？]$/.test(text.trim());
+    const count = (matches?.length || 0) + (endsWithPunct ? 1 : 0);
+    return count >= 2;
+  }
+
+  async function handleSplit() {
+    const card = cards[index];
+    if (!card || !card.sessionId || !card.sourceField || splitLoading) return;
+
+    // Check AI usage limit
+    if (plan !== "pro") {
+      if (!user) {
+        const { remaining } = getGuestUsage();
+        if (remaining <= 0) { router.push("/login"); return; }
+      } else {
+        const { remaining } = await getAiUsage(user.id);
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+      }
+    }
+
+    setSplitLoading(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "split-sentence", text: card.front }),
+      });
+      const data = await res.json();
+      if (data.error) {
+        alert(data.error);
+      } else if (data.result && data.result.length > 1) {
+        // Increment AI usage on success
+        if (plan !== "pro") {
+          if (!user) {
+            const { remaining } = incrementGuestUsage();
+            setAiRemaining(remaining);
+          } else {
+            await incrementAiUsage(user.id);
+            const { remaining } = await getAiUsage(user.id);
+            setAiRemaining(remaining);
+          }
+        }
+        setSplitPreview(data.result);
+        setSplitSelected(new Set(data.result.map((_: string, i: number) => i)));
+      } else {
+        setSplitNoResult(true);
+      }
+    } catch {
+      alert(locale === "ko" ? "요청 실패" : "Request failed");
+    }
+    setSplitLoading(false);
+  }
+
+  async function doSplitConfirm(sentences: string[], deleteOrig: boolean) {
+    const card = cards[index];
+    if (!card || !card.sessionId || !card.sourceField) return;
+
+    const { data: session } = await supabase
+      .from("study_sessions")
+      .select("*")
+      .eq("id", card.sessionId)
+      .single();
+    if (!session) { alert("Session not found"); return; }
+
+    const fieldValue = (session as Record<string, unknown>)[card.sourceField] as string;
+    const lines = parseSentences(fieldValue);
+    const lineIdx = card.lineIndex ?? lines.findIndex((l) => l === card.front);
+    if (lineIdx === -1) { alert("Line not found"); return; }
+
+    const newLines = deleteOrig
+      ? [...lines.slice(0, lineIdx), ...sentences, ...lines.slice(lineIdx + 1)]
+      : [...lines.slice(0, lineIdx + 1), ...sentences, ...lines.slice(lineIdx + 1)];
+    const newValue = newLines.join("\n");
+
+    const { error } = await supabase
+      .from("study_sessions")
+      .update({ [card.sourceField]: newValue })
+      .eq("id", card.sessionId);
+
+    if (error) { alert("저장 실패: " + error.message); return; }
+
+    const newCards = [...cards];
+    const splitCards: Card[] = sentences.map((s, i) => ({
+      front: s,
+      back: "",
+      type: card.type,
+      sessionDate: card.sessionDate,
+      language: card.language,
+      sessionId: card.sessionId,
+      sourceField: card.sourceField,
+      lineIndex: lineIdx + (deleteOrig ? i : i + 1),
+    }));
+    if (deleteOrig) {
+      newCards.splice(index, 1, ...splitCards);
+    } else {
+      newCards.splice(index + 1, 0, ...splitCards);
+    }
+    setCards(newCards);
+    setSplitPreview(null);
+  }
+
+  async function handleSplitConfirm() {
+    if (!splitPreview) return;
+    const selected = splitPreview.filter((_, i) => splitSelected.has(i));
+    if (selected.length === 0) { setSplitPreview(null); return; }
+    await doSplitConfirm(selected, true);
+  }
+
+  async function doSplitKeep() {
+    if (!splitPreview) return;
+    const selected = splitPreview.filter((_, i) => splitSelected.has(i));
+    if (selected.length === 0) { setSplitPreview(null); return; }
+    await doSplitConfirm(selected, false);
   }
 
   useEffect(() => {
@@ -426,7 +620,13 @@ function ReviewContent() {
           <button
             title={locale === "ko" ? "카드 순서를 무작위로 섞습니다" : "Shuffle card order randomly"}
             data-guide-tab="셔플" data-guide-tab-en="Shuffle"
-            onClick={() => setShuffled((s) => !s)}
+            onClick={() => {
+              if (!shuffled && cards[index]) {
+                preShuffleCard.current = { front: cards[index].front, sessionId: cards[index].sessionId };
+              }
+              sessionStorage.removeItem("review-index");
+              setShuffled((s) => !s);
+            }}
             className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
               shuffled
                 ? "bg-indigo-600 text-white"
@@ -444,7 +644,7 @@ function ReviewContent() {
                 {(["all", "vocab", "sentence"] as const).map((ct) => (
                   <button
                     key={ct}
-                    onClick={() => setCardType(ct)}
+                    onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
                     className={`px-3 py-1 rounded-md text-sm transition-colors ${
                       cardType === ct
                         ? "bg-gray-700 text-white"
@@ -465,7 +665,7 @@ function ReviewContent() {
               <button
                 key={f}
                 title={f === "english" ? (locale === "ko" ? "영어 카드 보기" : "Show English cards") : (locale === "ko" ? "일본어 카드 보기" : "Show Japanese cards")}
-                onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
+                onClick={() => { sessionStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
                 className={`px-3 py-1 rounded-md text-sm transition-colors ${
                   filter === f
                     ? "bg-gray-700 text-white"
@@ -505,19 +705,46 @@ function ReviewContent() {
               <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
                 {/* Front */}
                 <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
-                  {typeof navigator !== "undefined" && navigator.share && (
-                    <button
-                      onTouchStart={(e) => e.stopPropagation()}
-                      onTouchEnd={(e) => e.stopPropagation()}
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        navigator.share({ text: card.front }).catch(() => {});
-                      }}
-                      className="absolute top-3 right-3 text-gray-600 hover:text-gray-300 transition-colors text-sm z-10"
-                    >
-                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
-                    </button>
-                  )}
+                  {/* Card toolbar: share, split, delete */}
+                  <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                    {typeof navigator !== "undefined" && navigator.share && (
+                      <button
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          navigator.share({ text: card.front }).catch(() => {});
+                        }}
+                        title={locale === "ko" ? "공유" : "Share"}
+                        className="text-gray-600 hover:text-gray-300 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
+                      </button>
+                    )}
+                    {card.sessionId && hasMultipleSentences(card.front) && (
+                      <button
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); plan !== "pro" ? setSplitAiConfirm(true) : handleSplit(); }}
+                        disabled={splitLoading}
+                        title={locale === "ko" ? "문장 나누기" : "Split sentences"}
+                        className="text-gray-600 hover:text-orange-400 transition-colors disabled:opacity-50"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="8" x2="12" y2="11"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="12" y1="22" x2="12" y2="23"/></svg>
+                      </button>
+                    )}
+                    {card.sessionId && (
+                      <button
+                        onTouchStart={(e) => e.stopPropagation()}
+                        onTouchEnd={(e) => e.stopPropagation()}
+                        onClick={(e) => { e.stopPropagation(); setDeleteConfirm(true); }}
+                        title={locale === "ko" ? "카드 삭제" : "Delete card"}
+                        className="text-gray-600 hover:text-red-400 transition-colors"
+                      >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                      </button>
+                    )}
+                  </div>
                   <div className="flex items-center gap-2 mb-4">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -623,7 +850,210 @@ function ReviewContent() {
                   )}
                 </button>
               )}
+
             </div>
+
+            {/* Split Preview Modal */}
+            {(splitLoading || splitPreview) && (
+              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { if (!splitLoading) setSplitPreview(null); }}>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4 touch-auto" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold text-center">
+                    {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
+                  </h3>
+                  <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400">
+                    <span className="text-xs text-gray-600 block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
+                    {cards[index]?.front}
+                  </div>
+                  {splitLoading ? (
+                    <p className="text-center text-orange-400 text-sm animate-pulse">
+                      {locale === "ko" ? "분석 중..." : "Analyzing..."}
+                    </p>
+                  ) : splitPreview ? (
+                    <>
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs text-gray-500">
+                          {splitSelected.size}/{splitPreview.length} {locale === "ko" ? "선택" : "selected"}
+                        </span>
+                        <button
+                          onClick={() => setSplitSelected(splitSelected.size === splitPreview.length ? new Set() : new Set(splitPreview.map((_, i) => i)))}
+                          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                        >
+                          {splitSelected.size === splitPreview.length
+                            ? (locale === "ko" ? "전체 해제" : "Deselect all")
+                            : (locale === "ko" ? "전체 선택" : "Select all")}
+                        </button>
+                      </div>
+                      <div className="space-y-2">
+                        {splitPreview.map((s, i) => (
+                          <div
+                            key={i}
+                            onClick={() => setSplitSelected((prev) => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; })}
+                            className={`rounded-lg p-3 text-sm cursor-pointer transition-colors ${
+                              splitSelected.has(i)
+                                ? "bg-indigo-600/20 border border-indigo-500/40 text-gray-200"
+                                : "bg-gray-800/30 text-gray-600"
+                            }`}
+                          >
+                            {s}
+                          </div>
+                        ))}
+                      </div>
+                      <div className="flex items-center justify-between pt-1">
+                        <span className="text-sm text-gray-400">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
+                        <button
+                          onClick={() => setSplitDeleteOrig((v) => !v)}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-gray-700"}`}
+                        >
+                          <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${splitDeleteOrig ? "translate-x-5" : "translate-x-0"}`} />
+                        </button>
+                      </div>
+                      <div className="flex gap-3">
+                        <button
+                          onClick={() => setSplitPreview(null)}
+                          className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                        >
+                          {locale === "ko" ? "취소" : "Cancel"}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (splitSelected.size === 0) return;
+                            if (splitDeleteOrig && !localStorage.getItem("split-auto")) {
+                              setSplitDeleteConfirm(true);
+                            } else if (splitDeleteOrig) {
+                              handleSplitConfirm();
+                            } else {
+                              doSplitKeep();
+                            }
+                          }}
+                          disabled={splitSelected.size === 0}
+                          className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors disabled:opacity-40"
+                        >
+                          {locale === "ko" ? "나누기" : "Split"}
+                        </button>
+                      </div>
+                    </>
+                  ) : null}
+                </div>
+              </div>
+            )}
+
+            {/* Split Delete Confirm Popup */}
+            {splitDeleteConfirm && (
+              <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setSplitDeleteConfirm(false)}>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-sm text-gray-300 text-center">
+                    {locale === "ko" ? "기존 카드는 삭제되고 나뉘어진 카드로 대체됩니다" : "The original card will be deleted and replaced with split cards"}
+                  </p>
+                  <label className="flex items-center justify-center gap-2 text-xs text-gray-500 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={splitDontAsk}
+                      onChange={(e) => setSplitDontAsk(e.target.checked)}
+                      className="w-3.5 h-3.5 accent-gray-500 rounded"
+                    />
+                    {locale === "ko" ? "다시 보지 않기" : "Don't show again"}
+                  </label>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSplitDeleteConfirm(false)}
+                      className="flex-1 py-2 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      {locale === "ko" ? "취소" : "Cancel"}
+                    </button>
+                    <button
+                      onClick={() => {
+                        if (splitDontAsk) localStorage.setItem("split-auto", "delete");
+                        setSplitDeleteConfirm(false);
+                        handleSplitConfirm();
+                      }}
+                      className="flex-1 py-2 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
+                    >
+                      {locale === "ko" ? "확인" : "OK"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Split No Result Modal */}
+            {splitNoResult && (
+              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitNoResult(false)}>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-sm text-gray-400 text-center">
+                    {locale === "ko" ? "나눌 문장이 없습니다" : "No sentences to split"}
+                  </p>
+                  <button
+                    onClick={() => setSplitNoResult(false)}
+                    className="w-full py-2.5 bg-gray-800 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                  >
+                    {locale === "ko" ? "확인" : "OK"}
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Split AI Confirm Modal */}
+            {splitAiConfirm && (
+              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(false)}>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold text-center">
+                    {locale === "ko" ? "문장 나누기" : "Split Sentences"}
+                  </h3>
+                  <p className="text-sm text-gray-400 text-center">
+                    {locale === "ko"
+                      ? "AI를 이용한 문장 나누기 기능입니다."
+                      : "This feature uses AI to split sentences."}
+                  </p>
+                  <p className="text-xs text-gray-500 text-center">
+                    {locale === "ko"
+                      ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`
+                      : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setSplitAiConfirm(false)}
+                      className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      {locale === "ko" ? "취소" : "Cancel"}
+                    </button>
+                    <button
+                      onClick={() => { setSplitAiConfirm(false); handleSplit(); }}
+                      className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
+                    >
+                      {locale === "ko" ? "문장 나누기" : "Split"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Delete Confirm Modal */}
+            {deleteConfirm && (
+              <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDeleteConfirm(false)}>
+                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <h3 className="text-lg font-semibold text-center">
+                    {locale === "ko" ? "카드 삭제" : "Delete Card"}
+                  </h3>
+                  <p className="text-sm text-gray-400 text-center">
+                    {locale === "ko" ? "이 카드를 삭제하시겠습니까?" : "Delete this card?"}
+                  </p>
+                  <div className="flex gap-3">
+                    <button
+                      onClick={() => setDeleteConfirm(false)}
+                      className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                    >
+                      {locale === "ko" ? "취소" : "Cancel"}
+                    </button>
+                    <button
+                      onClick={() => { setDeleteConfirm(false); handleDeleteCard(); }}
+                      className="flex-1 py-2.5 bg-red-600 text-white rounded-lg text-sm hover:bg-red-500 transition-colors"
+                    >
+                      {locale === "ko" ? "삭제" : "Delete"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            )}
           </>
         ) : (
           <>
