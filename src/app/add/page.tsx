@@ -8,7 +8,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
 import { ensureUser } from "@/lib/guestAuth";
 
 const SAMPLE_EN = `Stress and Pronunciation
@@ -31,7 +31,7 @@ function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const { user, plan, isAnonymous } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese"
     : (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
   const [language, setLanguage] = useState<"english" | "japanese">(initialLang);
@@ -44,19 +44,10 @@ function AddContent() {
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
 
-  const GUEST_LIMIT = 5;
-
   useEffect(() => {
     if (!user || plan === "pro") return;
-    if (isAnonymous) {
-      supabase
-        .from("study_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .then(({ count }) => setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0))));
-    } else {
-      getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-    }
+    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
   }, [user, plan, isAnonymous]);
 
   function handlePreview() {
@@ -144,10 +135,11 @@ function AddContent() {
         raw_input: rawInput,
       };
     } else {
-      // AI mode — increment usage for free users (skip for anonymous)
-      if (plan !== "pro" && user && !isAnonymous) {
+      // AI mode — increment usage for free users
+      if (plan !== "pro" && user) {
         await incrementAiUsage(user.id);
-        const { remaining } = await getAiUsage(user.id);
+        const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+        const { remaining } = await fn(user.id);
         setAiRemaining(remaining);
       }
       const extracted = await aiParse(rawInput, language);
@@ -188,21 +180,23 @@ function AddContent() {
       <GuideOverlay pageKey="add" />
       {/* Title, Date & Language */}
       <div data-guide="add-header" className="flex gap-2 items-center">
-        <input
-          data-guide-tab="제목" data-guide-tab-en="Title"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={`${t("titleOptional")} | Lesson 12 - Business English`}
-          className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
-        />
-        <input
-          data-guide-tab="날짜" data-guide-tab-en="Date"
-          type="date"
-          value={studyDate}
-          onChange={(e) => setStudyDate(e.target.value)}
-          className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
-        />
+        <div className="flex gap-2 flex-1 min-w-0">
+          <input
+            data-guide-tab="제목" data-guide-tab-en="Title"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={`${t("titleOptional")} | Lesson 12 - Business English`}
+            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
+          />
+          <input
+            data-guide-tab="날짜" data-guide-tab-en="Date"
+            type="date"
+            value={studyDate}
+            onChange={(e) => setStudyDate(e.target.value)}
+            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
+          />
+        </div>
         <div data-guide-tab="언어" data-guide-tab-en="Language" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
@@ -286,7 +280,7 @@ function AddContent() {
               ) : (
                 <>
                   <button
-                    onClick={() => router.push(isAnonymous ? "/login" : "/pricing")}
+                    onClick={() => router.push((isAnonymous || !user) ? "/login" : "/pricing")}
                     className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <span className="flex items-center justify-center gap-2">
@@ -305,7 +299,7 @@ function AddContent() {
                     className="w-full py-3 bg-purple-600/10 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span className="flex items-center justify-center gap-2">
-                      {t("aiFreeExtract")}
+                      {(isAnonymous || !user) ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
                         {aiRemaining}/{(isAnonymous || !user) ? GUEST_LIMIT : DAILY_LIMIT}
                       </span>

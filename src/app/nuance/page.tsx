@@ -7,7 +7,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
 import { ensureUser } from "@/lib/guestAuth";
 import GuideOverlay from "@/components/GuideOverlay";
 
@@ -56,21 +56,11 @@ function NuanceContent() {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  const GUEST_LIMIT = 5;
-
   // Load AI usage for free users + show banner
   useEffect(() => {
     if (!user || plan === "pro") return;
-    if (isAnonymous) {
-      // Anonymous: count total chats (not daily)
-      supabase
-        .from("nuance_chats")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", user.id)
-        .then(({ count }) => setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0))));
-    } else {
-      getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-    }
+    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
   }, [user, plan, isAnonymous]);
 
   // Load available dates — current month: daily, past months: monthly
@@ -206,12 +196,14 @@ function NuanceContent() {
     if (plan !== "pro") {
       const { data: { session: sess } } = await supabase.auth.getSession();
       const uid = sess?.user?.id || user?.id;
-      if (uid && sess?.user?.is_anonymous) {
-        const { count } = await supabase.from("nuance_chats").select("*", { count: "exact", head: true }).eq("user_id", uid);
-        if ((count ?? 0) >= GUEST_LIMIT) { router.push("/login"); return; }
-      } else if (uid) {
-        const { remaining } = await getAiUsage(uid);
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+      if (uid) {
+        const fn = sess?.user?.is_anonymous ? getGuestAiUsage : getAiUsage;
+        const { remaining } = await fn(uid);
+        if (remaining <= 0) {
+          if (sess?.user?.is_anonymous) router.push("/login");
+          else alert(t("aiLimitReached"));
+          return;
+        }
       }
     }
 
@@ -245,13 +237,10 @@ function NuanceContent() {
         if (plan !== "pro") {
           const { data: { session: sess } } = await supabase.auth.getSession();
           const uid = sess?.user?.id || user?.id;
-          if (uid && sess?.user?.is_anonymous) {
-            // Anonymous: count total chats (will increase after insert below)
-            const { count } = await supabase.from("nuance_chats").select("*", { count: "exact", head: true }).eq("user_id", uid);
-            setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0) - 1));
-          } else if (uid) {
+          if (uid) {
             await incrementAiUsage(uid);
-            const { remaining } = await getAiUsage(uid);
+            const fn = sess?.user?.is_anonymous ? getGuestAiUsage : getAiUsage;
+            const { remaining } = await fn(uid);
             setAiRemaining(remaining);
           }
         }

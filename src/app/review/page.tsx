@@ -1,13 +1,14 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
 import GuideOverlay from "@/components/GuideOverlay";
 
 type Card = {
@@ -19,6 +20,7 @@ type Card = {
 };
 
 function ReviewContent() {
+  const router = useRouter();
   const { user, plan, isAnonymous } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
@@ -166,17 +168,20 @@ function ReviewContent() {
   // Load AI usage for free users
   useEffect(() => {
     if (!user || plan === "pro") return;
-    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan]);
+    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan, isAnonymous]);
 
   async function handleAi() {
     if (aiLoading || aiResults[index]) return;
 
     // Check AI usage limit for free users
     if (plan !== "pro" && user) {
-      const { remaining } = await getAiUsage(user.id);
+      const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+      const { remaining } = await fn(user.id);
       if (remaining <= 0) {
-        alert(t("aiLimitReached"));
+        if (isAnonymous) router.push("/login");
+        else alert(t("aiLimitReached"));
         return;
       }
     }
@@ -201,7 +206,8 @@ function ReviewContent() {
       // Increment AI usage for free users on success
       if (plan !== "pro" && user && data.result) {
         await incrementAiUsage(user.id);
-        const { remaining } = await getAiUsage(user.id);
+        const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
+        const { remaining } = await fn(user.id);
         setAiRemaining(remaining);
       }
     } catch {
@@ -594,7 +600,7 @@ function ReviewContent() {
                   AI Example
                   {plan !== "pro" && (
                     <span className="ml-1 text-xs text-purple-400/60">
-                      · {locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`}
+                      · {(isAnonymous || !user) ? (locale === "ko" ? `무료 체험 ${aiRemaining}/${GUEST_LIMIT}` : `Free trial ${aiRemaining}/${GUEST_LIMIT}`) : (locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`)}
                     </span>
                   )}
                 </button>

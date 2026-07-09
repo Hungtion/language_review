@@ -21,11 +21,11 @@ type Annotation = {
 
 export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const { locale } = useLocale();
-  const { user } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const lang = locale === "ko" ? "ko" : "en";
   const steps = GUIDE_STEPS[pageKey];
   const router = useRouter();
-  const isGuest = !user;
+  const isGuest = !user || isAnonymous;
 
   const [visible, setVisible] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
@@ -335,8 +335,17 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
         );
       })}
 
-      {/* Tutorial next/done button */}
-      {tutorialOn && (
+      {/* Tutorial next/done button OR guest tap-to-close hint */}
+      {isGuest ? (
+        <div
+          className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
+          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
+        >
+          <p className="text-sm text-gray-400 animate-pulse" style={{ fontFamily: "var(--font-gaegu), cursive" }}>
+            {lang === "ko" ? "아무 곳이나 터치하여 닫기" : "Tap anywhere to close"}
+          </p>
+        </div>
+      ) : tutorialOn && (
         <div
           className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}

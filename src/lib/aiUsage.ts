@@ -59,3 +59,15 @@ export async function resetAiUsage(userId: string): Promise<void> {
 }
 
 export const DAILY_LIMIT = DAILY_FREE_LIMIT;
+export const GUEST_LIMIT = 5;
+
+/** Guest: count total usage across all dates */
+export async function getGuestAiUsage(userId: string): Promise<{ count: number; remaining: number }> {
+  const { data } = await supabase
+    .from("ai_usage")
+    .select("count")
+    .eq("user_id", userId);
+
+  const total = (data || []).reduce((sum, row) => sum + (row.count || 0), 0);
+  return { count: total, remaining: Math.max(0, GUEST_LIMIT - total) };
+}

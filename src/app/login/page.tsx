@@ -34,7 +34,7 @@ export default function LoginPage() {
   const [inAppType, setInAppType] = useState<InAppType>(null);
 
   useEffect(() => {
-    if (user) {
+    if (user && !user.is_anonymous) {
       router.replace("/");
       return;
     }
