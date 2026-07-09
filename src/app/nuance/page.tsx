@@ -14,6 +14,7 @@ type Message = {
   role: "user" | "ai";
   text?: string;
   results?: NuanceResult[];
+  chatId?: string;
 };
 
 const LANGS_OPTIONS = ["English", "Japanese"] as const;
@@ -46,6 +47,8 @@ function NuanceContent() {
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
+  const [swipedPair, setSwipedPair] = useState<number | null>(null);
+  const swipeRef = useRef({ startX: 0, startY: 0, swiping: false });
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didScroll = useRef(false);
@@ -121,8 +124,8 @@ function NuanceContent() {
       if (data && data.length > 0) {
         const msgs: Message[] = [];
         for (const chat of data) {
-          msgs.push({ role: "user", text: chat.input_text });
-          msgs.push({ role: "ai", results: chat.results });
+          msgs.push({ role: "user", text: chat.input_text, chatId: chat.id });
+          msgs.push({ role: "ai", results: chat.results, chatId: chat.id });
         }
         setMessages(msgs);
       } else {
@@ -227,13 +230,20 @@ function NuanceContent() {
           setAiRemaining(remaining);
         }
 
-        await supabase.from("nuance_chats").insert({
+        const { data: inserted } = await supabase.from("nuance_chats").insert({
           user_id: user?.id,
           input_text: trimmed,
           results,
           target_langs: targetLangs,
           tone,
-        });
+        }).select("id").single();
+
+        if (inserted) {
+          setMessages((prev) => prev.map((m, idx) => {
+            if (idx >= prev.length - 2) return { ...m, chatId: inserted.id };
+            return m;
+          }));
+        }
 
         // Add today to date tabs if not there
         if (!dateTabs.includes(todayStr)) {
@@ -292,6 +302,37 @@ function NuanceContent() {
 
     setSavingNote(null);
     setSavedKeys((prev) => new Set(prev).add(key));
+  }
+
+  async function handleDeletePair(pairIdx: number) {
+    const userMsg = messages[pairIdx * 2];
+    if (userMsg?.chatId) {
+      await supabase.from("nuance_chats").delete().eq("id", userMsg.chatId);
+    }
+    setMessages((prev) => prev.filter((_, i) => Math.floor(i / 2) !== pairIdx));
+    setSwipedPair(null);
+  }
+
+  function pairTouchStart(e: React.TouchEvent, pairIdx: number) {
+    swipeRef.current = { startX: e.touches[0].clientX, startY: e.touches[0].clientY, swiping: false };
+  }
+
+  function pairTouchMove(e: React.TouchEvent, pairIdx: number) {
+    const dx = e.touches[0].clientX - swipeRef.current.startX;
+    const dy = Math.abs(e.touches[0].clientY - swipeRef.current.startY);
+    if (Math.abs(dx) > 10 && Math.abs(dx) > dy) {
+      swipeRef.current.swiping = true;
+    }
+  }
+
+  function pairTouchEnd(e: React.TouchEvent, pairIdx: number) {
+    if (!swipeRef.current.swiping) return;
+    const dx = e.changedTouches[0].clientX - swipeRef.current.startX;
+    if (dx < -60) {
+      setSwipedPair(pairIdx);
+    } else {
+      setSwipedPair(null);
+    }
   }
 
   function handleKeyDown(e: React.KeyboardEvent) {
@@ -355,103 +396,137 @@ function NuanceContent() {
           </div>
         )}
 
-        {messages.map((msg, i) => (
-          <div key={i}>
-            {msg.role === "user" ? (
-              <div className="flex justify-end">
-                <div className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%]">
-                  <p className="text-sm leading-relaxed">{msg.text}</p>
-                </div>
-              </div>
-            ) : (
-              <div className="space-y-3">
-                {msg.results?.map((result, idx) => (
-                  <div
-                    key={idx}
-                    className={`rounded-2xl rounded-tl-sm px-4 py-4 max-w-[95%] ${
-                      result.language === "Error"
-                        ? "bg-red-900/30 border border-red-500/30"
-                        : "bg-gray-900 border border-gray-800"
-                    }`}
-                  >
-                    {result.language !== "Error" && (
-                      <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-800">
-                        <span className="text-sm">
-                          {result.language === "English" ? "🇺🇸" : result.language === "Japanese" ? "🇯🇵" : "🌐"}
-                        </span>
-                        <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
-                          {result.language}
-                        </span>
-                      </div>
-                    )}
+        {Array.from({ length: Math.ceil(messages.length / 2) }, (_, pairIdx) => {
+          const userMsg = messages[pairIdx * 2];
+          const aiMsg = messages[pairIdx * 2 + 1];
+          const isSwiped = swipedPair === pairIdx;
 
-                    <div className="flex items-start gap-2 mb-3">
+          return (
+            <div key={pairIdx} className="relative overflow-hidden rounded-xl">
+              {/* Delete button behind */}
+              {isSwiped && (
+                <div className="absolute inset-y-0 right-0 flex items-center z-10">
+                  <button
+                    onClick={() => handleDeletePair(pairIdx)}
+                    className="h-full px-6 bg-red-600 text-white text-sm font-medium rounded-xl"
+                  >
+                    {locale === "ko" ? "삭제" : "Delete"}
+                  </button>
+                </div>
+              )}
+
+              {/* Swipeable content */}
+              <div
+                className={`relative z-20 transition-transform duration-200 ${isSwiped ? "-translate-x-20" : ""}`}
+                onTouchStart={(e) => pairTouchStart(e, pairIdx)}
+                onTouchMove={(e) => pairTouchMove(e, pairIdx)}
+                onTouchEnd={(e) => pairTouchEnd(e, pairIdx)}
+                onClick={() => { if (isSwiped) setSwipedPair(null); }}
+              >
+                {/* User message */}
+                {userMsg && (
+                  <div className="flex justify-end mb-3">
+                    <div
+                      className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] cursor-pointer active:bg-indigo-500 transition-colors"
+                      onClick={() => { if (!isSwiped && userMsg.text) { setInput(userMsg.text); inputRef.current?.focus(); } }}
+                    >
+                      <p className="text-sm leading-relaxed">{userMsg.text}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* AI message */}
+                {aiMsg?.results && (
+                  <div className="space-y-3">
+                    {aiMsg.results.map((result, idx) => (
                       <div
-                        className="flex-1 cursor-pointer active:opacity-70 transition-opacity"
-                        onClick={() => speak(result.translation, result.language === "Japanese" ? "japanese" : "english")}
-                      >
-                        <p className="text-lg font-medium text-gray-100 leading-relaxed">
-                          {result.translation}
-                        </p>
-                      </div>
-                      <button
-                        onClick={() => handleAddToNotes(result.translation, result.language)}
-                        disabled={savingNote === `${result.language}-${result.translation}` || savedKeys.has(`${result.language}-${result.translation}`)}
-                        className={`shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors text-sm ${
-                          savedKeys.has(`${result.language}-${result.translation}`)
-                            ? "text-green-400 border border-green-500/30 bg-green-600/20"
-                            : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                        key={idx}
+                        className={`rounded-2xl rounded-tl-sm px-4 py-4 max-w-[95%] ${
+                          result.language === "Error"
+                            ? "bg-red-900/30 border border-red-500/30"
+                            : "bg-gray-900 border border-gray-800"
                         }`}
                       >
-                        {savedKeys.has(`${result.language}-${result.translation}`) ? "✓" : savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
-                      </button>
-                    </div>
+                        {result.language !== "Error" && (
+                          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-800">
+                            <span className="text-sm">
+                              {result.language === "English" ? "🇺🇸" : result.language === "Japanese" ? "🇯🇵" : "🌐"}
+                            </span>
+                            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                              {result.language}
+                            </span>
+                          </div>
+                        )}
 
-                    {result.nuance && (
-                      <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
-                        <p className="text-xs font-medium text-indigo-400 mb-1">{t("whyExpression")}</p>
-                        <p className="text-sm text-gray-300 leading-relaxed">{result.nuance}</p>
-                      </div>
-                    )}
-
-                    {result.alternatives?.length > 0 && (
-                      <div className="mb-3">
-                        <p className="text-xs font-medium text-gray-500 mb-1.5">{t("alternatives")}</p>
-                        <div className="space-y-1">
-                          {result.alternatives.map((alt, altIdx) => {
-                            const altText = alt.replace(/\s*\([^)]*[가-힣][^)]*\)\s*$/, "").trim();
-                            return (
-                              <div key={altIdx} className="flex items-center gap-1.5">
-                                <div
-                                  className="flex-1 text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5 cursor-pointer active:opacity-70 transition-opacity"
-                                  onClick={() => speak(altText, result.language === "Japanese" ? "japanese" : "english")}
-                                >
-                                  {alt}
-                                </div>
-                                <button
-                                  onClick={() => handleAddToNotes(altText, result.language)}
-                                  disabled={savingNote === `${result.language}-${altText}` || savedKeys.has(`${result.language}-${altText}`)}
-                                  className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-colors text-xs ${
-                                    savedKeys.has(`${result.language}-${altText}`)
-                                      ? "text-green-400 border border-green-500/30 bg-green-600/20"
-                                      : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
-                                  }`}
-                                >
-                                  {savedKeys.has(`${result.language}-${altText}`) ? "✓" : savingNote === `${result.language}-${altText}` ? "·" : "+"}
-                                </button>
-                              </div>
-                            );
-                          })}
+                        <div className="flex items-start gap-2 mb-3">
+                          <div
+                            className="flex-1 cursor-pointer active:opacity-70 transition-opacity"
+                            onClick={() => speak(result.translation, result.language === "Japanese" ? "japanese" : "english")}
+                          >
+                            <p className="text-lg font-medium text-gray-100 leading-relaxed">
+                              {result.translation}
+                            </p>
+                          </div>
+                          <button
+                            onClick={() => handleAddToNotes(result.translation, result.language)}
+                            disabled={savingNote === `${result.language}-${result.translation}` || savedKeys.has(`${result.language}-${result.translation}`)}
+                            className={`shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors text-sm ${
+                              savedKeys.has(`${result.language}-${result.translation}`)
+                                ? "text-green-400 border border-green-500/30 bg-green-600/20"
+                                : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                            }`}
+                          >
+                            {savedKeys.has(`${result.language}-${result.translation}`) ? "✓" : savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
+                          </button>
                         </div>
-                      </div>
-                    )}
 
+                        {result.nuance && (
+                          <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
+                            <p className="text-xs font-medium text-indigo-400 mb-1">{t("whyExpression")}</p>
+                            <p className="text-sm text-gray-300 leading-relaxed">{result.nuance}</p>
+                          </div>
+                        )}
+
+                        {result.alternatives?.length > 0 && (
+                          <div className="mb-3">
+                            <p className="text-xs font-medium text-gray-500 mb-1.5">{t("alternatives")}</p>
+                            <div className="space-y-1">
+                              {result.alternatives.map((alt, altIdx) => {
+                                const altText = alt.replace(/\s*\([^)]*[가-힣][^)]*\)\s*$/, "").trim();
+                                return (
+                                  <div key={altIdx} className="flex items-center gap-1.5">
+                                    <div
+                                      className="flex-1 text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5 cursor-pointer active:opacity-70 transition-opacity"
+                                      onClick={() => speak(altText, result.language === "Japanese" ? "japanese" : "english")}
+                                    >
+                                      {alt}
+                                    </div>
+                                    <button
+                                      onClick={() => handleAddToNotes(altText, result.language)}
+                                      disabled={savingNote === `${result.language}-${altText}` || savedKeys.has(`${result.language}-${altText}`)}
+                                      className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-colors text-xs ${
+                                        savedKeys.has(`${result.language}-${altText}`)
+                                          ? "text-green-400 border border-green-500/30 bg-green-600/20"
+                                          : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                                      }`}
+                                    >
+                                      {savedKeys.has(`${result.language}-${altText}`) ? "✓" : savingNote === `${result.language}-${altText}` ? "·" : "+"}
+                                    </button>
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
+
+                      </div>
+                    ))}
                   </div>
-                ))}
+                )}
               </div>
-            )}
-          </div>
-        ))}
+            </div>
+          );
+        })}
 
         {loading && (
           <div className="flex justify-start">

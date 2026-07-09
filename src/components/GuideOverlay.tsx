@@ -202,34 +202,28 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               />
             );
           } else {
-            const dx = targetX - labelCX;
-            const dy = targetY - labelCY;
-            const dist = Math.sqrt(dx * dx + dy * dy);
-            if (dist < 20) return null;
+            // ㄴ-shape: from target bottom → down → right to text
+            const startPtX = a.rect.left + 20;
+            const startPtY = a.rect.top + a.rect.height + 4;
+            const cornerY = label.y + label.h / 2;
+            const endPtX = label.x - 6;
 
-            startX = labelCX + (dx / dist) * (label.w / 2.5);
-            startY = labelCY + (dy / dist) * (label.h / 2);
-            endX = targetX;
-            endY = a.rect.top - 4;
+            const r = 12;
+            const d = `M ${startPtX} ${startPtY} L ${startPtX} ${cornerY - r} Q ${startPtX} ${cornerY}, ${startPtX + r} ${cornerY} L ${endPtX} ${cornerY}`;
 
-            // Curly/pigtail curve with two control points
-            cp1X = startX + (endX - startX) * 0.1;
-            cp1Y = startY + (endY - startY) * 0.7;
-            cp2X = endX - (endX - startX) * 0.3;
-            cp2Y = endY - 20;
+            return (
+              <path
+                key={i}
+                d={d}
+                fill="none"
+                stroke="rgba(251,191,36,0.7)"
+                strokeWidth="2"
+                strokeDasharray="5 4"
+                strokeLinecap="round"
+                markerEnd="url(#guide-chevron)"
+              />
+            );
           }
-
-          return (
-            <path
-              key={i}
-              d={`M ${startX} ${startY} C ${cp1X} ${cp1Y} ${cp2X} ${cp2Y} ${endX} ${endY}`}
-              fill="none"
-              stroke="rgba(251,191,36,0.7)"
-              strokeWidth="2"
-              strokeDasharray="3 3"
-              markerEnd="url(#guide-arrow)"
-            />
-          );
         })}
       </svg>
 
@@ -315,7 +309,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
             >
               <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
                 {a.step.title[lang] && <p className="text-[20px] font-bold text-amber-300">{a.step.title[lang]}</p>}
-                {a.step.description[lang] && <p className={`text-[17px] text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>}
+                {a.step.description[lang] && <p className={`text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`} style={{ fontSize: a.step.fontSize || 17 }}>{renderDesc(a.step.description[lang])}</p>}
               </div>
             </div>
           );
@@ -428,7 +422,7 @@ function getLabelPos(
     x = Math.max(16, rect.right - labelW);
     y = rect.top + Math.min(rect.height, vh * 0.5) + gap;
   } else {
-    x = Math.max(16, Math.min(rect.left, vw - labelW - 16));
+    x = Math.max(16, Math.min(rect.left + 56, vw - labelW - 16));
     y = rect.top + Math.min(rect.height, vh * 0.5) + gap;
   }
 

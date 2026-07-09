@@ -6,6 +6,7 @@ export type GuideStep = {
   overlay?: boolean; // label directly on the element, no arrow
   noArrow?: boolean; // hide arrow even when not overlay
   noHighlight?: boolean; // hide highlight border
+  fontSize?: number; // override description font size
   tabLabels?: boolean; // render individual labels on each [data-guide-tab] child
 };
 
@@ -166,18 +167,18 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
         en: "Choose the nuance you want to express.",
         ko: "표현하고 싶은 뉘앙스를 선택하세요.",
       },
-      noArrow: true,
     },
     {
       selector: "[data-guide='nuance-screen']",
       title: { en: "", ko: "" },
       description: {
-        en: "You can speak in any language.\n\nTranslates Korean naturally,\nand corrects foreign languages\nto match context and nuance.\n\nTap [+] to save expressions to your notes.",
-        ko: "어떤 언어로 말해도 좋아요.\n\n한국어는 자연스럽게 번역하고,\n외국어는 상황과 뉘앙스에 맞춰 교정해 드려요.\n\n마음에 드는 표현을 [+]를 눌러 노트에 저장해 보세요.",
+        en: "You can speak in any language.\n\nTranslates Korean naturally,\nand corrects foreign languages\nto match context and nuance.\n\nTap a sentence to hear pronunciation.\nTap [+] to save expressions to your notes.",
+        ko: "어떤 언어로 말해도 좋아요.\n\n한국어는 자연스럽게 번역하고,\n외국어는 상황과 뉘앙스에 맞춰 교정해 드려요.\n\n문장을 탭하면 발음을 들을 수 있어요.\n[+]를 눌러 노트에 저장해 보세요.",
       },
       overlay: true,
       position: "bottom",
       noHighlight: true,
+      fontSize: 20,
     },
   ],
 };
