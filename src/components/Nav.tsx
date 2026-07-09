@@ -43,8 +43,7 @@ export default function Nav() {
         {pageTitle && (
           <span className="ml-auto mr-3 text-sm text-gray-300 font-medium sm:hidden flex-shrink-0 self-end pb-2">{pageTitle}</span>
         )}
-        {user && (
-          <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
+        <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
             <Link
               href="/add"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
@@ -86,7 +85,6 @@ export default function Nav() {
               {t("settingsTitle")}
             </Link>
           </div>
-        )}
       </div>
     </nav>
   );

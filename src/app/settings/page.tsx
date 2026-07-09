@@ -342,7 +342,7 @@ function SettingsContent() {
 
 export default function SettingsPage() {
   return (
-    <RequireAuth>
+    <RequireAuth strict>
       <SettingsContent />
     </RequireAuth>
   );

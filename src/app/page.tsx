@@ -15,7 +15,7 @@ function HomeContent() {
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) { setRecent([]); return; }
     async function load() {
       const { data } = await supabase
         .from("study_sessions")

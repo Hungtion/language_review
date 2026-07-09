@@ -1,17 +1,11 @@
 "use client";
 
-"use client";
-
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { useAuth } from "./AuthProvider";
 import { playTabClick } from "@/lib/unlockAudio";
 
 export default function BottomTab() {
   const pathname = usePathname();
-  const { user } = useAuth();
-
-  if (!user) return null;
 
   const tabs = [
     { href: "/", icon: HomeIcon, match: (p: string) => p === "/", guideLabel: "홈" },

@@ -19,7 +19,7 @@ type Card = {
 };
 
 function ReviewContent() {
-  const { user, plan } = useAuth();
+  const { user, plan, isAnonymous } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -124,6 +124,11 @@ function ReviewContent() {
         }
       }
 
+      // Anonymous users limited to 20 cards
+      if (isAnonymous) {
+        filtered = filtered.slice(0, 20);
+      }
+
       stopTts();
       setCards(filtered);
       setIndex(0);
@@ -133,7 +138,7 @@ function ReviewContent() {
       setLoading(false);
     }
     load();
-  }, [filter, cardType, shuffled]);
+  }, [filter, cardType, shuffled, isAnonymous]);
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {

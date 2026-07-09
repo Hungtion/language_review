@@ -7,6 +7,7 @@ import type { User } from "@supabase/supabase-js";
 type AuthContextType = {
   user: User | null;
   plan: "free" | "pro";
+  isAnonymous: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
 };
@@ -14,6 +15,7 @@ type AuthContextType = {
 const AuthContext = createContext<AuthContextType>({
   user: null,
   plan: "free",
+  isAnonymous: false,
   loading: true,
   signOut: async () => {},
 });
@@ -56,8 +58,10 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     await supabase.auth.signOut();
   }
 
+  const isAnonymous = !!user?.is_anonymous;
+
   return (
-    <AuthContext.Provider value={{ user, plan, loading, signOut }}>
+    <AuthContext.Provider value={{ user, plan, isAnonymous, loading, signOut }}>
       {children}
     </AuthContext.Provider>
   );

@@ -9,6 +9,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import { ensureUser } from "@/lib/guestAuth";
 
 const SAMPLE_EN = `Stress and Pronunciation
 apple- AE-pl
@@ -29,7 +30,7 @@ Practice makes perfect.`;
 function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, plan } = useAuth();
+  const { user, plan, isAnonymous } = useAuth();
   const { t } = useLocale();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese"
     : (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
@@ -74,8 +75,12 @@ function AddContent() {
     return !(parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment);
   }
 
-  function handleSaveClick() {
+  async function handleSaveClick() {
     if (!rawInput.trim()) return;
+    if (!user) {
+      const guest = await ensureUser();
+      if (!guest) { router.push("/login"); return; }
+    }
     if (needsParseChoice()) {
       setShowParseChoice(true);
     } else {
@@ -85,6 +90,20 @@ function AddContent() {
 
   async function doSave(mode: "ai" | "line" | "none") {
     setSaving(true);
+
+    // Guest note limit
+    const { data: { session: s } } = await supabase.auth.getSession();
+    if (s?.user?.is_anonymous) {
+      const { count } = await supabase
+        .from("study_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", s.user.id);
+      if ((count ?? 0) >= 5) {
+        setSaving(false);
+        router.push("/login");
+        return;
+      }
+    }
 
     let insertData;
     if (mode === "none") {
@@ -138,9 +157,11 @@ function AddContent() {
       };
     }
 
+    const { data: { session } } = await supabase.auth.getSession();
+    const uid = session?.user?.id || user?.id;
     const { error } = await supabase.from("study_sessions").insert({
       ...insertData,
-      user_id: user?.id,
+      user_id: uid,
     });
 
     setSaving(false);

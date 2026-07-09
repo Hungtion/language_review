@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { GUIDE_STEPS, isGuideDismissed, dismissGuide, dismissTutorial, isTutorialActive, GuideStep } from "@/lib/guide";
 import { useLocale } from "@/lib/useLocale";
+import { useAuth } from "./AuthProvider";
 
 const TUTORIAL_ORDER = [
   { key: "home", path: "/" },
@@ -20,15 +21,17 @@ type Annotation = {
 
 export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const { locale } = useLocale();
+  const { user } = useAuth();
   const lang = locale === "ko" ? "ko" : "en";
   const steps = GUIDE_STEPS[pageKey];
   const router = useRouter();
+  const isGuest = !user;
 
   const [visible, setVisible] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
   const [doneModal, setDoneModal] = useState(false);
 
-  const tutorialOn = isTutorialActive();
+  const tutorialOn = isGuest || isTutorialActive();
   const currentIdx = TUTORIAL_ORDER.findIndex((t) => t.key === pageKey);
   const prevStep = currentIdx > 0 ? TUTORIAL_ORDER[currentIdx - 1] : null;
   const nextStep = currentIdx >= 0 && currentIdx < TUTORIAL_ORDER.length - 1
@@ -38,7 +41,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
 
   useEffect(() => {
     if (!steps || steps.length === 0) return;
-    if (isGuideDismissed(pageKey)) return;
+    if (!isGuest && isGuideDismissed(pageKey)) return;
     const timer = setTimeout(() => setVisible(true), 600);
     return () => clearTimeout(timer);
   }, [pageKey]);
@@ -66,7 +69,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   }, [updateRects]);
 
   function close() {
-    if (!tutorialOn) {
+    if (!isGuest && !tutorialOn) {
       dismissGuide(pageKey);
     }
     setVisible(false);

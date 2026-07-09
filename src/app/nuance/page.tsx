@@ -8,6 +8,7 @@ import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT } from "@/lib/aiUsage";
+import { ensureUser } from "@/lib/guestAuth";
 import GuideOverlay from "@/components/GuideOverlay";
 
 type Message = {
@@ -181,6 +182,10 @@ function NuanceContent() {
   }
 
   async function handleSend() {
+    if (!user) {
+      const guest = await ensureUser();
+      if (!guest) { router.push("/login"); return; }
+    }
     const trimmed = input.trim();
     if (!trimmed || loading) return;
     if (targetLangs.length === 0) {
@@ -230,8 +235,10 @@ function NuanceContent() {
           setAiRemaining(remaining);
         }
 
+        const { data: { session: curSession } } = await supabase.auth.getSession();
+        const uid = curSession?.user?.id || user?.id;
         const { data: inserted } = await supabase.from("nuance_chats").insert({
-          user_id: user?.id,
+          user_id: uid,
           input_text: trimmed,
           results,
           target_langs: targetLangs,
