@@ -44,10 +44,20 @@ function AddContent() {
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
 
+  const GUEST_LIMIT = 5;
+
   useEffect(() => {
     if (!user || plan === "pro") return;
-    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan]);
+    if (isAnonymous) {
+      supabase
+        .from("study_sessions")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .then(({ count }) => setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0))));
+    } else {
+      getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+    }
+  }, [user, plan, isAnonymous]);
 
   function handlePreview() {
     const parsed = parseRawInput(rawInput);
@@ -134,8 +144,8 @@ function AddContent() {
         raw_input: rawInput,
       };
     } else {
-      // AI mode — increment usage for free users
-      if (plan !== "pro" && user) {
+      // AI mode — increment usage for free users (skip for anonymous)
+      if (plan !== "pro" && user && !isAnonymous) {
         await incrementAiUsage(user.id);
         const { remaining } = await getAiUsage(user.id);
         setAiRemaining(remaining);
@@ -276,7 +286,7 @@ function AddContent() {
               ) : (
                 <>
                   <button
-                    onClick={() => router.push("/pricing")}
+                    onClick={() => router.push(isAnonymous ? "/login" : "/pricing")}
                     className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <span className="flex items-center justify-center gap-2">
@@ -297,7 +307,7 @@ function AddContent() {
                     <span className="flex items-center justify-center gap-2">
                       {t("aiFreeExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
-                        {aiRemaining}/{DAILY_LIMIT}
+                        {aiRemaining}/{(isAnonymous || !user) ? GUEST_LIMIT : DAILY_LIMIT}
                       </span>
                     </span>
                     <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>

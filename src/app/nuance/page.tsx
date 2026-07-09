@@ -26,7 +26,7 @@ const TONE_OPTIONS = [
 ] as const;
 
 function NuanceContent() {
-  const { user, plan } = useAuth();
+  const { user, plan, isAnonymous } = useAuth();
   const router = useRouter();
   const { speak } = useTts();
   const { t, locale } = useLocale();
@@ -56,13 +56,22 @@ function NuanceContent() {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
+  const GUEST_LIMIT = 5;
+
   // Load AI usage for free users + show banner
   useEffect(() => {
     if (!user || plan === "pro") return;
-    getAiUsage(user.id).then(({ remaining }) => {
-      setAiRemaining(remaining);
-    });
-  }, [user, plan]);
+    if (isAnonymous) {
+      // Anonymous: count total chats (not daily)
+      supabase
+        .from("nuance_chats")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
+        .then(({ count }) => setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0))));
+    } else {
+      getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+    }
+  }, [user, plan, isAnonymous]);
 
   // Load available dates — current month: daily, past months: monthly
   useEffect(() => {
@@ -193,12 +202,16 @@ function NuanceContent() {
       return;
     }
 
-    // Check AI usage limit for free users
-    if (plan !== "pro" && user) {
-      const { remaining } = await getAiUsage(user.id);
-      if (remaining <= 0) {
-        alert(t("aiLimitReached"));
-        return;
+    // Check AI usage limit for free/anonymous users
+    if (plan !== "pro") {
+      const { data: { session: sess } } = await supabase.auth.getSession();
+      const uid = sess?.user?.id || user?.id;
+      if (uid && sess?.user?.is_anonymous) {
+        const { count } = await supabase.from("nuance_chats").select("*", { count: "exact", head: true }).eq("user_id", uid);
+        if ((count ?? 0) >= GUEST_LIMIT) { router.push("/login"); return; }
+      } else if (uid) {
+        const { remaining } = await getAiUsage(uid);
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
       }
     }
 
@@ -228,11 +241,19 @@ function NuanceContent() {
         const results: NuanceResult[] = data.result.results;
         setMessages((prev) => [...prev, { role: "ai", results }]);
 
-        // Increment AI usage for free users
-        if (plan !== "pro" && user) {
-          await incrementAiUsage(user.id);
-          const { remaining } = await getAiUsage(user.id);
-          setAiRemaining(remaining);
+        // Update usage tracking for free users
+        if (plan !== "pro") {
+          const { data: { session: sess } } = await supabase.auth.getSession();
+          const uid = sess?.user?.id || user?.id;
+          if (uid && sess?.user?.is_anonymous) {
+            // Anonymous: count total chats (will increase after insert below)
+            const { count } = await supabase.from("nuance_chats").select("*", { count: "exact", head: true }).eq("user_id", uid);
+            setAiRemaining(Math.max(0, GUEST_LIMIT - (count ?? 0) - 1));
+          } else if (uid) {
+            await incrementAiUsage(uid);
+            const { remaining } = await getAiUsage(uid);
+            setAiRemaining(remaining);
+          }
         }
 
         const { data: { session: curSession } } = await supabase.auth.getSession();
@@ -549,7 +570,7 @@ function NuanceContent() {
       {/* Free usage + Date Tabs + Input */}
       {plan !== "pro" && (
         <p className="text-center text-xs text-gray-500 pt-2 pb-1">
-          {t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}
+          {(isAnonymous || !user) ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{(isAnonymous || !user) ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
         </p>
       )}
       <div className="pt-3 border-t border-gray-800">
@@ -601,14 +622,14 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push("/pricing"); } }}
+            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push(isAnonymous ? "/login" : "/pricing"); } }}
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={plan !== "pro" && aiRemaining <= 0 ? (locale === "ko" ? "무료 횟수를 모두 사용했어요" : "Free uses exhausted") : t("enterSentence")}
             rows={1}
             className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
           />
           <button
-            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push("/pricing"); return; } handleSend(); }}
+            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push(isAnonymous ? "/login" : "/pricing"); return; } handleSend(); }}
             disabled={loading || (!input.trim() && !(plan !== "pro" && aiRemaining <= 0))}
             className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
           >
