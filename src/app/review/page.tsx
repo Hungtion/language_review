@@ -64,6 +64,8 @@ function ReviewContent() {
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
+  const [playing, setPlaying] = useState(false);
+  const playingRef = useRef(false);
   const [pressed, setPressed] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
   const [swipeAnim, setSwipeAnim] = useState<"left" | "right" | null>(null);
@@ -194,6 +196,8 @@ function ReviewContent() {
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
       stopTts();
+      playingRef.current = false;
+      setPlaying(false);
       setIndex((i) => i + 1);
       setFlipped(false);
     }
@@ -202,14 +206,56 @@ function ReviewContent() {
   const goPrev = useCallback(() => {
     if (index > 0) {
       stopTts();
+      playingRef.current = false;
+      setPlaying(false);
       setIndex((i) => i - 1);
       setFlipped(false);
     }
   }, [index]);
 
+  function togglePlay() {
+    if (playing) {
+      playingRef.current = false;
+      setPlaying(false);
+      stopTts();
+    } else {
+      playingRef.current = true;
+      setPlaying(true);
+      if (cards[index]) {
+        speak(cards[index].front, cards[index].language, () => {
+          if (!playingRef.current) return;
+          setIndex((prev) => {
+            if (prev < cards.length - 1) {
+              return prev + 1;
+            } else {
+              playingRef.current = false;
+              setPlaying(false);
+              return prev;
+            }
+          });
+          setFlipped(false);
+        });
+      }
+    }
+  }
+
   useEffect(() => {
     if (!cards[index] || loading) return;
-    if (autoplay) {
+    if (playing && playingRef.current) {
+      speak(cards[index].front, cards[index].language, () => {
+        if (!playingRef.current) return;
+        setIndex((prev) => {
+          if (prev < cards.length - 1) {
+            return prev + 1;
+          } else {
+            playingRef.current = false;
+            setPlaying(false);
+            return prev;
+          }
+        });
+        setFlipped(false);
+      });
+    } else if (autoplay && !playing) {
       speak(cards[index].front, cards[index].language);
     }
   }, [index, loading]);
@@ -595,7 +641,7 @@ function ReviewContent() {
       <GuideOverlay pageKey="review" />
       {/* Filters */}
       <div className="flex items-center justify-between px-4 pt-3 pb-3">
-        <div data-guide="review-filters-right" className="flex gap-3 items-center shrink-0">
+        <div data-guide="review-filters-right" className="flex gap-4 items-center shrink-0">
           <button
             title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
             data-guide-tab={`자동\n재생`} data-guide-tab-en={`Auto\nPlay`}
@@ -604,12 +650,12 @@ function ReviewContent() {
               setAutoplay(next);
               localStorage.setItem("tts-autoplay", String(next));
             }}
-            className={`w-9 h-5 rounded-full transition-colors relative shrink-0 ${
+            className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${
               autoplay ? "bg-indigo-600" : "bg-gray-700"
             }`}
           >
             <span
-              className={`absolute top-0.5 left-0.5 w-4 h-4 rounded-full transition-transform flex items-center justify-center text-[8px] font-bold ${
+              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
                 autoplay ? "translate-x-4 bg-white text-indigo-600" : "translate-x-0 bg-gray-500 text-gray-300"
               }`}
             >
@@ -627,13 +673,26 @@ function ReviewContent() {
               sessionStorage.removeItem("review-index");
               setShuffled((s) => !s);
             }}
-            className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
+            className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
               shuffled
                 ? "bg-indigo-600 text-white"
                 : "bg-gray-900 text-gray-400 hover:text-gray-200"
             }`}
           >
             🔀
+          </button>
+
+          <button
+            title={locale === "ko" ? "연속 재생" : "Auto play all"}
+            data-guide-tab="자동 넘김" data-guide-tab-en="Auto Play"
+            onClick={togglePlay}
+            className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
+              playing
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-900 text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            {playing ? "⏸" : "▶️"}
           </button>
         </div>
 
@@ -1080,9 +1139,39 @@ function ReviewContent() {
         <div className="text-center text-xs text-gray-500 mb-1.5">
           {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
         </div>
-        <div className="h-1 bg-gray-800 rounded-full overflow-hidden">
+        <div
+          className="h-2 bg-gray-800 rounded-full overflow-hidden cursor-pointer relative touch-none"
+          onClick={(e) => {
+            if (cards.length === 0) return;
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const newIdx = Math.min(Math.round(ratio * (cards.length - 1)), cards.length - 1);
+            stopTts();
+            setIndex(newIdx);
+            setFlipped(false);
+          }}
+          onTouchStart={(e) => {
+            if (cards.length === 0) return;
+            const touch = e.touches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            const newIdx = Math.min(Math.round(ratio * (cards.length - 1)), cards.length - 1);
+            stopTts();
+            setIndex(newIdx);
+            setFlipped(false);
+          }}
+          onTouchMove={(e) => {
+            if (cards.length === 0) return;
+            const touch = e.touches[0];
+            const rect = e.currentTarget.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (touch.clientX - rect.left) / rect.width));
+            const newIdx = Math.min(Math.round(ratio * (cards.length - 1)), cards.length - 1);
+            setIndex(newIdx);
+            setFlipped(false);
+          }}
+        >
           <div
-            className="h-full bg-indigo-500 rounded-full transition-all duration-300"
+            className="h-full bg-indigo-500 rounded-full transition-all duration-100"
             style={{ width: cards.length > 0 ? `${((index + 1) / cards.length) * 100}%` : "0%" }}
           />
         </div>

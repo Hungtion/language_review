@@ -41,7 +41,7 @@ export function useTts() {
   );
 
   const speak = useCallback(
-    (text: string, language: "english" | "japanese") => {
+    (text: string, language: "english" | "japanese", onEnd?: () => void) => {
       speechSynthesis.cancel();
       const cleaned = text
         .replace(/[（(][^）)]*[）)]/g, "")
@@ -52,6 +52,7 @@ export function useTts() {
       const voice = getVoice(langCode);
       if (voice) utter.voice = voice;
       utter.rate = 0.9;
+      if (onEnd) utter.onend = onEnd;
       speechSynthesis.speak(utter);
     },
     [getVoice]
