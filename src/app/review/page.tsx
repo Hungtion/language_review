@@ -377,48 +377,9 @@ function ReviewContent() {
       <GuideOverlay pageKey="review" />
       {/* Filters */}
       <div className="flex items-center justify-between px-4 pt-3 pb-3">
-        <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
-          <div data-guide="review-filter-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
-            {(["english", "japanese"] as const).map((f) => (
-              <button
-                key={f}
-                onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
-                className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                  filter === f
-                    ? "bg-gray-700 text-white"
-                    : "text-gray-400 hover:text-gray-200"
-                }`}
-              >
-                {f === "english" ? "🇺🇸" : "🇯🇵"}
-              </button>
-            ))}
-          </div>
-
-          {isEngChannel && (
-            <>
-              <div className="w-px h-5 bg-gray-700 shrink-0" />
-
-              <div data-guide="review-filter-type" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
-                {(["all", "vocab", "sentence"] as const).map((ct) => (
-                  <button
-                    key={ct}
-                    onClick={() => setCardType(ct)}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                      cardType === ct
-                        ? "bg-gray-700 text-white"
-                        : "text-gray-400 hover:text-gray-200"
-                    }`}
-                  >
-                    {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
-                  </button>
-                ))}
-              </div>
-            </>
-          )}
-        </div>
-
-        <div data-guide="review-filters-right" className="flex gap-2 items-center shrink-0 ml-2">
+        <div data-guide="review-filters-right" className="flex gap-3 items-center shrink-0">
           <button
+            data-guide-tab="셔플" data-guide-tab-en="Shuffle"
             onClick={() => setShuffled((s) => !s)}
             className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
               shuffled
@@ -430,6 +391,7 @@ function ReviewContent() {
           </button>
 
           <button
+            data-guide-tab={`자동\n재생`} data-guide-tab-en={`Auto\nPlay`}
             onClick={() => {
               const next = !autoplay;
               setAutoplay(next);
@@ -447,6 +409,46 @@ function ReviewContent() {
               A
             </span>
           </button>
+        </div>
+
+        <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
+          {isEngChannel && (
+            <>
+              <div data-guide="review-filter-type" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+                {(["all", "vocab", "sentence"] as const).map((ct) => (
+                  <button
+                    key={ct}
+                    onClick={() => setCardType(ct)}
+                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                      cardType === ct
+                        ? "bg-gray-700 text-white"
+                        : "text-gray-400 hover:text-gray-200"
+                    }`}
+                  >
+                    {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
+                  </button>
+                ))}
+              </div>
+
+              <div className="w-px h-5 bg-gray-700 shrink-0" />
+            </>
+          )}
+
+          <div data-guide="review-filter-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+            {(["english", "japanese"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
+                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  filter === f
+                    ? "bg-gray-700 text-white"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                {f === "english" ? "🇺🇸" : "🇯🇵"}
+              </button>
+            ))}
+          </div>
         </div>
       </div>
 
@@ -573,9 +575,10 @@ function ReviewContent() {
                         setAiRemaining(DAILY_LIMIT);
                       }
                     }}
-                    className="flex-1 py-2 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
+                    disabled
+                    className="flex-1 py-2 bg-gray-800/50 text-gray-600 border border-gray-700/30 rounded-lg text-xs cursor-not-allowed"
                   >
-                    {locale === "ko" ? "광고 보기" : "Watch Ad"}
+                    {locale === "ko" ? "광고 보기 (준비중)" : "Watch Ad (Coming soon)"}
                   </button>
                 </div>
               ) : (

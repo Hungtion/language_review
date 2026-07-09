@@ -81,7 +81,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           onClick={(e) => e.stopPropagation()}
         >
           <div className="text-3xl mb-3">🎉</div>
-          <p className="text-white text-[15px] leading-relaxed whitespace-pre-line">
+          <p className="text-white text-[17px] leading-relaxed whitespace-pre-line">
             {lang === "ko"
               ? "준비 완료! 이제 학습을 시작해 보세요.\n가이드는 설정에서 다시 켤 수 있어요."
               : "All set! Start learning now.\nYou can turn the guide back on in Settings."}
@@ -259,19 +259,32 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
         const tabEls = parent ? parent.querySelectorAll("[data-guide-tab]") : [];
         return Array.from(tabEls).map((el, ti) => {
           const tabRect = el.getBoundingClientRect();
-          const label = el.getAttribute("data-guide-tab") || "";
+          const label = (lang === "en" ? el.getAttribute("data-guide-tab-en") : null) || el.getAttribute("data-guide-tab") || "";
           return (
-            <div
-              key={`tab-${i}-${ti}`}
-              className="fixed z-[1002] pointer-events-none text-center"
-              style={{
-                top: tabRect.top,
-                left: tabRect.left - 8,
-                width: tabRect.width + 16,
-                fontFamily: "var(--font-gaegu), cursive",
-              }}
-            >
-              <span className="text-[14px] font-bold text-white whitespace-pre-line leading-tight">{label}</span>
+            <div key={`tab-${i}-${ti}`} className="contents">
+              <div
+                className="fixed z-[1000] rounded-lg pointer-events-none"
+                style={{
+                  top: tabRect.top - 4,
+                  left: tabRect.left - 4,
+                  width: tabRect.width + 8,
+                  height: tabRect.height + 8,
+                  border: "1.5px solid rgba(165,180,252,0.35)",
+                  boxShadow: "0 0 12px rgba(99,102,241,0.15)",
+                }}
+              />
+              <div
+                className="fixed z-[1002] pointer-events-none text-center flex items-center justify-center"
+                style={{
+                  top: tabRect.top,
+                  left: tabRect.left - 8,
+                  width: tabRect.width + 16,
+                  height: tabRect.height,
+                  fontFamily: "var(--font-gaegu), cursive",
+                }}
+              >
+                <span className="text-[16px] font-bold text-white whitespace-pre-line leading-tight">{label}</span>
+              </div>
             </div>
           );
         });
@@ -301,23 +314,24 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               }}
             >
               <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
-                {a.step.title[lang] && <p className="text-[18px] font-bold text-amber-300">{a.step.title[lang]}</p>}
-                {a.step.description[lang] && <p className={`text-[15px] text-white leading-relaxed whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>}
+                {a.step.title[lang] && <p className="text-[20px] font-bold text-amber-300">{a.step.title[lang]}</p>}
+                {a.step.description[lang] && <p className={`text-[17px] text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>}
               </div>
             </div>
           );
         }
         const label = getLabelPos(a, i, vh, vw);
+        const alignRight = a.step.position === "bottom-right";
         return (
           <div
             key={`label-${i}`}
-            className="fixed z-[1002] pointer-events-none flex items-center"
+            className={`fixed z-[1002] pointer-events-none flex items-center ${alignRight ? "justify-end text-right" : ""}`}
             style={{ top: label.y, left: label.x, width: label.w, height: label.h }}
           >
             <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
-              {a.step.title[lang] && <p className="text-[17px] font-bold text-amber-300 leading-snug">{a.step.title[lang]}</p>}
+              {a.step.title[lang] && <p className="text-[19px] font-bold text-amber-300 leading-snug">{a.step.title[lang]}</p>}
               {a.step.description[lang] && (
-                <p className={`text-[15px] text-white leading-relaxed whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>
+                <p className={`text-[17px] text-white leading-relaxed whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>
               )}
             </div>
           </div>
@@ -379,9 +393,9 @@ function getLabelPos(
   vh: number,
   vw: number,
 ): { x: number; y: number; w: number; h: number } {
-  const labelW = Math.min(220, vw - 32);
+  const labelW = Math.min(300, vw - 32);
   const labelH = 56;
-  const gap = 16;
+  const gap = 0;
   const pos = a.step.position || "bottom";
   const rect = a.rect;
 
@@ -410,6 +424,9 @@ function getLabelPos(
   } else if (pos === "center") {
     x = Math.max(16, rect.left + (rect.width - labelW) / 2);
     y = rect.top + Math.min(rect.height, vh * 0.5) / 2 - labelH / 2;
+  } else if (pos === "bottom-right") {
+    x = Math.max(16, rect.right - labelW);
+    y = rect.top + Math.min(rect.height, vh * 0.5) + gap;
   } else {
     x = Math.max(16, Math.min(rect.left, vw - labelW - 16));
     y = rect.top + Math.min(rect.height, vh * 0.5) + gap;

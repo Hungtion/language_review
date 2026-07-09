@@ -31,7 +31,8 @@ function AddContent() {
   const searchParams = useSearchParams();
   const { user, plan } = useAuth();
   const { t } = useLocale();
-  const initialLang = searchParams.get("lang") === "japanese" ? "japanese" : "english";
+  const initialLang = searchParams.get("lang") === "japanese" ? "japanese"
+    : (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
   const [language, setLanguage] = useState<"english" | "japanese">(initialLang);
   const [rawInput, setRawInput] = useState("");
   const [title, setTitle] = useState("");
@@ -157,7 +158,7 @@ function AddContent() {
       {/* Title, Date & Language */}
       <div data-guide="add-header" className="flex gap-2 items-center">
         <input
-          data-guide-tab="제목"
+          data-guide-tab="제목" data-guide-tab-en="Title"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
@@ -165,33 +166,26 @@ function AddContent() {
           className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
         />
         <input
-          data-guide-tab="날짜"
+          data-guide-tab="날짜" data-guide-tab-en="Date"
           type="date"
           value={studyDate}
           onChange={(e) => setStudyDate(e.target.value)}
           className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
         />
-        <div data-guide-tab="학습언어" className="flex gap-1 shrink-0">
-          <button
-            onClick={() => setLanguage("english")}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              language === "english"
-                ? "bg-blue-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            🇺🇸
-          </button>
-          <button
-            onClick={() => setLanguage("japanese")}
-            className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-              language === "japanese"
-                ? "bg-red-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            🇯🇵
-          </button>
+        <div data-guide-tab="언어" data-guide-tab-en="Language" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+          {(["english", "japanese"] as const).map((f) => (
+            <button
+              key={f}
+              onClick={() => { setLanguage(f); localStorage.setItem("lang-filter", f); }}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                language === f
+                  ? "bg-gray-700 text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {f === "english" ? "🇺🇸" : "🇯🇵"}
+            </button>
+          ))}
         </div>
       </div>
 

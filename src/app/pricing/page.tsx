@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { supabase } from "@/lib/supabase";
@@ -8,6 +9,7 @@ import { useLocale } from "@/lib/useLocale";
 
 function PricingContent() {
   const { user, plan } = useAuth();
+  const router = useRouter();
   const { locale } = useLocale();
   const [showInterest, setShowInterest] = useState(false);
   const [registered, setRegistered] = useState(false);
@@ -84,17 +86,12 @@ function PricingContent() {
             >
               {isKo ? "프리미엄 구독하기" : "Subscribe to Premium"}
             </button>
-            <a
-              href="https://qr.kakaopay.com/Ej7lvEtQc"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="w-full py-3 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+            <button
+              onClick={() => router.back()}
+              className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
             >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path fill="#191919" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
-              </svg>
-              {isKo ? "카카오페이로 후원하기" : "Support via KakaoPay"}
-            </a>
+              {isKo ? "돌아가기" : "Go Back"}
+            </button>
           </div>
         )}
       </div>
@@ -102,7 +99,8 @@ function PricingContent() {
       {/* 관심 등록 팝업 */}
       {showInterest && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setShowInterest(false)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full text-center space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full text-center space-y-4 relative" onClick={(e) => e.stopPropagation()}>
+            <button onClick={() => setShowInterest(false)} className="absolute top-3 right-3 text-gray-500 hover:text-gray-300 text-lg leading-none">✕</button>
             {registered ? (
               <>
                 <div className="text-3xl">🎉</div>

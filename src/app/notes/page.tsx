@@ -72,7 +72,7 @@ function NotesContent() {
     <div className="space-y-6">
       <GuideOverlay pageKey="notes" />
       <div className="flex gap-2 items-center">
-        <div data-guide="notes-search" className="flex-1">
+        <div data-guide="notes-search" className="flex-[2]">
           <input
             type="text"
             value={search}
@@ -84,7 +84,7 @@ function NotesContent() {
         <Link
           data-guide="notes-add"
           href={`/add?lang=${filter}`}
-          className="px-5 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+          className="px-7 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
         >
           +
         </Link>

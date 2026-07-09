@@ -25,7 +25,7 @@ export default function InstallBanner() {
   useEffect(() => {
     if (isStandalone()) return;
     if (device === "other") return;
-    // 매번 표시 (PWA 미설치 상태에서)
+    if (sessionStorage.getItem("install-banner-dismissed")) return;
     const timer = setTimeout(() => setShow(true), 2000);
     return () => clearTimeout(timer);
   }, [device]);
@@ -33,6 +33,7 @@ export default function InstallBanner() {
   if (!show) return null;
 
   function dismiss() {
+    sessionStorage.setItem("install-banner-dismissed", "true");
     setShow(false);
   }
 

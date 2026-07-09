@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState, useRef } from "react";
+import { useRouter } from "next/navigation";
 import { supabase, NuanceChat, NuanceResult } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
@@ -24,6 +25,7 @@ const TONE_OPTIONS = [
 
 function NuanceContent() {
   const { user, plan } = useAuth();
+  const router = useRouter();
   const { speak } = useTts();
   const { t, locale } = useLocale();
   const [messages, setMessages] = useState<Message[]>([]);
@@ -32,8 +34,8 @@ function NuanceContent() {
   const [initialLoading, setInitialLoading] = useState(true);
   const [targetLangs, setTargetLangs] = useState<string[]>(() => {
     if (typeof window === "undefined") return ["English"];
-    const saved = localStorage.getItem("nuance_target_langs");
-    return saved ? JSON.parse(saved) : ["English"];
+    const saved = localStorage.getItem("lang-filter");
+    return saved === "japanese" ? ["Japanese"] : ["English"];
   });
   const [tone, setTone] = useState(() => {
     if (typeof window === "undefined") return "Polite";
@@ -153,18 +155,9 @@ function NuanceContent() {
     }
   }, [messages]);
 
-  function toggleLang(lang: string) {
-    setTargetLangs((prev) => {
-      if (prev.includes(lang)) {
-        if (prev.length === 1) return prev;
-        const next = prev.filter((l) => l !== lang);
-        localStorage.setItem("nuance_target_langs", JSON.stringify(next));
-        return next;
-      }
-      const next = [...prev, lang];
-      localStorage.setItem("nuance_target_langs", JSON.stringify(next));
-      return next;
-    });
+  function selectLang(lang: string) {
+    setTargetLangs([lang]);
+    localStorage.setItem("lang-filter", lang === "Japanese" ? "japanese" : "english");
   }
 
   function changeTone(val: string) {
@@ -309,82 +302,41 @@ function NuanceContent() {
   }
 
   return (
-    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-4 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="nuance" />
 
-      {/* Free user banner */}
-      {plan !== "pro" && (
-        <div className="mb-3 bg-gray-900 border border-gray-700 rounded-xl p-3">
-          <div className="flex items-center justify-between">
-            <p className="text-sm text-gray-200">
-              {t("aiFree")}<span className="text-indigo-400 font-bold">{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}
-            </p>
-          </div>
-          {aiRemaining === 0 && (
-            <div className="flex gap-2 mt-2">
-              <a href="/pricing" className="flex-1 py-1.5 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
-                {t("upgradeForUnlimited")}
-              </a>
-              <button
-                onClick={async () => {
-                  alert(locale === "ko" ? "준비중입니다" : "Coming soon");
-                  if (user) {
-                    const { resetAiUsage } = await import("@/lib/aiUsage");
-                    await resetAiUsage(user.id);
-                    setAiRemaining(DAILY_LIMIT);
-                  }
-                }}
-                className="flex-1 py-1.5 bg-yellow-600/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-600/30 transition-colors"
-              >
-                {locale === "ko" ? "광고 보기" : "Watch Ad"}
-              </button>
-            </div>
-          )}
+      {/* Tone & Language */}
+      <div className="flex items-center justify-between pb-3">
+        <div data-guide="nuance-tone" className="flex gap-1.5">
+          {TONE_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              onClick={() => changeTone(opt.value)}
+              className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
+                tone === opt.value
+                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
+                  : "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800"
+              }`}
+            >
+              {opt.label}
+            </button>
+          ))}
         </div>
-      )}
-
-      {/* Date Tabs */}
-      <div className="flex items-center gap-1 pb-2 mb-2">
-        <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
-          <button
-            onClick={() => setSelectedDate("today")}
-            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-              selectedDate === "today"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            {t("today")}
-          </button>
-          {dateTabs
-            .filter((d) => d !== todayStr)
-            .map((date) => (
-              <button
-                key={date}
-                onClick={() => setSelectedDate(date)}
-                className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
-                  selectedDate === date
-                    ? "bg-indigo-600 text-white"
-                    : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-                }`}
-              >
-                {formatDateTab(date)}
-              </button>
-            ))}
+        <div data-guide="nuance-langs" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+          {LANGS_OPTIONS.map((lang) => (
+            <button
+              key={lang}
+              onClick={() => selectLang(lang)}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                targetLangs.includes(lang)
+                  ? "bg-gray-700 text-white"
+                  : "text-gray-400 hover:text-gray-200"
+              }`}
+            >
+              {lang === "English" ? "🇺🇸" : "🇯🇵"}
+            </button>
+          ))}
         </div>
-        <button
-          onClick={() => {
-            setMessages([]);
-            setSelectedDate("new");
-          }}
-          className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-            selectedDate === "new"
-              ? "bg-indigo-600 text-white"
-              : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-          }`}
-        >
-          {t("newChat")}
-        </button>
       </div>
 
       {/* Messages */}
@@ -512,47 +464,54 @@ function NuanceContent() {
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Language & Tone + Input */}
+      {/* Free usage + Date Tabs + Input */}
+      {plan !== "pro" && (
+        <p className="text-center text-xs text-gray-500 pt-2 pb-1">
+          {t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}
+        </p>
+      )}
       <div className="pt-3 border-t border-gray-800">
-        <div className="flex items-center justify-between mb-2">
-          <div data-guide="nuance-langs" className="flex gap-1.5">
-            {LANGS_OPTIONS.map((lang) => {
-              const selected = targetLangs.includes(lang);
-              return (
+        <div className="flex items-center gap-1 mb-2">
+          <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
+            <button
+              onClick={() => setSelectedDate("today")}
+              className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                selectedDate === "today"
+                  ? "bg-indigo-600 text-white"
+                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+              }`}
+            >
+              {t("today")}
+            </button>
+            {dateTabs
+              .filter((d) => d !== todayStr)
+              .map((date) => (
                 <button
-                  key={lang}
-                  onClick={() => toggleLang(lang)}
-                  className={`relative flex items-center justify-center w-9 h-9 rounded-lg text-base border transition-all ${
-                    selected
-                      ? "bg-indigo-500/20 border-indigo-500"
-                      : "bg-gray-900 border-gray-700 hover:bg-gray-800"
+                  key={date}
+                  onClick={() => setSelectedDate(date)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
+                    selectedDate === date
+                      ? "bg-indigo-600 text-white"
+                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
                   }`}
                 >
-                  {lang === "English" ? "🇺🇸" : "🇯🇵"}
-                  {selected && (
-                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-indigo-500 text-white rounded-full text-[9px] flex items-center justify-center">
-                      ✓
-                    </span>
-                  )}
+                  {formatDateTab(date)}
                 </button>
-              );
-            })}
+              ))}
           </div>
-          <div data-guide="nuance-tone" className="flex gap-1.5">
-            {TONE_OPTIONS.map((opt) => (
-              <button
-                key={opt.value}
-                onClick={() => changeTone(opt.value)}
-                className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
-                  tone === opt.value
-                    ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                    : "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800"
-                }`}
-              >
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <button
+            onClick={() => {
+              setMessages([]);
+              setSelectedDate("new");
+            }}
+            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
+              selectedDate === "new"
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+            }`}
+          >
+            {t("newChat")}
+          </button>
         </div>
         <div data-guide="nuance-input" className="flex gap-2">
           <textarea
@@ -560,15 +519,15 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
+            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push("/pricing"); } }}
             onBlur={() => window.scrollTo(0, 0)}
-            placeholder={t("enterSentence")}
+            placeholder={plan !== "pro" && aiRemaining <= 0 ? (locale === "ko" ? "무료 횟수를 모두 사용했어요" : "Free uses exhausted") : t("enterSentence")}
             rows={1}
-            disabled={plan !== "pro" && aiRemaining <= 0}
-            className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none disabled:opacity-50"
+            className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
           />
           <button
-            onClick={handleSend}
-            disabled={loading || !input.trim() || (plan !== "pro" && aiRemaining <= 0)}
+            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push("/pricing"); return; } handleSend(); }}
+            disabled={loading || (!input.trim() && !(plan !== "pro" && aiRemaining <= 0))}
             className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
           >
             {t("send")}

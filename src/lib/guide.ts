@@ -2,7 +2,7 @@ export type GuideStep = {
   selector: string;
   title: { en: string; ko: string };
   description: { en: string; ko: string };
-  position?: "top" | "bottom" | "center" | "right" | "left" | "top-left";
+  position?: "top" | "bottom" | "center" | "right" | "left" | "top-left" | "bottom-right";
   overlay?: boolean; // label directly on the element, no arrow
   noArrow?: boolean; // hide arrow even when not overlay
   noHighlight?: boolean; // hide highlight border
@@ -88,11 +88,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     {
       selector: "[data-guide='review-filters-right']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Shuffle & auto-play TTS.",
-        ko: "셔플, 자동재생",
-      },
-      overlay: true,
+      description: { en: "", ko: "" },
+      tabLabels: true,
     },
     {
       selector: "[data-guide='review-card']",
@@ -128,7 +125,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='notes-add']",
       title: { en: "", ko: "" },
       description: {
-        en: "New Note",
+        en: "Add\nNote",
         ko: "새 노트",
       },
       overlay: true,
@@ -157,10 +154,10 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='nuance-langs']",
       title: { en: "", ko: "" },
       description: {
-        en: "Choose the language you want to learn.",
-        ko: "배우고 싶은 언어를 선택하세요.",
+        en: "Language",
+        ko: "언어",
       },
-      position: "right",
+      overlay: true,
     },
     {
       selector: "[data-guide='nuance-tone']",
@@ -169,7 +166,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
         en: "Choose the nuance you want to express.",
         ko: "표현하고 싶은 뉘앙스를 선택하세요.",
       },
-      position: "top-left",
+      noArrow: true,
     },
     {
       selector: "[data-guide='nuance-screen']",

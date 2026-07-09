@@ -8,7 +8,7 @@ import { useLocale } from "@/lib/useLocale";
 import { resetTutorial, dismissTutorial, isTutorialActive } from "@/lib/guide";
 
 function SettingsContent() {
-  const { user, signOut } = useAuth();
+  const { user, plan, signOut } = useAuth();
   const router = useRouter();
   const { locale, setLocale, t } = useLocale();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -235,16 +235,44 @@ function SettingsContent() {
         </div>
       </div>
 
+      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
+        <a
+          href="https://qr.kakaopay.com/Ej7lvEtQc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-3 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="#191919" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
+          </svg>
+          {locale === "ko" ? "카카오페이로 후원하기" : "Support via KakaoPay"}
+        </a>
+      </div>
+
       <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-gray-300">{t("account")}</h2>
         <div className="flex items-center justify-between">
           <p className="text-sm text-gray-400">{user?.email}</p>
-          <button
-            onClick={signOut}
-            className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
-          >
-            {t("logout")}
-          </button>
+          <div className="flex items-center gap-2">
+            {plan === "pro" ? (
+              <span className="px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+                Pro
+              </span>
+            ) : (
+              <button
+                onClick={() => router.push("/pricing")}
+                className="px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 rounded-lg hover:bg-indigo-500/20 transition-colors"
+              >
+                {locale === "ko" ? "Pro 전환" : "Upgrade"}
+              </button>
+            )}
+            <button
+              onClick={signOut}
+              className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+            >
+              {t("logout")}
+            </button>
+          </div>
         </div>
         <div className="pt-2 border-t border-gray-800">
           <button
