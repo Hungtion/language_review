@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
@@ -9,8 +10,17 @@ import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
 
 function HomeContent() {
-  const { user, plan } = useAuth();
+  const router = useRouter();
+  const { user, loading } = useAuth();
   const { t } = useLocale();
+
+  // First visit: redirect to login if not authenticated
+  useEffect(() => {
+    if (loading) return;
+    if (!user && !sessionStorage.getItem("browsing")) {
+      router.replace("/login");
+    }
+  }, [user, loading, router]);
   const [recent, setRecent] = useState<StudySession[]>([]);
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
 
@@ -21,6 +31,7 @@ function HomeContent() {
         .from("study_sessions")
         .select("*")
         .order("study_date", { ascending: false })
+        .order("created_at", { ascending: false })
         .limit(5);
       if (data) setRecent(data);
 

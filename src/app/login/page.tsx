@@ -174,7 +174,7 @@ export default function LoginPage() {
               {t("signInWithKakao", locale)}
             </button>
             <button
-              onClick={() => router.push("/")}
+              onClick={() => { sessionStorage.setItem("browsing", "1"); router.push("/"); }}
               className="w-full py-2.5 text-gray-400 hover:text-gray-200 text-sm transition-colors"
             >
               {locale === "ko" ? "먼저 둘러보기" : "Browse first"}

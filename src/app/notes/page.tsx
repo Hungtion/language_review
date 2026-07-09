@@ -26,7 +26,8 @@ function NotesContent() {
       let query = supabase
         .from("study_sessions")
         .select("*")
-        .order("study_date", { ascending: false });
+        .order("study_date", { ascending: false })
+        .order("created_at", { ascending: false });
 
       query = query.eq("language", filter);
 
