@@ -10,9 +10,7 @@ function PricingContent() {
   const { user, plan } = useAuth();
   const { locale } = useLocale();
   const [showInterest, setShowInterest] = useState(false);
-  const [showPayment, setShowPayment] = useState(false);
   const [registered, setRegistered] = useState(false);
-  const [paymentSent, setPaymentSent] = useState(false);
   const [sending, setSending] = useState(false);
 
   const isKo = locale === "ko";
@@ -27,18 +25,6 @@ function PricingContent() {
     }, { onConflict: "user_id,type" });
     setSending(false);
     setRegistered(true);
-  }
-
-  async function handlePaymentNotify() {
-    if (!user) return;
-    setSending(true);
-    await supabase.from("premium_interest").upsert({
-      user_id: user.id,
-      email: user.email,
-      type: "payment",
-    }, { onConflict: "user_id,type" });
-    setSending(false);
-    setPaymentSent(true);
   }
 
   return (
@@ -98,12 +84,17 @@ function PricingContent() {
             >
               {isKo ? "프리미엄 구독하기" : "Subscribe to Premium"}
             </button>
-            <button
-              onClick={() => setShowPayment(true)}
-              className="w-full py-3 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-sm transition-colors"
+            <a
+              href="https://qr.kakaopay.com/Ej7lvEtQc"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="w-full py-3 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
             >
-              {isKo ? "직접 송금으로 구독하기" : "Subscribe via Bank Transfer"}
-            </button>
+              <svg className="w-5 h-5" viewBox="0 0 24 24">
+                <path fill="#191919" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
+              </svg>
+              {isKo ? "카카오페이로 후원하기" : "Support via KakaoPay"}
+            </a>
           </div>
         )}
       </div>
@@ -162,73 +153,6 @@ function PricingContent() {
         </div>
       )}
 
-      {/* 수동 송금 팝업 */}
-      {showPayment && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setShowPayment(false)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={(e) => e.stopPropagation()}>
-            {paymentSent ? (
-              <div className="text-center space-y-3">
-                <div className="text-3xl">✅</div>
-                <p className="text-white text-[15px] leading-relaxed whitespace-pre-line">
-                  {isKo
-                    ? "입금 확인 요청이 접수되었습니다.\n확인 후 프리미엄이 활성화됩니다."
-                    : "Payment verification requested.\nPremium will be activated after confirmation."}
-                </p>
-                <button
-                  onClick={() => setShowPayment(false)}
-                  className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  {isKo ? "확인" : "OK"}
-                </button>
-              </div>
-            ) : (
-              <>
-                <h3 className="text-white font-bold text-lg text-center">
-                  {isKo ? "송금으로 구독하기" : "Subscribe via Transfer"}
-                </h3>
-                <div className="bg-gray-800 rounded-xl p-4 space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">{isKo ? "금액" : "Amount"}</span>
-                    <span className="text-white font-medium">1,000{isKo ? "원" : " KRW"}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">{isKo ? "은행" : "Bank"}</span>
-                    <span className="text-white font-medium">토스뱅크</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">{isKo ? "계좌번호" : "Account"}</span>
-                    <span className="text-white font-medium font-mono">1000-8278-0380</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-gray-400">{isKo ? "예금주" : "Name"}</span>
-                    <span className="text-white font-medium">김성*</span>
-                  </div>
-                </div>
-                <p className="text-gray-500 text-xs text-center">
-                  {isKo
-                    ? "송금 후 아래 버튼을 눌러주세요.\n확인 후 24시간 내 프리미엄이 활성화됩니다."
-                    : "After transfer, tap below.\nPremium activates within 24 hours."}
-                </p>
-                <button
-                  onClick={handlePaymentNotify}
-                  disabled={sending}
-                  className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  {sending
-                    ? (isKo ? "전송 중..." : "Sending...")
-                    : (isKo ? "입금 완료 알림" : "I've sent the payment")}
-                </button>
-                <button
-                  onClick={() => setShowPayment(false)}
-                  className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
-                >
-                  {isKo ? "닫기" : "Close"}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
     </div>
   );
 }
