@@ -504,7 +504,7 @@ function ReviewContent() {
             >
               <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
                 {/* Front */}
-                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center">
+                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
                   {typeof navigator !== "undefined" && navigator.share && (
                     <button
                       onTouchStart={(e) => e.stopPropagation()}
@@ -518,7 +518,7 @@ function ReviewContent() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                     </button>
                   )}
-                  <div className="flex items-center gap-2 mb-4 shrink-0">
+                  <div className="flex items-center gap-2 mb-4">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         card.language === "english"
@@ -539,16 +539,14 @@ function ReviewContent() {
                     </span>
                     <span className="text-xs text-gray-600">{card.sessionDate}</span>
                   </div>
-                  <div className="flex-1 flex items-center justify-center overflow-y-auto w-full">
-                    <p className="text-xl text-center font-medium leading-relaxed py-4">
-                      {card.front}
-                    </p>
-                  </div>
+                  <p className="text-xl text-center font-medium leading-relaxed">
+                    {card.front}
+                  </p>
                 </div>
 
                 {/* Back */}
-                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center overflow-y-auto">
-                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300 py-4">
+                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
+                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
                     {card.back}
                   </pre>
                 </div>
