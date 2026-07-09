@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
+export const maxDuration = 60;
+
 async function callGemini(prompt: string, maxTokens = 1024, jsonMode = false) {
   const generationConfig: Record<string, unknown> = {
     temperature: 0.3,
@@ -75,7 +77,7 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // AI 파싱 (노트 저장) - all users
+  // AI 파싱 (수동 입력) - all users
   if (action === "parse") {
     const langLabel = language === "english" ? "영어" : "일본어";
 
@@ -83,16 +85,71 @@ export async function POST(req: NextRequest) {
 - ${langLabel} 문장만 한 줄에 하나씩 출력해.
 - 번호, 타임스탬프, 한국어 번역, 메타데이터는 제외해.
 - 다른 설명 없이 문장만 출력해.
+- 중복 문장은 한 번만 출력해.
 
 텍스트:
 ${rawInput}`;
 
     try {
-      const text = await callGemini(parsePrompt, 2048);
+      const text = await callGemini(parsePrompt, 4096);
       return NextResponse.json({ result: text });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
       return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
+  // AI 파싱 (파일 업로드) - chunked, 모든 문장 추출
+  if (action === "parse-file") {
+    const t0 = Date.now();
+    const langLabel = language === "english" ? "영어" : "일본어";
+    const CHUNK_SIZE = 20000;
+
+    const baseInstruction = `아래 텍스트에서 ${langLabel} 문장을 모두 추출해줘.
+- ${langLabel}로 된 모든 문장을 빠짐없이 한 줄에 하나씩 출력해.
+- 짧은 문장, 대화, 독백, 나레이션 등 종류와 관계없이 전부 포함해.
+- 한국어, 메타데이터, 번호, 타임스탬프는 제외해.
+- 다른 설명 없이 문장만 출력해.
+- 중복 문장은 한 번만 출력해.`;
+
+    try {
+      if (rawInput.length <= CHUNK_SIZE) {
+        const text = await callGemini(`${baseInstruction}\n\n텍스트:\n${rawInput}`, 16384);
+        return NextResponse.json({ result: text, debug: { inputLen: rawInput.length, chunks: 1, time: `${Date.now() - t0}ms` } });
+      }
+
+      const lines = rawInput.split("\n");
+      const chunks: string[] = [];
+      let current = "";
+      for (const line of lines) {
+        if (current.length + line.length > CHUNK_SIZE && current.length > 0) {
+          chunks.push(current);
+          current = line;
+        } else {
+          current += (current ? "\n" : "") + line;
+        }
+      }
+      if (current) chunks.push(current);
+
+      // Process in batches of 3 to avoid rate limits
+      const BATCH_SIZE = 5;
+      const results: string[] = [];
+      for (let i = 0; i < chunks.length; i += BATCH_SIZE) {
+        const batch = chunks.slice(i, i + BATCH_SIZE);
+        const batchResults = await Promise.all(
+          batch.map((chunk) => callGemini(`${baseInstruction}\n\n텍스트:\n${chunk}`, 16384))
+        );
+        results.push(...batchResults);
+      }
+
+      const totalTime = Date.now() - t0;
+      return NextResponse.json({
+        result: results.map((r) => r.trim()).filter(Boolean).join("\n"),
+        debug: { inputLen: rawInput.length, chunks: chunks.length, time: `${totalTime}ms` },
+      });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
+      return NextResponse.json({ error: msg, debug: { inputLen: rawInput?.length, time: `${Date.now() - t0}ms` } }, { status: 500 });
     }
   }
 

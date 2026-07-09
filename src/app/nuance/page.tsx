@@ -7,8 +7,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
-import { ensureUser } from "@/lib/guestAuth";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
 import GuideOverlay from "@/components/GuideOverlay";
 
 type Message = {
@@ -26,7 +25,7 @@ const TONE_OPTIONS = [
 ] as const;
 
 function NuanceContent() {
-  const { user, plan, isAnonymous } = useAuth();
+  const { user, plan } = useAuth();
   const router = useRouter();
   const { speak } = useTts();
   const { t, locale } = useLocale();
@@ -44,7 +43,7 @@ function NuanceContent() {
     return localStorage.getItem("nuance_tone") || "Polite";
   });
   const [dateTabs, setDateTabs] = useState<string[]>([]);
-  const [selectedDate, setSelectedDate] = useState<string>("new");
+  const [selectedDate, setSelectedDate] = useState<string>("today");
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
@@ -53,15 +52,19 @@ function NuanceContent() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didScroll = useRef(false);
+  const sendingRef = useRef(false);
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Load AI usage for free users + show banner
+  // Load AI usage for free/guest users
   useEffect(() => {
-    if (!user || plan === "pro") return;
-    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan, isAnonymous]);
+    if (plan === "pro") return;
+    if (!user) {
+      setAiRemaining(getGuestUsage().remaining);
+      return;
+    }
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
 
   // Load available dates — current month: daily, past months: monthly
   useEffect(() => {
@@ -80,7 +83,7 @@ function NuanceContent() {
         const pastMonths = [...new Set(allDates.filter((d) => !d.startsWith(currentMonth)).map((d) => d.slice(0, 7)))];
         setDateTabs([...thisMonthDates, ...pastMonths]);
       }
-      setSelectedDate("new");
+      setSelectedDate("today");
     }
     loadDates();
   }, [user]);
@@ -88,11 +91,7 @@ function NuanceContent() {
   // Load messages for selected date or month
   useEffect(() => {
     if (!user) return;
-    if (selectedDate === "new") {
-      setMessages([]);
-      setInitialLoading(false);
-      return;
-    }
+    if (sendingRef.current) return;
     async function loadMessages() {
       setInitialLoading(true);
       didScroll.current = false;
@@ -181,10 +180,6 @@ function NuanceContent() {
   }
 
   async function handleSend() {
-    if (!user) {
-      const guest = await ensureUser();
-      if (!guest) { router.push("/login"); return; }
-    }
     const trimmed = input.trim();
     if (!trimmed || loading) return;
     if (targetLangs.length === 0) {
@@ -192,24 +187,22 @@ function NuanceContent() {
       return;
     }
 
-    // Check AI usage limit for free/anonymous users
+    // Check AI usage limit
     if (plan !== "pro") {
-      const { data: { session: sess } } = await supabase.auth.getSession();
-      const uid = sess?.user?.id || user?.id;
-      if (uid) {
-        const fn = sess?.user?.is_anonymous ? getGuestAiUsage : getAiUsage;
-        const { remaining } = await fn(uid);
-        if (remaining <= 0) {
-          if (sess?.user?.is_anonymous) router.push("/login");
-          else alert(t("aiLimitReached"));
-          return;
-        }
+      if (!user) {
+        const { remaining } = getGuestUsage();
+        if (remaining <= 0) { router.push("/login"); return; }
+      } else {
+        const { remaining } = await getAiUsage(user.id);
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
       }
     }
 
-    // Switch to new if on a past date
-    if (selectedDate !== "today" && selectedDate !== "new") {
-      setSelectedDate("new");
+    // Switch to today if viewing a past date
+    if (selectedDate !== "today") {
+      sendingRef.current = true;
+      setMessages([]);
+      setSelectedDate("today");
     }
 
     setInput("");
@@ -233,38 +226,38 @@ function NuanceContent() {
         const results: NuanceResult[] = data.result.results;
         setMessages((prev) => [...prev, { role: "ai", results }]);
 
-        // Update usage tracking for free users
+        // Update usage tracking
         if (plan !== "pro") {
-          const { data: { session: sess } } = await supabase.auth.getSession();
-          const uid = sess?.user?.id || user?.id;
-          if (uid) {
-            await incrementAiUsage(uid);
-            const fn = sess?.user?.is_anonymous ? getGuestAiUsage : getAiUsage;
-            const { remaining } = await fn(uid);
+          if (!user) {
+            const { remaining } = incrementGuestUsage();
+            setAiRemaining(remaining);
+          } else {
+            await incrementAiUsage(user.id);
+            const { remaining } = await getAiUsage(user.id);
             setAiRemaining(remaining);
           }
         }
 
-        const { data: { session: curSession } } = await supabase.auth.getSession();
-        const uid = curSession?.user?.id || user?.id;
-        const { data: inserted } = await supabase.from("nuance_chats").insert({
-          user_id: uid,
-          input_text: trimmed,
-          results,
-          target_langs: targetLangs,
-          tone,
-        }).select("id").single();
+        // Save to DB only for logged-in users
+        if (user) {
+          const { data: inserted } = await supabase.from("nuance_chats").insert({
+            user_id: user.id,
+            input_text: trimmed,
+            results,
+            target_langs: targetLangs,
+            tone,
+          }).select("id").single();
 
-        if (inserted) {
-          setMessages((prev) => prev.map((m, idx) => {
-            if (idx >= prev.length - 2) return { ...m, chatId: inserted.id };
-            return m;
-          }));
-        }
+          if (inserted) {
+            setMessages((prev) => prev.map((m, idx) => {
+              if (idx >= prev.length - 2) return { ...m, chatId: inserted.id };
+              return m;
+            }));
+          }
 
-        // Add today to date tabs if not there
-        if (!dateTabs.includes(todayStr)) {
-          setDateTabs((prev) => [todayStr, ...prev]);
+          if (!dateTabs.includes(todayStr)) {
+            setDateTabs((prev) => [todayStr, ...prev]);
+          }
         }
       } else {
         setMessages((prev) => [
@@ -279,6 +272,7 @@ function NuanceContent() {
       ]);
     }
     setLoading(false);
+    sendingRef.current = false;
     inputRef.current?.focus();
   }
 
@@ -369,6 +363,7 @@ function NuanceContent() {
           {TONE_OPTIONS.map((opt) => (
             <button
               key={opt.value}
+              title={locale === "ko" ? `${opt.label} 톤으로 변환합니다` : `Translate in ${opt.label} tone`}
               onClick={() => changeTone(opt.value)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                 tone === opt.value
@@ -384,6 +379,7 @@ function NuanceContent() {
           {LANGS_OPTIONS.map((lang) => (
             <button
               key={lang}
+              title={lang === "English" ? (locale === "ko" ? "영어로 변환" : "Translate to English") : (locale === "ko" ? "일본어로 변환" : "Translate to Japanese")}
               onClick={() => selectLang(lang)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 targetLangs.includes(lang)
@@ -442,7 +438,14 @@ function NuanceContent() {
               >
                 {/* User message */}
                 {userMsg && (
-                  <div className="flex justify-end mb-3">
+                  <div className="flex justify-end mb-3 group/msg">
+                    <button
+                      onClick={() => handleDeletePair(pairIdx)}
+                      title={locale === "ko" ? "이 대화를 삭제합니다" : "Delete this conversation"}
+                      className="hidden [@media(hover:hover)]:flex opacity-0 group-hover/msg:opacity-100 self-center mr-2 p-1.5 text-gray-600 hover:text-red-400 transition-all"
+                    >
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                    </button>
                     <div
                       className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] cursor-pointer active:bg-indigo-500 transition-colors"
                       onClick={() => { if (!isSwiped && userMsg.text) { setInput(userMsg.text); inputRef.current?.focus(); } }}
@@ -559,7 +562,7 @@ function NuanceContent() {
       {/* Free usage + Date Tabs + Input */}
       {plan !== "pro" && (
         <p className="text-center text-xs text-gray-500 pt-2 pb-1">
-          {(isAnonymous || !user) ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{(isAnonymous || !user) ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
+          {!user ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
         </p>
       )}
       <div className="pt-3 border-t border-gray-800">
@@ -591,19 +594,6 @@ function NuanceContent() {
                 </button>
               ))}
           </div>
-          <button
-            onClick={() => {
-              setMessages([]);
-              setSelectedDate("new");
-            }}
-            className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors flex-shrink-0 ${
-              selectedDate === "new"
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-800 text-gray-400 hover:bg-gray-700"
-            }`}
-          >
-            {t("newChat")}
-          </button>
         </div>
         <div data-guide="nuance-input" className="flex gap-2">
           <textarea
@@ -611,14 +601,14 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push(isAnonymous ? "/login" : "/pricing"); } }}
+            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push(!user ? "/login" : "/pricing"); } }}
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={plan !== "pro" && aiRemaining <= 0 ? (locale === "ko" ? "무료 횟수를 모두 사용했어요" : "Free uses exhausted") : t("enterSentence")}
             rows={1}
             className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
           />
           <button
-            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push(isAnonymous ? "/login" : "/pricing"); return; } handleSend(); }}
+            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push(!user ? "/login" : "/pricing"); return; } handleSend(); }}
             disabled={loading || (!input.trim() && !(plan !== "pro" && aiRemaining <= 0))}
             className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
           >

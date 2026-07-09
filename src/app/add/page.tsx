@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { parseRawInput, extractMetadata } from "@/lib/parser";
@@ -8,8 +8,11 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
-import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
-import { ensureUser } from "@/lib/guestAuth";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
+
+const AI_PARSE_CHAR_LIMIT = 5000;
+import { addGuestNote } from "@/lib/guestStorage";
+import { setUploadStatus } from "@/lib/uploadStatus";
 
 const SAMPLE_EN = `Stress and Pronunciation
 apple- AE-pl
@@ -27,10 +30,18 @@ It depends on the situation.
 Comment
 Practice makes perfect.`;
 
+// Module-level: survives component remount (tab switch)
+type UploadJob = {
+  promise: Promise<{ language: string; studyDate: string; title: string; lines: string[]; userId: string } | null>;
+  abort: AbortController;
+  fileName: string;
+};
+let activeUpload: UploadJob | null = null;
+
 function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, plan, isAnonymous } = useAuth();
+  const { user, plan } = useAuth();
   const { t, locale } = useLocale();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese"
     : (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
@@ -42,13 +53,115 @@ function AddContent() {
   const [saving, setSaving] = useState(false);
   const [showParseChoice, setShowParseChoice] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [uploading, setUploading] = useState(!!activeUpload);
+  const [uploadFileName, setUploadFileName] = useState(activeUpload?.fileName || "");
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
 
+  // On mount: if upload was running while away, attach to it
   useEffect(() => {
-    if (!user || plan === "pro") return;
-    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan, isAnonymous]);
+    if (!activeUpload) return;
+    setUploading(true);
+    setUploadFileName(activeUpload.fileName);
+    activeUpload.promise.then((result) => {
+      activeUpload = null;
+      setUploading(false);
+      setUploadFileName("");
+      setUploadStatus(result ? "done" : "idle");
+      if (result) router.push("/notes");
+    });
+  }, [router]);
+
+  useEffect(() => {
+    if (plan === "pro") return;
+    if (!user) {
+      setAiRemaining(getGuestUsage().remaining);
+      return;
+    }
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
+
+  async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    e.target.value = "";
+
+    if (plan !== "pro") {
+      router.push(!user ? "/login" : "/pricing");
+      return;
+    }
+
+    const abort = new AbortController();
+    const currentLang = language;
+    const currentDate = studyDate;
+    const currentTitle = title;
+    const userId = user!.id;
+
+    const promise = (async (): Promise<{ language: string; studyDate: string; title: string; lines: string[]; userId: string } | null> => {
+      try {
+        // 1. Extract text from file
+        const formData = new FormData();
+        formData.append("file", file);
+        const res = await fetch("/api/upload", { method: "POST", body: formData, signal: abort.signal });
+        const data = await res.json();
+        if (data.debug) console.log("[upload debug]", data.debug);
+        if (abort.signal.aborted) return null;
+        if (!res.ok) { alert(data.error || "Upload failed"); return null; }
+
+        const extracted = data.text as string;
+        if (!extracted.trim()) { alert(locale === "ko" ? "파일에서 텍스트를 찾을 수 없습니다" : "No text found in file"); return null; }
+
+        // 2. Parse: small files → AI, large files → line split
+        let lines: string[];
+        if (extracted.length <= 5000) {
+          const parseRes = await fetch("/api/ai", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "parse-file", rawInput: extracted, language: currentLang }),
+            signal: abort.signal,
+          });
+          const parseData = await parseRes.json();
+          if (parseData.debug) console.log("[file-parse debug]", parseData.debug);
+          if (abort.signal.aborted) return null;
+          lines = (parseData.result || "").split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+        } else {
+          console.log("[file-parse] large file, using line split:", extracted.length, "chars");
+          lines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+        }
+
+        // 3. Save to DB
+        const { error } = await supabase.from("study_sessions").insert({
+          language: currentLang,
+          study_date: currentDate,
+          title: currentTitle || file.name.replace(/\.[^.]+$/, ""),
+          stress_pronunciation: null,
+          vocabulary: null,
+          sentence_grammar: lines.length > 0 ? lines.join("\n") : null,
+          comment: null,
+          raw_input: "",
+          user_id: userId,
+        });
+
+        if (error) { alert(error.message); return null; }
+        return { language: currentLang, studyDate: currentDate, title: currentTitle, lines, userId };
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") return null;
+        return null;
+      }
+    })();
+
+    activeUpload = { promise, abort, fileName: file.name };
+    setUploading(true);
+    setUploadFileName(file.name);
+    setUploadStatus("uploading", file.name);
+
+    const result = await promise;
+    activeUpload = null;
+    setUploading(false);
+    setUploadFileName("");
+    setUploadStatus(result ? "done" : "idle");
+    if (result) router.push("/notes");
+  }
 
   function handlePreview() {
     const parsed = parseRawInput(rawInput);
@@ -76,12 +189,8 @@ function AddContent() {
     return !(parsed.stress_pronunciation || parsed.vocabulary || parsed.sentence_grammar || parsed.comment);
   }
 
-  async function handleSaveClick() {
+  function handleSaveClick() {
     if (!rawInput.trim()) return;
-    if (!user) {
-      const guest = await ensureUser();
-      if (!guest) { router.push("/login"); return; }
-    }
     if (needsParseChoice()) {
       setShowParseChoice(true);
     } else {
@@ -91,20 +200,6 @@ function AddContent() {
 
   async function doSave(mode: "ai" | "line" | "none") {
     setSaving(true);
-
-    // Guest note limit
-    const { data: { session: s } } = await supabase.auth.getSession();
-    if (s?.user?.is_anonymous) {
-      const { count } = await supabase
-        .from("study_sessions")
-        .select("*", { count: "exact", head: true })
-        .eq("user_id", s.user.id);
-      if ((count ?? 0) >= 5) {
-        setSaving(false);
-        router.push("/login");
-        return;
-      }
-    }
 
     let insertData;
     if (mode === "none") {
@@ -135,12 +230,16 @@ function AddContent() {
         raw_input: rawInput,
       };
     } else {
-      // AI mode — increment usage for free users
-      if (plan !== "pro" && user) {
-        await incrementAiUsage(user.id);
-        const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-        const { remaining } = await fn(user.id);
-        setAiRemaining(remaining);
+      // AI mode — increment usage
+      if (plan !== "pro") {
+        if (!user) {
+          const { remaining } = incrementGuestUsage();
+          setAiRemaining(remaining);
+        } else {
+          await incrementAiUsage(user.id);
+          const { remaining } = await getAiUsage(user.id);
+          setAiRemaining(remaining);
+        }
       }
       const extracted = await aiParse(rawInput, language);
       const lines = (extracted || "")
@@ -159,11 +258,17 @@ function AddContent() {
       };
     }
 
-    const { data: { session } } = await supabase.auth.getSession();
-    const uid = session?.user?.id || user?.id;
+    if (!user) {
+      // Guest: save to localStorage
+      addGuestNote(insertData as any);
+      setSaving(false);
+      router.push("/notes");
+      return;
+    }
+
     const { error } = await supabase.from("study_sessions").insert({
       ...insertData,
-      user_id: uid,
+      user_id: user.id,
     });
 
     setSaving(false);
@@ -201,6 +306,7 @@ function AddContent() {
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
+              title={f === "english" ? (locale === "ko" ? "영어 노트 작성" : "Write English note") : (locale === "ko" ? "일본어 노트 작성" : "Write Japanese note")}
               onClick={() => { setLanguage(f); localStorage.setItem("lang-filter", f); }}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 language === f
@@ -237,10 +343,13 @@ function AddContent() {
           rows={16}
           className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
         />
+        <p className={`text-right text-xs mt-1 ${rawInput.length > AI_PARSE_CHAR_LIMIT ? "text-red-400" : "text-gray-600"}`}>
+          {rawInput.length.toLocaleString()}/{AI_PARSE_CHAR_LIMIT.toLocaleString()}
+        </p>
       </div>
 
       {/* Actions */}
-      <div className="flex gap-3">
+      <div className="flex gap-3 items-center">
         {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}
@@ -257,6 +366,37 @@ function AddContent() {
         >
           {saving ? t("saving") : t("save")}
         </button>
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept=".txt,.doc,.docx,.pdf,image/*"
+          onChange={handleFileUpload}
+          className="hidden"
+        />
+        {uploading ? (
+          <button
+            onClick={() => activeUpload?.abort.abort()}
+            className="ml-auto px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+              <span className="animate-pulse">{uploadFileName || (locale === "ko" ? "처리중..." : "Processing...")}</span>
+            </span>
+          </button>
+        ) : (
+          <button
+            onClick={() => fileInputRef.current?.click()}
+            title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다 (Pro)" : "Extract text from file and AI-parse (Pro)"}
+            className="ml-auto px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+              {locale === "ko" ? "파일" : "File"}
+              <span className="text-[10px] px-1 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
+              <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
+            </span>
+          </button>
+        )}
       </div>
 
       {/* Parse Choice Modal */}
@@ -268,7 +408,13 @@ function AddContent() {
             <div className="space-y-2">
               {plan === "pro" ? (
                 <button
-                  onClick={() => { setShowParseChoice(false); doSave("ai"); }}
+                  onClick={() => {
+                    if (rawInput.length > AI_PARSE_CHAR_LIMIT) {
+                      alert(locale === "ko" ? `AI 추출은 ${AI_PARSE_CHAR_LIMIT.toLocaleString()}자까지 가능합니다. (현재 ${rawInput.length.toLocaleString()}자)` : `AI extract is limited to ${AI_PARSE_CHAR_LIMIT.toLocaleString()} characters. (Current: ${rawInput.length.toLocaleString()})`);
+                      return;
+                    }
+                    setShowParseChoice(false); doSave("ai");
+                  }}
                   className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
                 >
                   <span className="flex items-center justify-center gap-2">
@@ -280,7 +426,7 @@ function AddContent() {
               ) : (
                 <>
                   <button
-                    onClick={() => router.push((isAnonymous || !user) ? "/login" : "/pricing")}
+                    onClick={() => router.push(!user ? "/login" : "/pricing")}
                     className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
                   >
                     <span className="flex items-center justify-center gap-2">
@@ -292,6 +438,10 @@ function AddContent() {
                   <button
                     onClick={() => {
                       if (aiRemaining <= 0) return;
+                      if (rawInput.length > AI_PARSE_CHAR_LIMIT) {
+                        alert(locale === "ko" ? `AI 추출은 ${AI_PARSE_CHAR_LIMIT.toLocaleString()}자까지 가능합니다. (현재 ${rawInput.length.toLocaleString()}자)` : `AI extract is limited to ${AI_PARSE_CHAR_LIMIT.toLocaleString()} characters. (Current: ${rawInput.length.toLocaleString()})`);
+                        return;
+                      }
                       setShowParseChoice(false);
                       doSave("ai");
                     }}
@@ -299,9 +449,9 @@ function AddContent() {
                     className="w-full py-3 bg-purple-600/10 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
                     <span className="flex items-center justify-center gap-2">
-                      {(isAnonymous || !user) ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
+                      {!user ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
-                        {aiRemaining}/{(isAnonymous || !user) ? GUEST_LIMIT : DAILY_LIMIT}
+                        {aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}
                       </span>
                     </span>
                     <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>

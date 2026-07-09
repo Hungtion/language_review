@@ -3,35 +3,50 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playTabClick } from "@/lib/unlockAudio";
+import { useUploadStatus, clearNotesBadge } from "@/lib/uploadStatus";
 
 export default function BottomTab() {
   const pathname = usePathname();
+  const { status: uploadStatus, notesBadge } = useUploadStatus();
 
   const tabs = [
-    { href: "/", icon: HomeIcon, match: (p: string) => p === "/", guideLabel: "홈" },
-    { href: "/add", icon: AddIcon, match: (p: string) => p === "/add", guideLabel: "새 노트" },
-    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review", guideLabel: "복습\n카드" },
-    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록" },
-    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat" },
-    { href: "/settings", icon: SettingsIcon, match: (p: string) => p === "/settings", guideLabel: "설정" },
+    { href: "/", icon: HomeIcon, match: (p: string) => p === "/", guideLabel: "홈", desc: "Dashboard" },
+    { href: "/add", icon: AddIcon, match: (p: string) => p === "/add", guideLabel: "새 노트", desc: "Add Note" },
+    { href: "/review", icon: CardsIcon, match: (p: string) => p === "/review", guideLabel: "복습\n카드", desc: "Review Cards" },
+    { href: "/notes", icon: NotesIcon, match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록", desc: "Note List" },
+    { href: "/nuance", icon: NuanceIcon, match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat", desc: "Nuance Chat" },
+    { href: "/settings", icon: SettingsIcon, match: (p: string) => p === "/settings", guideLabel: "설정", desc: "Settings" },
   ];
 
   return (
     <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-sm border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-14">
-        {tabs.map(({ href, icon: Icon, match, guideLabel }) => {
+        {tabs.map(({ href, icon: Icon, match, guideLabel, desc }) => {
           const active = match(pathname);
           return (
             <Link
               key={href}
               href={href}
-              onClick={playTabClick}
+              title={desc}
+              onClick={() => { playTabClick(); if (href === "/notes") clearNotesBadge(); }}
               data-guide-tab={guideLabel}
-              className={`flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors ${
+              className={`relative flex flex-col items-center justify-center w-12 h-12 rounded-lg transition-colors ${
                 active ? "text-indigo-400" : "text-gray-500"
               }`}
             >
               <Icon active={active} />
+              {href === "/add" && uploadStatus === "uploading" && (
+                <>
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full animate-ping" />
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full" />
+                </>
+              )}
+              {href === "/add" && uploadStatus === "done" && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
+              )}
+              {href === "/notes" && notesBadge && (
+                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
+              )}
             </Link>
           );
         })}

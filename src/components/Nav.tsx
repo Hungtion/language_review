@@ -19,16 +19,9 @@ export default function Nav() {
     : pathname === "/settings" ? t("settingsTitle")
     : null;
 
-  const showBack = pathname.startsWith("/notes/");
-
   return (
     <nav className="border-b border-gray-800 bg-gray-950 backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
-        {showBack && (
-          <button onClick={() => router.back()} className="mr-1 p-1.5 text-gray-400 hover:text-gray-200 flex-shrink-0 sm:hidden">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-          </button>
-        )}
         <Link href="/" onClick={playTabClick} className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0 self-end pb-2 sm:self-center sm:pb-0">
           <span className="text-blue-400">EN</span>
           <span className="text-gray-500">/</span>

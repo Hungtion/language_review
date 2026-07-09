@@ -5,11 +5,14 @@ import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
+import { getGuestNotes } from "@/lib/guestStorage";
 
 function NotesContent() {
-  const { t } = useLocale();
+  const { user } = useAuth();
+  const { t, locale } = useLocale();
   const searchParams = useSearchParams();
   const router = useRouter();
   const initialFilter = (searchParams.get("filter") as "english" | "japanese")
@@ -22,6 +25,12 @@ function NotesContent() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    if (!user) {
+      const guestNotes = getGuestNotes().filter((n) => n.language === filter);
+      setSessions(guestNotes);
+      setLoading(false);
+      return;
+    }
     async function load() {
       let query = supabase
         .from("study_sessions")
@@ -29,14 +38,14 @@ function NotesContent() {
         .order("study_date", { ascending: false })
         .order("created_at", { ascending: false });
 
-      query = query.eq("language", filter);
+      query = query.eq("user_id", user!.id).eq("language", filter);
 
       const { data } = await query;
       setSessions(data ?? []);
       setLoading(false);
     }
     load();
-  }, [filter]);
+  }, [filter, user]);
 
   const updateUrl = useCallback((f: string, q: string) => {
     const params = new URLSearchParams();
@@ -83,6 +92,7 @@ function NotesContent() {
           />
         </div>
         <Link
+          title={locale === "ko" ? "새 노트 추가" : "Add new note"}
           data-guide="notes-add"
           href={`/add?lang=${filter}`}
           className="px-7 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
@@ -93,6 +103,7 @@ function NotesContent() {
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
+              title={f === "english" ? (locale === "ko" ? "영어 노트 보기" : "Show English notes") : (locale === "ko" ? "일본어 노트 보기" : "Show Japanese notes")}
               onClick={() => handleFilterChange(f)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 filter === f
@@ -144,9 +155,9 @@ function NotesContent() {
               </div>
 
               <div className="flex gap-4 text-xs text-gray-600">
-                {s.stress_pronunciation && <span>🔊 {t("pronunciation")}</span>}
-                {s.vocabulary && <span>📖 {t("vocabulary")}</span>}
-                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")}</span>}
+                {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
+                {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
+                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
                 {s.comment && <span>💬 {t("comment")}</span>}
               </div>
 

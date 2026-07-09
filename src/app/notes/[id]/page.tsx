@@ -1,23 +1,39 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import RequireAuth from "@/components/RequireAuth";
+import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import { getGuestNotes, deleteGuestNote } from "@/lib/guestStorage";
 
 function NoteDetailContent() {
-  const { t } = useLocale();
+  const { user } = useAuth();
+  const { t, locale } = useLocale();
   const params = useParams();
   const router = useRouter();
   const [session, setSession] = useState<StudySession | null>(null);
+  const [prevId, setPrevId] = useState<string | null>(null);
+  const [nextId, setNextId] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [editingField, setEditingField] = useState<string | null>(null);
   const [editLines, setEditLines] = useState<string[]>([]);
+  const [selectedLines, setSelectedLines] = useState<Set<number>>(new Set());
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
+    if (!user) {
+      const notes = getGuestNotes();
+      const idx = notes.findIndex((n) => n.id === params.id);
+      setSession(idx >= 0 ? notes[idx] : null);
+      setPrevId(idx > 0 ? notes[idx - 1].id : null);
+      setNextId(idx >= 0 && idx < notes.length - 1 ? notes[idx + 1].id : null);
+      setLoading(false);
+      return;
+    }
     async function load() {
       const { data } = await supabase
         .from("study_sessions")
@@ -25,14 +41,43 @@ function NoteDetailContent() {
         .eq("id", params.id)
         .single();
       setSession(data);
+
+      if (data) {
+        // Fetch prev (newer note)
+        const { data: prev } = await supabase
+          .from("study_sessions")
+          .select("id")
+          .eq("language", data.language)
+          .or(`study_date.gt.${data.study_date},and(study_date.eq.${data.study_date},created_at.gt.${data.created_at})`)
+          .order("study_date", { ascending: true })
+          .order("created_at", { ascending: true })
+          .limit(1);
+        setPrevId(prev && prev.length > 0 ? prev[0].id : null);
+
+        // Fetch next (older note)
+        const { data: next } = await supabase
+          .from("study_sessions")
+          .select("id")
+          .eq("language", data.language)
+          .or(`study_date.lt.${data.study_date},and(study_date.eq.${data.study_date},created_at.lt.${data.created_at})`)
+          .order("study_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .limit(1);
+        setNextId(next && next.length > 0 ? next[0].id : null);
+      }
+
       setLoading(false);
     }
     load();
-  }, [params.id]);
+  }, [params.id, user]);
 
   async function handleDelete() {
     if (!confirm(t("confirmDelete"))) return;
-    await supabase.from("study_sessions").delete().eq("id", params.id);
+    if (!user) {
+      deleteGuestNote(params.id as string);
+    } else {
+      await supabase.from("study_sessions").delete().eq("id", params.id);
+    }
     router.push(`/notes?filter=${session?.language || "english"}`);
   }
 
@@ -40,6 +85,7 @@ function NoteDetailContent() {
     const value = session?.[field];
     if (!value) return;
     setEditLines(parseSentences(value));
+    setSelectedLines(new Set());
     setEditingField(field);
   }
 
@@ -49,6 +95,16 @@ function NoteDetailContent() {
 
   function handleEditRemove(idx: number) {
     setEditLines((prev) => prev.filter((_, i) => i !== idx));
+    setSelectedLines((prev) => { const next = new Set<number>(); prev.forEach((v) => { if (v < idx) next.add(v); else if (v > idx) next.add(v - 1); }); return next; });
+  }
+
+  function toggleSelectLine(idx: number) {
+    setSelectedLines((prev) => { const next = new Set(prev); if (next.has(idx)) next.delete(idx); else next.add(idx); return next; });
+  }
+
+  function handleRemoveSelected() {
+    setEditLines((prev) => prev.filter((_, i) => !selectedLines.has(i)));
+    setSelectedLines(new Set());
   }
 
   async function handleSaveEdit() {
@@ -80,8 +136,43 @@ function NoteDetailContent() {
 
   return (
     <div className="space-y-6">
-      {/* Header */}
+      {/* Navigation */}
       <div className="flex items-center justify-between">
+        <Link
+          href={`/notes?filter=${session?.language || "english"}`}
+          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+          {locale === "ko" ? "목록으로" : "Back to list"}
+        </Link>
+        <div className="flex items-center gap-2">
+          {prevId ? (
+            <Link
+              href={`/notes/${prevId}`}
+              title={locale === "ko" ? "이전 노트로 이동" : "Go to previous note"}
+              className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </Link>
+          ) : (
+            <span className="p-1.5 text-gray-700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
+          )}
+          {nextId ? (
+            <Link
+              href={`/notes/${nextId}`}
+              title={locale === "ko" ? "다음 노트로 이동" : "Go to next note"}
+              className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </Link>
+          ) : (
+            <span className="p-1.5 text-gray-700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+          )}
+        </div>
+      </div>
+
+      {/* Header */}
+      <div className="flex items-end justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -95,12 +186,35 @@ function NoteDetailContent() {
           </div>
           {session.title && <h1 className="text-2xl font-bold">{session.title}</h1>}
         </div>
+        {user && (
+          <button
+            onClick={async () => {
+              if (!session.shared) {
+                await supabase.from("study_sessions").update({ shared: true }).eq("id", params.id);
+                setSession((prev) => prev ? { ...prev, shared: true } : prev);
+              }
+              const url = `${window.location.origin}/share/${params.id}`;
+              if (navigator.share) {
+                navigator.share({ title: session.title || "Shared Note", url }).catch(() => {});
+              } else {
+                await navigator.clipboard.writeText(url);
+                alert(locale === "ko" ? "공유 링크가 복사되었습니다!" : "Share link copied!");
+              }
+            }}
+            title={locale === "ko" ? "공유하기" : "Share"}
+            className={`p-2 rounded-lg transition-colors ${session.shared ? "text-indigo-400 hover:text-indigo-300" : "text-gray-500 hover:text-gray-300"}`}
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
+            </svg>
+          </button>
+        )}
       </div>
 
       {/* Stress & Pronunciation */}
       {session.stress_pronunciation && (
         <SectionCard
-          title="Stress & Pronunciation"
+          title={`Stress & Pronunciation (${stressLines.length})`}
           icon="🔊"
           color="purple"
           action={editingField === "stress_pronunciation" ? (
@@ -126,6 +240,9 @@ function NoteDetailContent() {
               lines={editLines}
               onChangeLine={handleEditLine}
               onRemoveLine={handleEditRemove}
+              selected={selectedLines}
+              onToggleSelect={toggleSelectLine}
+              onRemoveSelected={handleRemoveSelected}
             />
           ) : (
             <div className="space-y-2">
@@ -142,7 +259,7 @@ function NoteDetailContent() {
       {/* Vocabulary */}
       {session.vocabulary && (
         <SectionCard
-          title="Vocabulary"
+          title={`Vocabulary (${vocabEntries.length})`}
           icon="📖"
           color="green"
           action={editingField === "vocabulary" ? (
@@ -168,6 +285,9 @@ function NoteDetailContent() {
               lines={editLines}
               onChangeLine={handleEditLine}
               onRemoveLine={handleEditRemove}
+              selected={selectedLines}
+              onToggleSelect={toggleSelectLine}
+              onRemoveSelected={handleRemoveSelected}
             />
           ) : vocabEntries.length > 0 ? (
             <div className="space-y-3">
@@ -192,7 +312,7 @@ function NoteDetailContent() {
       {/* Sentence Structure & Grammar */}
       {session.sentence_grammar && (
         <SectionCard
-          title="Sentence Structure & Grammar"
+          title={`Sentence Structure & Grammar (${sentences.length})`}
           icon="✏️"
           color="blue"
           action={editingField === "sentence_grammar" ? (
@@ -218,6 +338,9 @@ function NoteDetailContent() {
               lines={editLines}
               onChangeLine={handleEditLine}
               onRemoveLine={handleEditRemove}
+              selected={selectedLines}
+              onToggleSelect={toggleSelectLine}
+              onRemoveSelected={handleRemoveSelected}
             />
           ) : (
             <div className="space-y-2">
@@ -262,16 +385,76 @@ export default function NoteDetailPage() {
 }
 
 function EditableLines({
-  lines, onChangeLine, onRemoveLine,
+  lines, onChangeLine, onRemoveLine, selected, onToggleSelect, onRemoveSelected,
 }: {
   lines: string[];
   onChangeLine: (idx: number, value: string) => void;
   onRemoveLine: (idx: number) => void;
+  selected: Set<number>;
+  onToggleSelect: (idx: number) => void;
+  onRemoveSelected: () => void;
 }) {
+  const lastCheckedRef = useRef<number | null>(null);
+  const draggingRef = useRef(false);
+  const rowRefs = useRef<(HTMLDivElement | null)[]>([]);
+
+  function handleCheck(i: number, e: React.MouseEvent) {
+    if (e.shiftKey && lastCheckedRef.current !== null) {
+      const from = Math.min(lastCheckedRef.current, i);
+      const to = Math.max(lastCheckedRef.current, i);
+      for (let idx = from; idx <= to; idx++) {
+        if (!selected.has(idx)) onToggleSelect(idx);
+      }
+    } else {
+      onToggleSelect(i);
+    }
+    lastCheckedRef.current = i;
+  }
+
+  function handleTouchStart(i: number) {
+    draggingRef.current = true;
+    lastCheckedRef.current = i;
+    if (!selected.has(i)) onToggleSelect(i);
+  }
+
+  function handleTouchMove(e: React.TouchEvent) {
+    if (!draggingRef.current) return;
+    const touch = e.touches[0];
+    const el = document.elementFromPoint(touch.clientX, touch.clientY);
+    if (!el) return;
+    const row = el.closest("[data-line-idx]");
+    if (!row) return;
+    const idx = parseInt(row.getAttribute("data-line-idx")!, 10);
+    if (isNaN(idx) || lastCheckedRef.current === null) return;
+    const from = Math.min(lastCheckedRef.current, idx);
+    const to = Math.max(lastCheckedRef.current, idx);
+    for (let j = from; j <= to; j++) {
+      if (!selected.has(j)) onToggleSelect(j);
+    }
+  }
+
+  function handleTouchEnd() {
+    draggingRef.current = false;
+  }
+
   return (
-    <div className="space-y-2">
+    <div className="space-y-2" onTouchMove={handleTouchMove} onTouchEnd={handleTouchEnd}>
+      {selected.size > 0 && (
+        <div className="flex items-center justify-between bg-red-500/10 border border-red-500/30 rounded-lg px-3 py-2">
+          <span className="text-sm text-red-400">{selected.size}개 선택됨</span>
+          <button onClick={onRemoveSelected} className="text-sm text-red-400 hover:text-red-300 font-medium">선택 삭제</button>
+        </div>
+      )}
       {lines.map((line, i) => (
-        <div key={i} className="flex items-center gap-2">
+        <div key={i} data-line-idx={i} className="flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={selected.has(i)}
+            onChange={() => {}}
+            onClick={(e) => handleCheck(i, e)}
+            onTouchStart={() => handleTouchStart(i)}
+            className="w-4 h-4 shrink-0 accent-red-500"
+          />
           <input
             type="text"
             value={line}

@@ -32,5 +32,6 @@ export type StudySession = {
   sentence_grammar: string | null;
   comment: string | null;
   raw_input: string;
+  shared?: boolean;
   created_at: string;
 };

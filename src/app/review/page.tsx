@@ -4,11 +4,12 @@ import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
+import { getGuestNotes } from "@/lib/guestStorage";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, getGuestAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT } from "@/lib/aiUsage";
+import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
 import GuideOverlay from "@/components/GuideOverlay";
 
 type Card = {
@@ -21,7 +22,7 @@ type Card = {
 
 function ReviewContent() {
   const router = useRouter();
-  const { user, plan, isAnonymous } = useAuth();
+  const { user, plan } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndex] = useState(0);
   const [flipped, setFlipped] = useState(false);
@@ -54,15 +55,19 @@ function ReviewContent() {
 
   useEffect(() => {
     async function load() {
-      let query = supabase
-        .from("study_sessions")
-        .select("*")
-        .order("study_date", { ascending: false })
-        .order("created_at", { ascending: false });
-
-      query = query.eq("language", filter);
-
-      const { data } = await query;
+      let data;
+      if (!user) {
+        data = getGuestNotes().filter((n) => n.language === filter);
+      } else {
+        const { data: dbData } = await supabase
+          .from("study_sessions")
+          .select("*")
+          .eq("user_id", user.id)
+          .order("study_date", { ascending: false })
+          .order("created_at", { ascending: false })
+          .eq("language", filter);
+        data = dbData;
+      }
       if (!data) {
         setCards([]);
         setLoading(false);
@@ -127,8 +132,8 @@ function ReviewContent() {
         }
       }
 
-      // Anonymous users limited to 20 cards
-      if (isAnonymous) {
+      // Guest users limited to 20 cards
+      if (!user) {
         filtered = filtered.slice(0, 20);
       }
 
@@ -141,7 +146,7 @@ function ReviewContent() {
       setLoading(false);
     }
     load();
-  }, [filter, cardType, shuffled, isAnonymous]);
+  }, [filter, cardType, shuffled, user]);
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
@@ -166,24 +171,27 @@ function ReviewContent() {
     }
   }, [index, loading]);
 
-  // Load AI usage for free users
+  // Load AI usage for free/guest users
   useEffect(() => {
-    if (!user || plan === "pro") return;
-    const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-    fn(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan, isAnonymous]);
+    if (plan === "pro") return;
+    if (!user) {
+      setAiRemaining(getGuestUsage().remaining);
+      return;
+    }
+    getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+  }, [user, plan]);
 
   async function handleAi() {
     if (aiLoading || aiResults[index]) return;
 
-    // Check AI usage limit for free users
-    if (plan !== "pro" && user) {
-      const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-      const { remaining } = await fn(user.id);
-      if (remaining <= 0) {
-        if (isAnonymous) router.push("/login");
-        else alert(t("aiLimitReached"));
-        return;
+    // Check AI usage limit
+    if (plan !== "pro") {
+      if (!user) {
+        const { remaining } = getGuestUsage();
+        if (remaining <= 0) { router.push("/login"); return; }
+      } else {
+        const { remaining } = await getAiUsage(user.id);
+        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
       }
     }
     const card = cards[index];
@@ -204,12 +212,16 @@ function ReviewContent() {
       const data = await res.json();
       setAiResults((prev) => ({ ...prev, [index]: data.result || data.error || "No response" }));
 
-      // Increment AI usage for free users on success
-      if (plan !== "pro" && user && data.result) {
-        await incrementAiUsage(user.id);
-        const fn = isAnonymous ? getGuestAiUsage : getAiUsage;
-        const { remaining } = await fn(user.id);
-        setAiRemaining(remaining);
+      // Increment AI usage on success
+      if (plan !== "pro" && data.result) {
+        if (!user) {
+          const { remaining } = incrementGuestUsage();
+          setAiRemaining(remaining);
+        } else {
+          await incrementAiUsage(user.id);
+          const { remaining } = await getAiUsage(user.id);
+          setAiRemaining(remaining);
+        }
       }
     } catch {
       setAiResults((prev) => ({ ...prev, [index]: t("requestFailed") }));
@@ -391,18 +403,7 @@ function ReviewContent() {
       <div className="flex items-center justify-between px-4 pt-3 pb-3">
         <div data-guide="review-filters-right" className="flex gap-3 items-center shrink-0">
           <button
-            data-guide-tab="셔플" data-guide-tab-en="Shuffle"
-            onClick={() => setShuffled((s) => !s)}
-            className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
-              shuffled
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-900 text-gray-400 hover:text-gray-200"
-            }`}
-          >
-            🔀
-          </button>
-
-          <button
+            title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
             data-guide-tab={`자동\n재생`} data-guide-tab-en={`Auto\nPlay`}
             onClick={() => {
               const next = !autoplay;
@@ -420,6 +421,19 @@ function ReviewContent() {
             >
               A
             </span>
+          </button>
+
+          <button
+            title={locale === "ko" ? "카드 순서를 무작위로 섞습니다" : "Shuffle card order randomly"}
+            data-guide-tab="셔플" data-guide-tab-en="Shuffle"
+            onClick={() => setShuffled((s) => !s)}
+            className={`px-3 py-1 rounded-lg text-sm transition-colors shrink-0 ${
+              shuffled
+                ? "bg-indigo-600 text-white"
+                : "bg-gray-900 text-gray-400 hover:text-gray-200"
+            }`}
+          >
+            🔀
           </button>
         </div>
 
@@ -450,6 +464,7 @@ function ReviewContent() {
             {(["english", "japanese"] as const).map((f) => (
               <button
                 key={f}
+                title={f === "english" ? (locale === "ko" ? "영어 카드 보기" : "Show English cards") : (locale === "ko" ? "일본어 카드 보기" : "Show Japanese cards")}
                 onClick={() => { setFilter(f); localStorage.setItem("lang-filter", f); }}
                 className={`px-3 py-1 rounded-md text-sm transition-colors ${
                   filter === f
@@ -489,7 +504,7 @@ function ReviewContent() {
             >
               <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
                 {/* Front */}
-                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center">
                   {typeof navigator !== "undefined" && navigator.share && (
                     <button
                       onTouchStart={(e) => e.stopPropagation()}
@@ -503,7 +518,7 @@ function ReviewContent() {
                       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                     </button>
                   )}
-                  <div className="flex items-center gap-2 mb-4">
+                  <div className="flex items-center gap-2 mb-4 shrink-0">
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         card.language === "english"
@@ -524,14 +539,16 @@ function ReviewContent() {
                     </span>
                     <span className="text-xs text-gray-600">{card.sessionDate}</span>
                   </div>
-                  <p className="text-xl text-center font-medium leading-relaxed">
-                    {card.front}
-                  </p>
+                  <div className="flex-1 flex items-center justify-center overflow-y-auto w-full">
+                    <p className="text-xl text-center font-medium leading-relaxed py-4">
+                      {card.front}
+                    </p>
+                  </div>
                 </div>
 
                 {/* Back */}
-                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
+                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center overflow-y-auto">
+                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300 py-4">
                     {card.back}
                   </pre>
                 </div>
@@ -556,6 +573,7 @@ function ReviewContent() {
                         <span className="text-xs text-green-400">✓</span>
                       ) : (
                         <button
+                          title={locale === "ko" ? "AI 예문을 노트에 저장합니다" : "Save AI example to notes"}
                           onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
                           className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm"
                         >
@@ -564,6 +582,7 @@ function ReviewContent() {
                       )}
                       {typeof navigator !== "undefined" && navigator.share && (
                         <button
+                          title={locale === "ko" ? "예문을 다른 앱으로 공유합니다" : "Share example to other apps"}
                           onClick={(e) => { e.stopPropagation(); navigator.share({ text: aiResults[index] }).catch(() => {}); }}
                           className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors"
                         >
@@ -601,7 +620,7 @@ function ReviewContent() {
                   AI Example
                   {plan !== "pro" && (
                     <span className="ml-1 text-xs text-purple-400/60">
-                      · {(isAnonymous || !user) ? (locale === "ko" ? `무료 체험 ${aiRemaining}/${GUEST_LIMIT}` : `Free trial ${aiRemaining}/${GUEST_LIMIT}`) : (locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`)}
+                      · {!user ? (locale === "ko" ? `무료 체험 ${aiRemaining}/${GUEST_LIMIT}` : `Free trial ${aiRemaining}/${GUEST_LIMIT}`) : (locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`)}
                     </span>
                   )}
                 </button>

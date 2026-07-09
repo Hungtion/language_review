@@ -8,11 +8,12 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
+import { getGuestNotes } from "@/lib/guestStorage";
 
 function HomeContent() {
   const router = useRouter();
   const { user, loading } = useAuth();
-  const { t } = useLocale();
+  const { t, locale } = useLocale();
 
   // First visit: redirect to login if not authenticated
   useEffect(() => {
@@ -25,11 +26,20 @@ function HomeContent() {
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
 
   useEffect(() => {
-    if (!user) { setRecent([]); return; }
+    if (!user) {
+      const gn = getGuestNotes();
+      setRecent(gn.slice(0, 5));
+      setCounts({
+        english: gn.filter((n) => n.language === "english").length,
+        japanese: gn.filter((n) => n.language === "japanese").length,
+      });
+      return;
+    }
     async function load() {
       const { data } = await supabase
         .from("study_sessions")
         .select("*")
+        .eq("user_id", user.id)
         .order("study_date", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(5);
@@ -38,11 +48,13 @@ function HomeContent() {
       const { count: engCount } = await supabase
         .from("study_sessions")
         .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
         .eq("language", "english");
 
       const { count: jpnCount } = await supabase
         .from("study_sessions")
         .select("*", { count: "exact", head: true })
+        .eq("user_id", user.id)
         .eq("language", "japanese");
 
       setCounts({ english: engCount ?? 0, japanese: jpnCount ?? 0 });

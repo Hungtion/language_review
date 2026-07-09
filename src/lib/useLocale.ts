@@ -6,14 +6,13 @@ import { Locale, t as translate, TranslationKey } from "./i18n";
 const LOCALE_CHANGE_EVENT = "locale-changed";
 
 export function useLocale() {
-  const [locale, setLocaleState] = useState<Locale>(() =>
-    typeof window !== "undefined"
-      ? (localStorage.getItem("locale") as Locale) || "ko"
-      : "ko"
-  );
+  const [locale, setLocaleState] = useState<Locale>("ko");
 
-  // Listen for locale changes from other components
+  // Sync with localStorage after mount + listen for changes
   useEffect(() => {
+    const saved = (localStorage.getItem("locale") as Locale) || "ko";
+    setLocaleState(saved);
+
     function onLocaleChange() {
       const next = (localStorage.getItem("locale") as Locale) || "ko";
       setLocaleState(next);

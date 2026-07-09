@@ -10,7 +10,7 @@ export async function getAiUsage(userId: string): Promise<{ count: number; remai
     .select("count")
     .eq("user_id", userId)
     .eq("usage_date", today)
-    .single();
+    .maybeSingle();
 
   const count = data?.count || 0;
   return { count, remaining: Math.max(0, DAILY_FREE_LIMIT - count) };
@@ -24,7 +24,7 @@ export async function incrementAiUsage(userId: string): Promise<void> {
     .select("count")
     .eq("user_id", userId)
     .eq("usage_date", today)
-    .single();
+    .maybeSingle();
 
   if (data) {
     await supabase
@@ -47,7 +47,7 @@ export async function resetAiUsage(userId: string): Promise<void> {
     .select("count")
     .eq("user_id", userId)
     .eq("usage_date", today)
-    .single();
+    .maybeSingle();
 
   if (data) {
     await supabase
@@ -61,13 +61,14 @@ export async function resetAiUsage(userId: string): Promise<void> {
 export const DAILY_LIMIT = DAILY_FREE_LIMIT;
 export const GUEST_LIMIT = 5;
 
-/** Guest: count total usage across all dates */
-export async function getGuestAiUsage(userId: string): Promise<{ count: number; remaining: number }> {
-  const { data } = await supabase
-    .from("ai_usage")
-    .select("count")
-    .eq("user_id", userId);
+/** Guest: track usage in localStorage (no DB) */
+export function getGuestUsage(): { count: number; remaining: number } {
+  const count = parseInt(localStorage.getItem("guest-ai-used") || "0", 10);
+  return { count, remaining: Math.max(0, GUEST_LIMIT - count) };
+}
 
-  const total = (data || []).reduce((sum, row) => sum + (row.count || 0), 0);
-  return { count: total, remaining: Math.max(0, GUEST_LIMIT - total) };
+export function incrementGuestUsage(): { count: number; remaining: number } {
+  const count = parseInt(localStorage.getItem("guest-ai-used") || "0", 10) + 1;
+  localStorage.setItem("guest-ai-used", String(count));
+  return { count, remaining: Math.max(0, GUEST_LIMIT - count) };
 }
