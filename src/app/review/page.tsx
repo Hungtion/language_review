@@ -79,6 +79,10 @@ function ReviewContent() {
   const touchStartX = useRef(0);
   const touchStartY = useRef(0);
   const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const mouseStartX = useRef(0);
+  const mouseDragging = useRef(false);
+  const mouseDown = useRef(false);
+  const lastTouchEnd = useRef(0);
 
   useEffect(() => {
     async function load() {
@@ -542,6 +546,7 @@ function ReviewContent() {
   }, []);
 
   useEffect(() => {
+    let animating = false;
     function handleKey(e: KeyboardEvent) {
       if (e.key === " " || e.key === "Enter") {
         e.preventDefault();
@@ -551,9 +556,25 @@ function ReviewContent() {
           else { speak(c.front, c.language); setFlipped(true); }
         } else if (c) { speak(c.front, c.language); }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
-        goNext();
+        if (animating || index >= cards.length - 1) return;
+        animating = true;
+        setSwipeAnim("left");
+        setTimeout(() => {
+          goNext();
+          setSwipeAnim(null);
+          setEnterAnim("from-right");
+          setTimeout(() => { setEnterAnim("entering"); setTimeout(() => { setEnterAnim(null); animating = false; }, 200); }, 20);
+        }, 200);
       } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
-        goPrev();
+        if (animating || index <= 0) return;
+        animating = true;
+        setSwipeAnim("right");
+        setTimeout(() => {
+          goPrev();
+          setSwipeAnim(null);
+          setEnterAnim("from-left");
+          setTimeout(() => { setEnterAnim("entering"); setTimeout(() => { setEnterAnim(null); animating = false; }, 200); }, 20);
+        }, 200);
       }
     }
     window.addEventListener("keydown", handleKey);
@@ -590,6 +611,7 @@ function ReviewContent() {
   }
 
   function handleTouchEnd(e: React.TouchEvent) {
+    lastTouchEnd.current = Date.now();
     if (longPressTimer.current) {
       clearTimeout(longPressTimer.current);
       longPressTimer.current = null;
@@ -621,8 +643,8 @@ function ReviewContent() {
       return;
     }
     setSwipeX(0);
-    // Quick tap → TTS + flip
-    if (!swiping.current) {
+    // Quick tap (not a real swipe) → TTS + flip
+    if (Math.abs(dx) <= 50) {
       const c = cards[index];
       if (!c) return;
       if (c.back) {
@@ -767,12 +789,82 @@ function ReviewContent() {
       <div className="flex-1 px-4 flex flex-col items-center justify-center">
         {card ? (
           <>
+            <div className="relative w-full max-w-lg">
+            {index > 0 && (
+              <div className="hidden sm:flex absolute -left-10 top-1/2 -translate-y-1/2 text-text-faint/30 pointer-events-none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+              </div>
+            )}
+            {index < cards.length - 1 && (
+              <div className="hidden sm:flex absolute -right-10 top-1/2 -translate-y-1/2 text-text-faint/30 pointer-events-none">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+              </div>
+            )}
             <div
               data-guide="review-card"
               className={`card-flip select-none w-full max-w-lg ${card.back ? "cursor-pointer" : ""} ${swipeAnim || enterAnim === "entering" ? "transition-transform duration-200" : swipeX || enterAnim ? "" : "transition-transform duration-150"}`}
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onMouseDown={(e) => {
+                if (e.button !== 0) return;
+                if (Date.now() - lastTouchEnd.current < 500) return;
+                mouseStartX.current = e.clientX;
+                mouseDown.current = true;
+                mouseDragging.current = false;
+                setPressed(true);
+              }}
+              onMouseMove={(e) => {
+                if (!mouseDown.current) return;
+                const dx = e.clientX - mouseStartX.current;
+                if (Math.abs(dx) > 10) mouseDragging.current = true;
+                if (mouseDragging.current) setSwipeX(dx);
+              }}
+              onMouseUp={(e) => {
+                if (!mouseDown.current) return;
+                mouseDown.current = false;
+                setPressed(false);
+                const dx = e.clientX - mouseStartX.current;
+                if (mouseDragging.current && Math.abs(dx) > 50) {
+                  const dir = dx < 0 ? "left" : "right";
+                  if ((dir === "left" && index >= cards.length - 1) || (dir === "right" && index <= 0)) {
+                    setSwipeX(0);
+                    mouseDragging.current = false;
+                    return;
+                  }
+                  setSwipeAnim(dir);
+                  setTimeout(() => {
+                    if (dir === "left") goNext(); else goPrev();
+                    setSwipeAnim(null);
+                    setSwipeX(0);
+                    setEnterAnim(dir === "left" ? "from-right" : "from-left");
+                    setTimeout(() => {
+                      setEnterAnim("entering");
+                      setTimeout(() => setEnterAnim(null), 200);
+                    }, 20);
+                  }, 200);
+                  mouseDragging.current = false;
+                  return;
+                }
+                setSwipeX(0);
+                // click (no drag) → flip
+                const c = cards[index];
+                if (!c) return;
+                if (c.back) {
+                  if (flipped) { speak(c.front, c.language); setFlipped(false); }
+                  else { speak(c.front, c.language); setFlipped(true); }
+                } else {
+                  speak(c.front, c.language);
+                }
+              }}
+              onMouseLeave={() => {
+                if (mouseDown.current) {
+                  mouseDown.current = false;
+                  mouseDragging.current = false;
+                  setPressed(false);
+                  setSwipeX(0);
+                }
+              }}
               style={{
                 height: "min(50vh, 350px)",
                 transform: swipeAnim
@@ -935,6 +1027,7 @@ function ReviewContent() {
                 </button>
               )}
 
+            </div>
             </div>
 
             {/* Split Preview Modal */}
