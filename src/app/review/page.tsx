@@ -11,6 +11,7 @@ import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
 import GuideOverlay from "@/components/GuideOverlay";
+import AdBanner from "@/components/AdBanner";
 
 type Card = {
   front: string;
@@ -1132,6 +1133,11 @@ function ReviewContent() {
             </div>
           </>
         )}
+      </div>
+
+      {/* Ad */}
+      <div className="px-4 pt-2">
+        <AdBanner format="horizontal" className="h-[50px]" />
       </div>
 
       {/* Bottom Progress */}

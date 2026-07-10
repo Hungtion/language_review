@@ -8,6 +8,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
+import AdBanner from "@/components/AdBanner";
 import { getGuestNotes } from "@/lib/guestStorage";
 
 function getSeenNotes(): Set<string> {
@@ -160,43 +161,49 @@ function NotesContent() {
             )}
           </div>
         ) : (
-          filtered.map((s) => (
-            <Link
-              key={s.id}
-              href={`/notes/${s.id}`}
-              onClick={() => { markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id)); }}
-              className="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors group"
-            >
-              <div className="flex items-center gap-3 mb-2">
-                <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                  s.language === "english"
-                    ? "bg-blue-500/20 text-blue-400"
-                    : "bg-red-500/20 text-red-400"
-                }`}>
-                  {s.language === "english" ? "English" : "日本語"}
-                </span>
-                <span className="text-sm text-gray-500">{s.study_date}</span>
-                {s.title && (
-                  <span className="text-sm text-gray-300 font-medium">{s.title}</span>
-                )}
-                {!seenNotes.has(s.id) && (
-                  <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">NEW</span>
-                )}
-              </div>
+          filtered.map((s, i) => (
+            <div key={s.id}>
+              <Link
+                href={`/notes/${s.id}`}
+                onClick={() => { markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id)); }}
+                className="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors group"
+              >
+                <div className="flex items-center gap-3 mb-2">
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                    s.language === "english"
+                      ? "bg-blue-500/20 text-blue-400"
+                      : "bg-red-500/20 text-red-400"
+                  }`}>
+                    {s.language === "english" ? "English" : "日本語"}
+                  </span>
+                  <span className="text-sm text-gray-500">{s.study_date}</span>
+                  {s.title && (
+                    <span className="text-sm text-gray-300 font-medium">{s.title}</span>
+                  )}
+                  {!seenNotes.has(s.id) && (
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">NEW</span>
+                  )}
+                </div>
 
-              <div className="flex gap-4 text-xs text-gray-600">
-                {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
-                {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
-                {s.comment && <span>💬 {t("comment")}</span>}
-              </div>
+                <div className="flex gap-4 text-xs text-gray-600">
+                  {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
+                  {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
+                  {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                  {s.comment && <span>💬 {t("comment")}</span>}
+                </div>
 
-              {s.vocabulary && (
-                <p className="text-gray-500 text-sm mt-2 truncate group-hover:text-gray-400">
-                  {s.vocabulary.slice(0, 120)}...
-                </p>
+                {s.vocabulary && (
+                  <p className="text-gray-500 text-sm mt-2 truncate group-hover:text-gray-400">
+                    {s.vocabulary.slice(0, 120)}...
+                  </p>
+                )}
+              </Link>
+              {(i + 1) % 5 === 0 && i < filtered.length - 1 && (
+                <div key={`ad-${i}`} className="mt-3 bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-hidden">
+                  <AdBanner />
+                </div>
               )}
-            </Link>
+            </div>
           ))
         )}
       </div>
