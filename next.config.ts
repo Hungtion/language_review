@@ -1,10 +1,19 @@
 import type { NextConfig } from "next";
-import pkg from "./package.json" with { type: "json" };
+import { readFileSync } from "fs";
+
+function getVersion() {
+  try {
+    const count = readFileSync(".build-number", "utf-8").trim();
+    return `0.1.${count}`;
+  } catch {
+    return "0.1.0";
+  }
+}
 
 const nextConfig: NextConfig = {
   allowedDevOrigins: ["192.168.100.219"],
   env: {
-    NEXT_PUBLIC_APP_VERSION: pkg.version,
+    NEXT_PUBLIC_APP_VERSION: getVersion(),
   },
 };
 
