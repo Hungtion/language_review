@@ -54,6 +54,13 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
     };
   }, [updateRects]);
 
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent("guide-visible", { detail: visible }));
+    return () => {
+      window.dispatchEvent(new CustomEvent("guide-visible", { detail: false }));
+    };
+  }, [visible]);
+
   function close() {
     setVisible(false);
   }
@@ -251,16 +258,16 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
           className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         >
-          <div className="flex flex-col items-center gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
+          <div className="flex flex-col items-center gap-3 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
             {!isGuideDismissed(pageKey) && (
               <button
                 onClick={closeAndDismiss}
-                className="text-xs text-text-faint hover:text-text-muted transition-colors"
+                className="px-4 py-1.5 rounded-full text-xs text-white/70 hover:text-white border border-white/20 hover:border-white/40 bg-white/10 transition-colors"
               >
                 {lang === "ko" ? "다시 보지 않기" : "Don't show again"}
               </button>
             )}
-            <p className="text-sm text-text-muted animate-pulse" style={{ fontFamily: "var(--font-gaegu), cursive" }}>
+            <p className="text-sm text-white/60 animate-pulse" style={{ fontFamily: "var(--font-gaegu), cursive" }}>
               {lang === "ko" ? "아무 곳이나 터치하여 닫기" : "Tap anywhere to close"}
             </p>
           </div>

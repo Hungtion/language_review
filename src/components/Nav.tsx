@@ -1,5 +1,6 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
@@ -24,6 +25,13 @@ export default function Nav() {
 
   const guideKey = GUIDE_PAGES[pathname];
   const hasGuide = guideKey && GUIDE_STEPS[guideKey]?.length > 0;
+  const [guideActive, setGuideActive] = useState(false);
+
+  useEffect(() => {
+    const handler = (e: Event) => setGuideActive((e as CustomEvent).detail);
+    window.addEventListener("guide-visible", handler);
+    return () => window.removeEventListener("guide-visible", handler);
+  }, []);
 
   const pageTitle = pathname === "/add" ? t("addNewNote")
     : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
@@ -96,7 +104,14 @@ export default function Nav() {
             <button
               onClick={() => window.dispatchEvent(new CustomEvent("show-guide"))}
               title={locale === "ko" ? "도움말" : "Help"}
-              className="sm:ml-auto p-1.5 rounded-lg text-text-faint hover:text-primary hover:bg-bg-input/50 transition-colors flex-shrink-0"
+              className={`sm:ml-auto p-1.5 rounded-lg transition-colors flex-shrink-0 ${
+                guideActive
+                  ? "text-primary animate-pulse"
+                  : "text-text-faint hover:text-primary hover:bg-bg-input/50"
+              }`}
+              style={guideActive ? {
+                filter: "drop-shadow(0 0 6px var(--primary)) drop-shadow(0 0 12px var(--primary))",
+              } : undefined}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="10"/>
