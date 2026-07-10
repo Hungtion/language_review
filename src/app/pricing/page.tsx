@@ -51,9 +51,7 @@ function PricingContent() {
       <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
         <div className="text-center">
           <div className="text-3xl font-bold">
-            1,000<span className="text-lg text-text-muted font-normal">
-              {isKo ? "원/월" : "KRW/mo"}
-            </span>
+            {isKo ? "출시 준비 중" : "Coming Soon"}
           </div>
         </div>
 
@@ -84,7 +82,7 @@ function PricingContent() {
               onClick={() => setShowInterest(true)}
               className="w-full py-3 bg-primary hover:bg-primary-hover rounded-lg text-sm font-medium transition-colors"
             >
-              {isKo ? "프리미엄 구독하기" : "Subscribe to Premium"}
+              {isKo ? "얼리버드 혜택 받기" : "Get Early Bird Benefits"}
             </button>
             <button
               onClick={() => router.back()}
