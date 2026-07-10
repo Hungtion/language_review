@@ -48,8 +48,8 @@ export default function Nav() {
           <span className="text-primary">Language</span>
           <span className="text-text-muted ml-1 text-sm font-normal">LAB</span>
           {user && !user.is_anonymous ? (
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded font-normal hover:bg-primary/30 transition-colors">
-              <span className="text-sm">{credits === 0 ? "🍃" : credits < 10 ? "🌱" : credits < 50 ? "🌿" : "🌳"}</span>{credits}
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded font-medium hover:bg-primary/30 transition-colors">
+              <span className="text-sm mr-0.5">{credits === 0 ? "🍃" : credits <= 10 ? "🌱" : credits <= 50 ? "🌿" : "🌳"}</span>{credits}
             </button>
           ) : null}
         </Link>

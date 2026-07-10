@@ -81,7 +81,7 @@ function PricingContent() {
 
       <div className="bg-bg-card border border-border rounded-xl p-5 text-center">
         <p className="text-text-muted text-xs mb-1">{isKo ? "보유 Leaf" : "Your Leaves"}</p>
-        <p className="text-3xl font-bold text-primary">{credits === 0 ? "🍃" : credits < 10 ? "🌱" : credits < 50 ? "🌿" : "🌳"} {credits}</p>
+        <p className="text-3xl font-bold text-primary">{credits === 0 ? "🍃" : credits <= 10 ? "🌱" : credits <= 50 ? "🌿" : "🌳"} {credits}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">

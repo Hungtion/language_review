@@ -52,6 +52,11 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){var d=document.documentElement,s=localStorage;var t=s.getItem("theme");if(t==="dark"||t==="light")d.setAttribute("data-theme",t);var v=s.getItem("theme-variant");if(v)d.setAttribute("data-variant",v);var a=s.getItem("theme-accent");if(a)d.setAttribute("data-accent",a);window.__fixPT=function(){var cs=getComputedStyle(d),c=cs.getPropertyValue("--primary").trim();if(!c)return;var r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);var L=0.2126*(r/255)+0.7152*(g/255)+0.0722*(b/255);d.style.setProperty("--primary-text",L>0.5?"#1a1a1a":"#ffffff")};setTimeout(window.__fixPT,0)})()` }} />
       </head>
       <body className="min-h-screen flex flex-col">
+        <div id="splash" style={{ position: "fixed", inset: 0, zIndex: 9999, background: "#0B0F19", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "16px", transition: "opacity 0.4s" }}>
+          <img src="/splash-icon.png" alt="" width="120" height="120" style={{ borderRadius: "24px" }} />
+          <div style={{ color: "#fff", fontSize: "24px", fontWeight: 700, letterSpacing: "-0.5px" }}>Language <span style={{ fontWeight: 300, opacity: 0.6 }}>LAB</span></div>
+        </div>
+        <script dangerouslySetInnerHTML={{ __html: `window.addEventListener("load",function(){var s=document.getElementById("splash");if(s){setTimeout(function(){s.style.opacity="0";setTimeout(function(){s.style.display="none"},400)},300)}})` }} />
         <AuthProvider>
           <Nav />
           <main className="flex-1 max-w-4xl w-full mx-auto px-4 pb-24 sm:pb-20 pt-3">
