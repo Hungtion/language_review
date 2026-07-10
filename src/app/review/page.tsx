@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState, useCallback, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 import { getGuestNotes } from "@/lib/guestStorage";
@@ -26,6 +26,8 @@ type Card = {
 
 function ReviewContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const noteId = searchParams.get("noteId");
   const { user, plan } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndexRaw] = useState(() => {
@@ -83,7 +85,15 @@ function ReviewContent() {
     async function load() {
       let data;
       if (!user) {
-        data = getGuestNotes().filter((n) => n.language === filter);
+        const all = getGuestNotes();
+        data = noteId ? all.filter((n) => n.id === noteId) : all.filter((n) => n.language === filter);
+      } else if (noteId) {
+        const { data: dbData } = await supabase
+          .from("study_sessions")
+          .select("*")
+          .eq("id", noteId)
+          .eq("user_id", user.id);
+        data = dbData;
       } else {
         const { data: dbData } = await supabase
           .from("study_sessions")
@@ -176,7 +186,9 @@ function ReviewContent() {
 
       // When un-shuffling, restore position to the card user was viewing
       let startIndex = 0;
-      if (!shuffled && preShuffleCard.current) {
+      if (noteId) {
+        startIndex = 0;
+      } else if (!shuffled && preShuffleCard.current) {
         const ref = preShuffleCard.current;
         const found = filtered.findIndex((c) => c.front === ref.front && c.sessionId === ref.sessionId);
         startIndex = found >= 0 ? found : 0;
@@ -192,7 +204,7 @@ function ReviewContent() {
       setLoading(false);
     }
     load();
-  }, [filter, cardType, shuffled, user]);
+  }, [filter, cardType, shuffled, user, noteId]);
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
@@ -640,6 +652,19 @@ function ReviewContent() {
   return (
     <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="review" />
+      {noteId && (
+        <div className="flex items-center justify-between px-4 pt-2 pb-1">
+          <span className="text-xs text-indigo-400">
+            {locale === "ko" ? "이 노트의 카드만 보는 중" : "Viewing cards from this note only"}
+          </span>
+          <button
+            onClick={() => router.push("/review")}
+            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+          >
+            {locale === "ko" ? "전체 카드 보기" : "Show all cards"}
+          </button>
+        </div>
+      )}
       {/* Filters */}
       <div className="flex items-center justify-between px-4 pt-3 pb-3">
         <div data-guide="review-filters-right" className="flex gap-4 items-center shrink-0">

@@ -30,6 +30,33 @@ It depends on the situation.
 Comment
 Practice makes perfect.`;
 
+const TEMPLATES = {
+  english: [
+    {
+      label: { ko: "OPIc 스크립트", en: "OPIc Script" },
+      text: `When it comes to learning English, I always try to practice speaking.\nI've been studying English for about 5 years now.\nEnsure that you practice every day to improve your fluency.\nThe thing is, consistency is more important than intensity.`,
+    },
+    {
+      label: { ko: "비즈니스 이메일", en: "Business Email" },
+      text: `I'm writing to follow up on our previous discussion.\nPlease find the attached document for your reference.\nI would appreciate it if you could get back to me by Friday.\nLooking forward to hearing from you soon.`,
+    },
+    {
+      label: { ko: "일상 회화", en: "Daily Conversation" },
+      text: `I've been grappling with this problem for hours.\nThe meeting was pushed back to next Friday.\nCould you walk me through the process?\nIt's not rocket science, just follow the steps.`,
+    },
+  ],
+  japanese: [
+    {
+      label: { ko: "JLPT 독해", en: "JLPT Reading" },
+      text: `環境問題は私たちの生活に深く関わっている。\n持続可能な社会を実現するためには、一人一人の努力が必要だ。\nこの問題について、様々な角度から考える必要がある。`,
+    },
+    {
+      label: { ko: "일상 회화", en: "Daily Conversation" },
+      text: `日本語を習うのは本当に面白いです。\n毎日少しずつ練習することが大切です。\nこの言葉の意味を教えていただけますか？\nだんだん上手になってきました。`,
+    },
+  ],
+};
+
 // Module-level: survives component remount (tab switch)
 type UploadJob = {
   promise: Promise<{ language: string; studyDate: string; title: string; lines: string[]; userId: string } | null>;
@@ -55,6 +82,7 @@ function AddContent() {
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [uploading, setUploading] = useState(!!activeUpload);
   const [uploadFileName, setUploadFileName] = useState(activeUpload?.fileName || "");
+  const [uploadStep, setUploadStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
 
@@ -99,7 +127,8 @@ function AddContent() {
 
     const promise = (async (): Promise<{ language: string; studyDate: string; title: string; lines: string[]; userId: string } | null> => {
       try {
-        // 1. Extract text from file
+        // Step 1: Extract text from file
+        setUploadStep(1);
         const formData = new FormData();
         formData.append("file", file);
         const res = await fetch("/api/upload", { method: "POST", body: formData, signal: abort.signal });
@@ -111,7 +140,8 @@ function AddContent() {
         const extracted = data.text as string;
         if (!extracted.trim()) { alert(locale === "ko" ? "파일에서 텍스트를 찾을 수 없습니다" : "No text found in file"); return null; }
 
-        // 2. Parse: small files → AI, large files → line split
+        // Step 2: Parse
+        setUploadStep(2);
         let lines: string[];
         if (extracted.length <= 5000) {
           const parseRes = await fetch("/api/ai", {
@@ -129,7 +159,8 @@ function AddContent() {
           lines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
         }
 
-        // 3. Save to DB
+        // Step 3: Save to DB
+        setUploadStep(3);
         const { error } = await supabase.from("study_sessions").insert({
           language: currentLang,
           study_date: currentDate,
@@ -322,27 +353,68 @@ function AddContent() {
 
       {/* Raw Input */}
       <div data-guide="add-textarea">
-        <textarea
-          value={rawInput}
-          onChange={(e) => {
-            const val = e.target.value;
-            setRawInput(val);
-            setPreview(null);
+        <div className="flex gap-2 mb-2 flex-wrap">
+          {TEMPLATES[language].map((tmpl, i) => (
+            <button
+              key={i}
+              onClick={() => setRawInput(tmpl.text)}
+              className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${
+                rawInput === tmpl.text
+                  ? "border-indigo-500 text-indigo-400 bg-indigo-500/10"
+                  : "text-gray-500 border-gray-800 hover:border-indigo-500/50 hover:text-indigo-400"
+              }`}
+            >
+              {locale === "ko" ? tmpl.label.ko : tmpl.label.en}
+            </button>
+          ))}
+        </div>
+        <div className="relative">
+          <textarea
+            value={rawInput}
+            onChange={(e) => {
+              const val = e.target.value;
+              setRawInput(val);
+              setPreview(null);
 
-            // Auto-fill date and title from metadata (English Channel only)
-            if (language === "english" && isEngChannel) {
-              const meta = extractMetadata(val);
-              if (meta.date) setStudyDate(meta.date);
-              if (meta.teacher || meta.lesson) {
-                const parts = [meta.lesson, meta.teacher].filter(Boolean);
-                setTitle(parts.join(" - "));
+              // Auto-fill date and title from metadata (English Channel only)
+              if (language === "english" && isEngChannel) {
+                const meta = extractMetadata(val);
+                if (meta.date) setStudyDate(meta.date);
+                if (meta.teacher || meta.lesson) {
+                  const parts = [meta.lesson, meta.teacher].filter(Boolean);
+                  setTitle(parts.join(" - "));
+                }
               }
-            }
-          }}
-          placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
-          rows={16}
-          className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
-        />
+            }}
+            placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
+            rows={16}
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
+          />
+          {uploading && (
+            <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
+              <svg className="w-10 h-10 text-indigo-400 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" /></svg>
+              <div className="w-full max-w-[240px] space-y-2">
+                {[
+                  locale === "ko" ? "파일 읽는 중..." : "Reading file...",
+                  locale === "ko" ? "AI 분석 중..." : "AI analyzing...",
+                  locale === "ko" ? "저장 중..." : "Saving...",
+                ].map((label, i) => (
+                  <div key={i} className={`flex items-center gap-2 text-xs transition-colors ${
+                    uploadStep === i + 1 ? "text-indigo-400" : uploadStep > i + 1 ? "text-green-500" : "text-gray-600"
+                  }`}>
+                    <span className="w-4 text-center">
+                      {uploadStep > i + 1 ? "✓" : uploadStep === i + 1 ? "●" : "○"}
+                    </span>
+                    {label}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-gray-500 mt-2">
+                {locale === "ko" ? "탭을 이동해도 안전합니다" : "Safe to switch tabs"}
+              </p>
+            </div>
+          )}
+        </div>
         <p className={`text-right text-xs mt-1 ${rawInput.length > AI_PARSE_CHAR_LIMIT ? "text-red-400" : "text-gray-600"}`}>
           {rawInput.length.toLocaleString()}/{AI_PARSE_CHAR_LIMIT.toLocaleString()}
         </p>
@@ -402,10 +474,11 @@ function AddContent() {
       {/* Parse Choice Modal */}
       {showParseChoice && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-sm w-full space-y-4">
+          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full space-y-4">
             <h3 className="text-lg font-bold">{t("parseChoice")}</h3>
             <p className="text-sm text-gray-400">{t("noFormatDetected")}</p>
-            <div className="space-y-2">
+            <div className="space-y-3">
+              {/* AI Extract option */}
               {plan === "pro" ? (
                 <button
                   onClick={() => {
@@ -415,21 +488,26 @@ function AddContent() {
                     }
                     setShowParseChoice(false); doSave("ai");
                   }}
-                  className="w-full py-3 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                  className="w-full text-left p-4 bg-purple-600/10 border border-purple-500/30 rounded-xl hover:bg-purple-600/20 transition-colors group"
                 >
-                  <span className="flex items-center justify-center gap-2">
+                  <span className="flex items-center gap-2 text-purple-400 font-medium text-sm">
                     {t("aiExtract")}
                     <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
                   </span>
                   <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
+                  <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
+                    <div className="text-purple-400/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
+                    <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
+                    <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
+                  </div>
                 </button>
               ) : (
                 <>
                   <button
                     onClick={() => router.push(!user ? "/login" : "/pricing")}
-                    className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition-colors"
+                    className="w-full text-left p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors"
                   >
-                    <span className="flex items-center justify-center gap-2">
+                    <span className="flex items-center gap-2 text-sm">
                       {t("aiExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
                     </span>
@@ -446,24 +524,37 @@ function AddContent() {
                       doSave("ai");
                     }}
                     disabled={aiRemaining <= 0}
-                    className="w-full py-3 bg-purple-600/10 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full text-left p-4 bg-purple-600/10 border border-purple-500/30 rounded-xl hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <span className="flex items-center justify-center gap-2">
+                    <span className="flex items-center gap-2 text-purple-400 font-medium text-sm">
                       {!user ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
                         {aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}
                       </span>
                     </span>
                     <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
+                    <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
+                      <div className="text-purple-400/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
+                      <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
+                      <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
+                    </div>
                   </button>
                 </>
               )}
+
+              {/* Line-by-line option */}
               <button
                 onClick={() => { setShowParseChoice(false); doSave("line"); }}
-                className="w-full py-3 bg-gray-800 text-gray-300 border border-gray-700 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                className="w-full text-left p-4 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 transition-colors"
               >
-                {t("lineByLine")}
+                <span className="text-gray-300 font-medium text-sm">{t("lineByLine")}</span>
                 <span className="block text-xs text-gray-500 mt-1">{t("lineByLineDesc")}</span>
+                <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
+                  <div className="text-gray-400/60">{locale === "ko" ? "▸ 각 줄 = 카드 1장" : "▸ Each line = 1 card"}</div>
+                  <div className="pl-2 text-gray-600">{locale === "ko" ? "1줄 → 카드 1" : "Line 1 → Card 1"}</div>
+                  <div className="pl-2 text-gray-600">{locale === "ko" ? "2줄 → 카드 2" : "Line 2 → Card 2"}</div>
+                  <div className="pl-2 text-gray-600">{locale === "ko" ? "3줄 → 카드 3 ..." : "Line 3 → Card 3 ..."}</div>
+                </div>
               </button>
             </div>
             <button

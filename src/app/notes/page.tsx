@@ -144,6 +144,27 @@ function NotesContent() {
         </div>
       </div>
 
+      {!loading && filtered.length > 0 && !search.trim() && (
+        <Link
+          href="/review"
+          className="flex items-center justify-between bg-indigo-600/10 border border-indigo-500/20 rounded-xl px-4 py-3 hover:bg-indigo-600/20 transition-colors group"
+        >
+          <div className="flex items-center gap-3">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
+              <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
+              <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
+              <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
+            </svg>
+            <span className="text-sm text-indigo-400 font-medium">
+              {locale === "ko" ? "카드로 복습하기" : "Review with Cards"}
+            </span>
+          </div>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400/60 group-hover:translate-x-1 transition-transform">
+            <polyline points="9 18 15 12 9 6"/>
+          </svg>
+        </Link>
+      )}
+
       <div data-guide="notes-list" className="space-y-3 flex-1" style={{ minHeight: "calc(100vh - 10rem)" }}>
         {loading ? (
           <div className="text-gray-500 text-center py-12">{t("loading")}</div>

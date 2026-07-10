@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 function isStandalone() {
   if (typeof window === "undefined") return false;
@@ -18,38 +18,114 @@ function getDevice(): "ios" | "android" | "other" {
   return "other";
 }
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
+}
+
+function getDismissCount(): number {
+  try { return parseInt(localStorage.getItem("install-dismiss-count") || "0", 10); } catch { return 0; }
+}
+
 export default function InstallBanner() {
-  const [show, setShow] = useState(false);
+  const [showModal, setShowModal] = useState(false);
+  const [showMini, setShowMini] = useState(false);
+  const [showManual, setShowManual] = useState(false);
   const device = getDevice();
+  const deferredPrompt = useRef<BeforeInstallPromptEvent | null>(null);
 
   useEffect(() => {
     if (isStandalone()) return;
     if (device === "other") return;
-    if (sessionStorage.getItem("install-banner-dismissed")) return;
-    const timer = setTimeout(() => setShow(true), 2000);
+
+    const dismissCount = getDismissCount();
+    // Stop showing after 3 dismissals
+    if (dismissCount >= 3) return;
+
+    if (device === "android") {
+      const handler = (e: Event) => {
+        e.preventDefault();
+        deferredPrompt.current = e as BeforeInstallPromptEvent;
+      };
+      window.addEventListener("beforeinstallprompt", handler);
+
+      const timer = setTimeout(() => setShowModal(true), 2000);
+      return () => {
+        clearTimeout(timer);
+        window.removeEventListener("beforeinstallprompt", handler);
+      };
+    }
+
+    const timer = setTimeout(() => setShowModal(true), 2000);
     return () => clearTimeout(timer);
   }, [device]);
 
-  if (!show) return null;
+  if (!showModal && !showMini) return null;
 
-  function dismiss() {
-    sessionStorage.setItem("install-banner-dismissed", "true");
-    setShow(false);
+  function dismissModal() {
+    const count = getDismissCount() + 1;
+    localStorage.setItem("install-dismiss-count", String(count));
+    setShowModal(false);
+    // Show mini banner after dismissing modal (up to 3 times)
+    if (count < 3) setShowMini(true);
   }
 
+  function dismissAll() {
+    localStorage.setItem("install-dismiss-count", "3");
+    setShowModal(false);
+    setShowMini(false);
+  }
+
+  async function handleAndroidInstall() {
+    if (deferredPrompt.current) {
+      await deferredPrompt.current.prompt();
+      const { outcome } = await deferredPrompt.current.userChoice;
+      deferredPrompt.current = null;
+      if (outcome === "accepted") {
+        dismissAll();
+      }
+    } else {
+      setShowManual(true);
+    }
+  }
+
+  // Mini banner (slim bar at bottom)
+  if (!showModal && showMini) {
+    return (
+      <div className="fixed bottom-16 left-0 right-0 z-[9998] flex justify-center px-4 animate-slide-up">
+        <div className="w-full max-w-lg bg-gray-800 border border-gray-700 rounded-xl px-4 py-3 flex items-center gap-3 shadow-lg">
+          <span className="text-sm text-gray-300 flex-1">
+            홈 화면에 추가하면 앱처럼!
+          </span>
+          <button
+            onClick={() => setShowModal(true)}
+            className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors shrink-0"
+          >
+            {device === "android" ? "설치" : "방법 보기"}
+          </button>
+          <button
+            onClick={() => setShowMini(false)}
+            className="text-gray-500 hover:text-gray-300 text-sm leading-none shrink-0"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  // Full modal
   return (
-    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-end justify-center" onClick={dismiss}>
+    <div className="fixed inset-0 bg-black/60 z-[9999] flex items-end justify-center" onClick={dismissModal}>
       <div
         className="w-full max-w-lg bg-gray-900 border-t border-gray-700 rounded-t-2xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] animate-slide-up"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-start justify-between mb-3">
           <h3 className="text-white font-bold text-[15px]">
-            {device === "ios"
-              ? "홈 화면에 추가하면 앱처럼 사용할 수 있어요!"
-              : "홈 화면에 추가하면 앱처럼 사용할 수 있어요!"}
+            홈 화면에 추가하면 앱처럼 사용할 수 있어요!
           </h3>
-          <button onClick={dismiss} className="text-gray-500 hover:text-gray-300 text-lg leading-none ml-2">✕</button>
+          <button onClick={dismissModal} className="text-gray-500 hover:text-gray-300 text-lg leading-none ml-2">✕</button>
         </div>
 
         {device === "ios" ? (
@@ -67,7 +143,7 @@ export default function InstallBanner() {
               <p>우측 상단 <span className="text-white font-medium">&quot;추가&quot;</span> 를 탭하면 완료!</p>
             </div>
           </div>
-        ) : (
+        ) : showManual ? (
           <div className="space-y-3 text-sm text-gray-300">
             <div className="flex items-start gap-3">
               <span className="shrink-0 w-6 h-6 rounded-full bg-indigo-600/30 text-indigo-400 flex items-center justify-center text-xs font-bold">1</span>
@@ -82,14 +158,32 @@ export default function InstallBanner() {
               <p><span className="text-white font-medium">&quot;설치&quot;</span> 를 탭하면 완료!</p>
             </div>
           </div>
+        ) : (
+          <div className="text-sm text-gray-300">
+            <p className="mb-4">앱을 설치하면 더 빠르고 편하게 사용할 수 있어요.</p>
+            <button
+              onClick={handleAndroidInstall}
+              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
+            >
+              홈 화면에 추가
+            </button>
+          </div>
         )}
 
-        <button
-          onClick={dismiss}
-          className="mt-4 w-full py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-sm transition-colors"
-        >
-          다음에 하기
-        </button>
+        <div className="mt-4 flex gap-2">
+          <button
+            onClick={dismissModal}
+            className="flex-1 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-400 rounded-xl text-sm transition-colors"
+          >
+            다음에 하기
+          </button>
+          <button
+            onClick={dismissAll}
+            className="py-2.5 px-4 text-gray-600 hover:text-gray-400 text-xs transition-colors"
+          >
+            다시 보지 않기
+          </button>
+        </div>
       </div>
     </div>
   );

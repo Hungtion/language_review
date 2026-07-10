@@ -338,7 +338,19 @@ function NoteDetailContent() {
           </div>
           {session.title && <h1 className="text-2xl font-bold">{session.title}</h1>}
         </div>
-        {user && (
+        <div className="flex items-center gap-1">
+          <Link
+            href={`/review?noteId=${params.id}`}
+            title={locale === "ko" ? "이 노트 카드로 복습" : "Review this note as cards"}
+            className="p-2 rounded-lg text-gray-500 hover:text-indigo-400 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
+              <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
+              <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
+            </svg>
+          </Link>
+          {user && (
           <button
             onClick={async () => {
               if (!session.shared) {
@@ -361,6 +373,7 @@ function NoteDetailContent() {
             </svg>
           </button>
         )}
+        </div>
       </div>
 
       {/* Stress & Pronunciation */}
