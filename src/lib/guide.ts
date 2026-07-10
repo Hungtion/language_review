@@ -126,6 +126,15 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       overlay: true,
     },
     {
+      selector: "[data-guide='notes-review']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Jump to flashcard review.",
+        ko: "카드 복습으로 바로 이동합니다.",
+      },
+      overlay: true,
+    },
+    {
       selector: "[data-guide='notes-list']",
       title: { en: "", ko: "" },
       description: {

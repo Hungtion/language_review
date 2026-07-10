@@ -146,6 +146,7 @@ function NotesContent() {
 
       {!loading && filtered.length > 0 && !search.trim() && (
         <Link
+          data-guide="notes-review"
           href="/review"
           className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 hover:bg-primary/20 transition-colors group"
         >

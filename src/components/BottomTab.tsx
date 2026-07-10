@@ -43,7 +43,7 @@ export default function BottomTab() {
   }, [pathname]);
 
   return (
-    <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-bg-nav backdrop-blur-sm border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-bg-nav backdrop-blur-sm border-t border-border z-[1003] pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-16">
         {tabs.map(({ href, icon: Icon, label, match, guideLabel, desc }) => {
           const active = match(pathname);
@@ -78,9 +78,6 @@ export default function BottomTab() {
                 </>
               )}
               {href === "/add" && uploadStatus === "done" && (
-                <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
-              )}
-              {href === "/notes" && notesBadge && (
                 <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-green-400 rounded-full" />
               )}
             </Link>
