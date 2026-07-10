@@ -8,7 +8,7 @@ import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
 
 function SettingsContent() {
-  const { user, plan, signOut } = useAuth();
+  const { user, plan, credits, signOut } = useAuth();
   const router = useRouter();
   const { locale, setLocale, t } = useLocale();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
@@ -362,26 +362,24 @@ function SettingsContent() {
         <h2 className="text-sm font-medium text-text-secondary">{t("account")}</h2>
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-muted">{user?.email}</p>
+          <button
+            onClick={signOut}
+            className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
+          >
+            {t("logout")}
+          </button>
+        </div>
+        <div className="flex items-center justify-between pt-2 border-t border-border">
           <div className="flex items-center gap-2">
-            {plan === "pro" ? (
-              <span className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg">
-                Pro
-              </span>
-            ) : (
-              <button
-                onClick={() => router.push("/pricing")}
-                className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
-              >
-                {locale === "ko" ? "Pro 전환" : "Upgrade"}
-              </button>
-            )}
-            <button
-              onClick={signOut}
-              className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
-            >
-              {t("logout")}
-            </button>
+            <span className="text-sm text-text-secondary">🍃 Leaf</span>
+            <span className="text-sm font-semibold text-primary">{credits}</span>
           </div>
+          <button
+            onClick={() => router.push("/pricing")}
+            className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
+          >
+            {locale === "ko" ? "충전하기" : "Get Leaves"}
+          </button>
         </div>
         <div className="pt-2 border-t border-border">
           <button

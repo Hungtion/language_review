@@ -1,154 +1,128 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
-import { supabase } from "@/lib/supabase";
 import { useLocale } from "@/lib/useLocale";
 
+const PACKAGES = [
+  { credits: 5, price: 500, icon: "🌱" },
+  { credits: 10, price: 1000, icon: "🍃" },
+  { credits: 20, price: 2000, icon: "🌿" },
+];
+
 function PricingContent() {
-  const { user, plan } = useAuth();
+  const { user, credits, refreshCredits } = useAuth();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const { locale } = useLocale();
-  const [showInterest, setShowInterest] = useState(false);
-  const [registered, setRegistered] = useState(false);
-  const [sending, setSending] = useState(false);
+  const [selected, setSelected] = useState(1);
+  const [loading, setLoading] = useState(false);
 
   const isKo = locale === "ko";
+  const pkg = PACKAGES[selected];
+  const done = searchParams.get("done") === "1";
 
-  async function handleInterest() {
+  // After returning from payment, refresh credits
+  if (done && user) {
+    refreshCredits();
+  }
+
+  async function handlePay() {
     if (!user) return;
-    setSending(true);
-    await supabase.from("premium_interest").upsert({
-      user_id: user.id,
-      email: user.email,
-      type: "interest",
-    }, { onConflict: "user_id,type" });
-    setSending(false);
-    setRegistered(true);
+    setLoading(true);
+    try {
+      const res = await fetch("/api/payment/payapp", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          userId: user.id,
+          price: pkg.price,
+          goodname: `${pkg.icon} Leaf ${pkg.credits}`,
+        }),
+      });
+      const data = await res.json();
+      if (data.url) {
+        // Mobile: navigate directly, PC: new tab (avoids popup blockers)
+        const isMobile = /iPhone|iPad|Android|Mobile/i.test(navigator.userAgent);
+        if (isMobile) {
+          window.location.href = data.url;
+        } else {
+          window.open(data.url, "_blank");
+        }
+      } else {
+        alert(data.error || "Payment failed");
+      }
+    } catch {
+      alert("Payment request failed");
+    }
+    setLoading(false);
   }
 
   return (
-    <div className="max-w-md mx-auto py-8 space-y-8">
+    <div className="max-w-md mx-auto py-8 space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">
-          {isKo ? "프리미엄 구독" : "Premium Subscription"}
+          {isKo ? "🍃 잎 충전" : "🍃 Get Leaves"}
         </h1>
         <p className="text-text-muted text-sm">
-          {isKo ? "AI 기능을 무제한으로 사용하세요" : "Unlimited access to AI features"}
+          {isKo ? "AI 기능 1회 = 잎 1장 (매일 무료 5회)" : "1 AI use = 1 leaf (5 free daily)"}
         </p>
       </div>
 
-      {plan === "pro" && (
-        <div className="bg-primary/10 border border-primary/30 rounded-lg p-4 text-center">
-          <p className="text-primary text-sm font-medium">
-            {isKo ? "현재 프리미엄 이용 중입니다" : "You are on Premium"}
+      {done && (
+        <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
+          <p className="text-green-400 text-sm">
+            {isKo ? "✅ 결제가 완료되었습니다! 잎이 충전됩니다." : "✅ Payment complete! Leaves will be added."}
           </p>
         </div>
       )}
 
-      <div className="bg-bg-card border border-border rounded-xl p-6 space-y-4">
-        <div className="text-center">
-          <div className="text-3xl font-bold">
-            {isKo ? "출시 준비 중" : "Coming Soon"}
-          </div>
-        </div>
-
-        <div className="space-y-3 text-sm">
-          <div className="flex items-center gap-3">
-            <span className="text-primary">✓</span>
-            <span className="text-text-secondary">
-              {isKo ? "Nuance Chat 무제한" : "Unlimited Nuance Chat"}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-primary">✓</span>
-            <span className="text-text-secondary">
-              {isKo ? "AI 자동 분류 무제한" : "Unlimited AI auto-parsing"}
-            </span>
-          </div>
-          <div className="flex items-center gap-3">
-            <span className="text-primary">✓</span>
-            <span className="text-text-secondary">
-              {isKo ? "복습 카드 AI 예문 무제한" : "Unlimited AI example sentences"}
-            </span>
-          </div>
-        </div>
-
-        {plan !== "pro" && (
-          <div className="space-y-3 pt-2">
-            <button
-              onClick={() => setShowInterest(true)}
-              className="w-full py-3 bg-primary hover:bg-primary-hover rounded-lg text-sm font-medium transition-colors"
-            >
-              {isKo ? "얼리버드 혜택 받기" : "Get Early Bird Benefits"}
-            </button>
-            <button
-              onClick={() => router.back()}
-              className="w-full py-3 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-lg text-sm transition-colors"
-            >
-              {isKo ? "돌아가기" : "Go Back"}
-            </button>
-          </div>
-        )}
+      <div className="bg-bg-card border border-border rounded-xl p-5 text-center">
+        <p className="text-text-muted text-xs mb-1">{isKo ? "보유 잎" : "Your Leaves"}</p>
+        <p className="text-3xl font-bold text-primary">🍃 {credits}</p>
       </div>
 
-      {/* 관심 등록 팝업 */}
-      {showInterest && (
-        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => setShowInterest(false)}>
-          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full text-center space-y-4 relative" onClick={(e) => e.stopPropagation()}>
-            <button onClick={() => setShowInterest(false)} className="absolute top-3 right-3 text-text-faint hover:text-text-secondary text-lg leading-none">✕</button>
-            {registered ? (
-              <>
-                <div className="text-3xl">🎉</div>
-                <p className="text-text text-[15px] leading-relaxed whitespace-pre-line">
-                  {isKo
-                    ? "등록 완료!\n정식 출시 시 할인 쿠폰을 보내드릴게요."
-                    : "Registered!\nWe'll send you a discount coupon at launch."}
-                </p>
-                <button
-                  onClick={() => setShowInterest(false)}
-                  className="mt-2 px-8 py-2.5 bg-primary hover:bg-primary-hover text-primary-text rounded-xl text-sm font-medium transition-colors"
-                >
-                  {isKo ? "확인" : "OK"}
-                </button>
-              </>
-            ) : (
-              <>
-                <div className="text-3xl">✨</div>
-                <h3 className="text-text font-bold text-lg">
-                  {isKo ? "오픈 베타 준비 중!" : "Open Beta Coming Soon!"}
-                </h3>
-                <p className="text-text-muted text-sm leading-relaxed whitespace-pre-line">
-                  {isKo
-                    ? "프리미엄 기능은 현재 준비 중입니다.\n아래 버튼을 누르시면 정식 출시 시\n50% 할인 쿠폰을 보내드릴게요."
-                    : "Premium features are coming soon.\nRegister below to receive a\n50% discount coupon at launch."}
-                </p>
-                <p className="text-text-faint text-xs">
-                  {user?.email}
-                </p>
-                <button
-                  onClick={handleInterest}
-                  disabled={sending}
-                  className="w-full py-3 bg-primary hover:bg-primary-hover disabled:bg-bg-hover text-text rounded-xl text-sm font-medium transition-colors"
-                >
-                  {sending
-                    ? (isKo ? "등록 중..." : "Registering...")
-                    : (isKo ? "알림 받기" : "Notify Me")}
-                </button>
-                <button
-                  onClick={() => setShowInterest(false)}
-                  className="w-full py-2 text-sm text-text-faint hover:text-text-secondary transition-colors"
-                >
-                  {isKo ? "닫기" : "Close"}
-                </button>
-              </>
-            )}
-          </div>
-        </div>
-      )}
+      <div className="grid grid-cols-3 gap-3">
+        {PACKAGES.map((p, i) => (
+          <button
+            key={p.credits}
+            onClick={() => setSelected(i)}
+            className={`p-4 rounded-xl border transition-colors text-center ${
+              selected === i
+                ? "bg-primary/15 border-primary/40"
+                : "bg-bg-card border-border hover:border-primary/20"
+            }`}
+          >
+            <p className="text-2xl mb-1">{p.icon}</p>
+            <p className="text-xl font-bold text-text">{p.credits}<span className="text-sm text-text-muted font-normal ml-0.5">{isKo ? "잎" : "leaves"}</span></p>
+            <p className="text-sm text-text-secondary mt-1">{p.price.toLocaleString()}{isKo ? "원" : " KRW"}</p>
+          </button>
+        ))}
+      </div>
 
+      <div className="space-y-3">
+        <button
+          onClick={handlePay}
+          disabled={loading}
+          className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text rounded-lg text-sm font-medium transition-colors"
+        >
+          {loading
+            ? (isKo ? "결제 준비 중..." : "Preparing...")
+            : (isKo ? "결제하기" : "Pay Now")}
+        </button>
+        <button
+          onClick={() => router.back()}
+          className="w-full py-3 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-lg text-sm transition-colors"
+        >
+          {isKo ? "돌아가기" : "Go Back"}
+        </button>
+      </div>
+
+      <p className="text-xs text-text-faint text-center">
+        {isKo ? "카카오페이 · 네이버페이 · 카드결제 지원" : "KakaoPay · NaverPay · Card supported"}
+      </p>
     </div>
   );
 }

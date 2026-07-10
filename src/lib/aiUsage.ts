@@ -1,4 +1,5 @@
 import { supabase } from "./supabase";
+import { deductCredit } from "./credits";
 
 const DAILY_FREE_LIMIT = 5;
 
@@ -14,6 +15,24 @@ export async function getAiUsage(userId: string): Promise<{ count: number; remai
 
   const count = data?.count || 0;
   return { count, remaining: Math.max(0, DAILY_FREE_LIMIT - count) };
+}
+
+/** Returns true if AI can be used (free or credit). Increments usage. */
+export async function useAiCredit(userId: string): Promise<"free" | "credit" | "none"> {
+  const { remaining } = await getAiUsage(userId);
+
+  if (remaining > 0) {
+    await incrementAiUsage(userId);
+    return "free";
+  }
+
+  const ok = await deductCredit(userId);
+  if (ok) {
+    await incrementAiUsage(userId);
+    return "credit";
+  }
+
+  return "none";
 }
 
 export async function incrementAiUsage(userId: string): Promise<void> {

@@ -8,7 +8,9 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
+import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage, useAiCredit } from "@/lib/aiUsage";
+import { getCredits } from "@/lib/credits";
+import CreditModal from "@/components/CreditModal";
 
 const AI_PARSE_CHAR_LIMIT = 5000;
 import { addGuestNote } from "@/lib/guestStorage";
@@ -80,6 +82,8 @@ function AddContent() {
   const [saving, setSaving] = useState(false);
   const [showParseChoice, setShowParseChoice] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
   const [uploading, setUploading] = useState(!!activeUpload);
   const [uploadFileName, setUploadFileName] = useState(activeUpload?.fileName || "");
   const [uploadStep, setUploadStep] = useState(0);
@@ -101,22 +105,23 @@ function AddContent() {
   }, [router]);
 
   useEffect(() => {
-    if (plan === "pro") return;
     if (!user) {
       setAiRemaining(getGuestUsage().remaining);
       return;
     }
     getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan]);
+    getCredits(user.id).then((c) => setUserCredits(c));
+  }, [user]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = "";
 
+    if (!user) { router.push("/login"); return; }
     if (plan !== "pro") {
-      router.push(!user ? "/login" : "/pricing");
-      return;
+      const { remaining } = await getAiUsage(user.id);
+      if (remaining <= 0 && userCredits <= 0) { setShowCreditModal(true); return; }
     }
 
     const abort = new AbortController();
@@ -261,15 +266,18 @@ function AddContent() {
         raw_input: rawInput,
       };
     } else {
-      // AI mode — increment usage
-      if (plan !== "pro") {
-        if (!user) {
-          const { remaining } = incrementGuestUsage();
-          setAiRemaining(remaining);
-        } else {
-          await incrementAiUsage(user.id);
-          const { remaining } = await getAiUsage(user.id);
-          setAiRemaining(remaining);
+      // AI mode — deduct usage
+      if (!user) {
+        const { remaining } = incrementGuestUsage();
+        setAiRemaining(remaining);
+      } else if (plan !== "pro") {
+        const result = await useAiCredit(user.id);
+        if (result === "none") { setShowCreditModal(true); setSaving(false); return; }
+        const { remaining } = await getAiUsage(user.id);
+        setAiRemaining(remaining);
+        if (result === "credit") {
+          const c = await getCredits(user.id);
+          setUserCredits(c);
         }
       }
       const extracted = await aiParse(rawInput, language);
@@ -314,6 +322,7 @@ function AddContent() {
   return (
     <div className="space-y-6">
       <GuideOverlay pageKey="add" />
+      {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
       {/* Title, Date & Language */}
       <div data-guide="add-header" className="flex gap-2 items-center">
         <div className="flex gap-2 flex-1 min-w-0">
@@ -479,68 +488,38 @@ function AddContent() {
             <p className="text-sm text-text-muted">{t("noFormatDetected")}</p>
             <div className="space-y-3">
               {/* AI Extract option */}
-              {plan === "pro" ? (
-                <button
-                  onClick={() => {
-                    if (rawInput.length > AI_PARSE_CHAR_LIMIT) {
-                      alert(locale === "ko" ? `AI 추출은 ${AI_PARSE_CHAR_LIMIT.toLocaleString()}자까지 가능합니다. (현재 ${rawInput.length.toLocaleString()}자)` : `AI extract is limited to ${AI_PARSE_CHAR_LIMIT.toLocaleString()} characters. (Current: ${rawInput.length.toLocaleString()})`);
-                      return;
-                    }
-                    setShowParseChoice(false); doSave("ai");
-                  }}
-                  className="w-full text-left p-4 bg-primary/10 border border-primary/30 rounded-xl hover:bg-primary/20 transition-colors group"
-                >
-                  <span className="flex items-center gap-2 text-primary font-medium text-sm">
-                    {t("aiExtract")}
-                    <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">Pro</span>
-                  </span>
-                  <span className="block text-xs text-text-faint mt-1">{t("aiExtractDesc")}</span>
-                  <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
-                    <div className="text-primary/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
-                    <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
-                    <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
-                  </div>
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={() => router.push(!user ? "/login" : "/pricing")}
-                    className="w-full text-left p-4 bg-primary hover:bg-primary-hover text-primary-text rounded-xl font-medium transition-colors"
-                  >
-                    <span className="flex items-center gap-2 text-sm">
-                      {t("aiExtract")}
-                      <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
+              <button
+                onClick={() => {
+                  if (!user) { const { remaining } = getGuestUsage(); if (remaining <= 0) { router.push("/login"); return; } }
+                  else if (plan !== "pro" && aiRemaining <= 0 && userCredits <= 0) { setShowCreditModal(true); setShowParseChoice(false); return; }
+                  if (rawInput.length > AI_PARSE_CHAR_LIMIT) {
+                    alert(locale === "ko" ? `AI 추출은 ${AI_PARSE_CHAR_LIMIT.toLocaleString()}자까지 가능합니다. (현재 ${rawInput.length.toLocaleString()}자)` : `AI extract is limited to ${AI_PARSE_CHAR_LIMIT.toLocaleString()} characters. (Current: ${rawInput.length.toLocaleString()})`);
+                    return;
+                  }
+                  setShowParseChoice(false);
+                  doSave("ai");
+                }}
+                className="w-full text-left p-4 bg-primary/10 border border-primary/30 rounded-xl hover:bg-primary/20 transition-colors"
+              >
+                <span className="flex items-center gap-2 text-primary font-medium text-sm">
+                  🍃 {t("aiExtract")}
+                  {plan !== "pro" && (
+                    <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">
+                      {!user
+                        ? `${aiRemaining}/${GUEST_LIMIT}`
+                        : aiRemaining > 0
+                          ? `${aiRemaining}/${DAILY_LIMIT}`
+                          : `🍃${userCredits}`}
                     </span>
-                    <span className="block text-xs text-primary-hover mt-1">{t("subscribe")}</span>
-                  </button>
-                  <button
-                    onClick={() => {
-                      if (aiRemaining <= 0) return;
-                      if (rawInput.length > AI_PARSE_CHAR_LIMIT) {
-                        alert(locale === "ko" ? `AI 추출은 ${AI_PARSE_CHAR_LIMIT.toLocaleString()}자까지 가능합니다. (현재 ${rawInput.length.toLocaleString()}자)` : `AI extract is limited to ${AI_PARSE_CHAR_LIMIT.toLocaleString()} characters. (Current: ${rawInput.length.toLocaleString()})`);
-                        return;
-                      }
-                      setShowParseChoice(false);
-                      doSave("ai");
-                    }}
-                    disabled={aiRemaining <= 0}
-                    className="w-full text-left p-4 bg-primary/10 border border-primary/30 rounded-xl hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-                  >
-                    <span className="flex items-center gap-2 text-primary font-medium text-sm">
-                      {!user ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
-                      <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">
-                        {aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}
-                      </span>
-                    </span>
-                    <span className="block text-xs text-text-faint mt-1">{t("aiExtractDesc")}</span>
-                    <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
-                      <div className="text-primary/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
-                      <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
-                      <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
-                    </div>
-                  </button>
-                </>
-              )}
+                  )}
+                </span>
+                <span className="block text-xs text-text-faint mt-1">{t("aiExtractDesc")}</span>
+                <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
+                  <div className="text-primary/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
+                  <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
+                  <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
+                </div>
+              </button>
 
               {/* Line-by-line option */}
               <button

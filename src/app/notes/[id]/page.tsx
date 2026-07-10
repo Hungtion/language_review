@@ -9,7 +9,10 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import { getGuestNotes, deleteGuestNote } from "@/lib/guestStorage";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
+import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage, useAiCredit } from "@/lib/aiUsage";
+import { getCredits } from "@/lib/credits";
+import CreditModal from "@/components/CreditModal";
+import GuideOverlay from "@/components/GuideOverlay";
 
 function NoteDetailContent() {
   const { user, plan } = useAuth();
@@ -35,15 +38,17 @@ function NoteDetailContent() {
   const [splitAiConfirm, setSplitAiConfirm] = useState<{ field: string; lineIdx: number; text: string } | null>(null);
   const [splitNoResult, setSplitNoResult] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
 
   useEffect(() => {
-    if (plan === "pro") return;
     if (!user) {
       setAiRemaining(getGuestUsage().remaining);
     } else {
       getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
+      getCredits(user.id).then((c) => setUserCredits(c));
     }
-  }, [user, plan]);
+  }, [user]);
 
   useEffect(() => {
     if (!user) {
@@ -193,14 +198,12 @@ function NoteDetailContent() {
 
   async function handleSplitLine(field: string, lineIdx: number, text: string) {
     // Check AI usage limit
-    if (plan !== "pro") {
-      if (!user) {
-        const { remaining } = getGuestUsage();
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
-      } else {
-        const { remaining } = await getAiUsage(user.id);
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
-      }
+    if (!user) {
+      const { remaining } = getGuestUsage();
+      if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+    } else if (plan !== "pro") {
+      const { remaining } = await getAiUsage(user.id);
+      if (remaining <= 0 && userCredits <= 0) { setShowCreditModal(true); return; }
     }
 
     setSplitTarget({ field, lineIdx, text });
@@ -216,16 +219,18 @@ function NoteDetailContent() {
         alert(data.error);
         setSplitTarget(null);
       } else if (data.result && data.result.length > 1) {
-        // Increment AI usage on success
-        if (plan !== "pro") {
-          if (!user) {
-            const { remaining } = incrementGuestUsage();
-            setAiRemaining(remaining);
-          } else {
-            await incrementAiUsage(user.id);
-            const { remaining } = await getAiUsage(user.id);
-            setAiRemaining(remaining);
+        // Deduct credit
+        if (!user) {
+          const { remaining } = incrementGuestUsage();
+          setAiRemaining(remaining);
+        } else if (plan !== "pro") {
+          const result = await useAiCredit(user.id);
+          if (result === "credit") {
+            const c = await getCredits(user.id);
+            setUserCredits(c);
           }
+          const { remaining } = await getAiUsage(user.id);
+          setAiRemaining(remaining);
         }
         setSplitPreview(data.result);
         setSplitSelected(new Set(data.result.map((_: string, i: number) => i)));
@@ -288,6 +293,8 @@ function NoteDetailContent() {
 
   return (
     <div className="space-y-6">
+      <GuideOverlay pageKey="note-detail" />
+      {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
       {/* Navigation */}
       <div className="flex items-center justify-between">
         <Link
@@ -324,7 +331,7 @@ function NoteDetailContent() {
       </div>
 
       {/* Header */}
-      <div className="flex items-end justify-between">
+      <div data-guide="note-header" className="flex items-end justify-between">
         <div>
           <div className="flex items-center gap-3 mb-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
@@ -345,9 +352,8 @@ function NoteDetailContent() {
             className="p-2 rounded-lg text-text-faint hover:text-primary transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
-              <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
-              <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
+              <rect x="2" y="4" width="14" height="17" rx="2" />
+              <path d="M8 2h10a2 2 0 012 2v14" />
             </svg>
           </Link>
           {user && (
@@ -376,6 +382,7 @@ function NoteDetailContent() {
         </div>
       </div>
 
+      <div data-guide="note-sections" className="space-y-6">
       {/* Stress & Pronunciation */}
       {session.stress_pronunciation && (
         <SectionCard
@@ -541,6 +548,8 @@ function NoteDetailContent() {
           )}
         </SectionCard>
       )}
+
+      </div>
 
       {/* Comment */}
       {session.comment && (
@@ -714,8 +723,8 @@ function NoteDetailContent() {
             </p>
             <p className="text-xs text-text-faint text-center">
               {locale === "ko"
-                ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}회`
-                : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
+                ? aiRemaining > 0 ? `무료 ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`
+                : aiRemaining > 0 ? `Free ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`}
             </p>
             <div className="flex gap-3">
               <button
@@ -728,7 +737,7 @@ function NoteDetailContent() {
                 onClick={() => { const t = splitAiConfirm; setSplitAiConfirm(null); handleSplitLine(t.field, t.lineIdx, t.text); }}
                 className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
               >
-                {locale === "ko" ? "문장 나누기" : "Split"}
+                {locale === "ko" ? "🍃 문장 나누기" : "🍃 Split"}
               </button>
             </div>
           </div>

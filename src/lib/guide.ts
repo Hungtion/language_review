@@ -172,6 +172,27 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       fontSize: 20,
     },
   ],
+  "note-detail": [
+    {
+      selector: "[data-guide='note-header']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "{row:{icon:card}|Review as flashcards}\n{row:{icon:share}|Share this note}",
+        ko: "{row:{icon:card}|카드로 복습하기}\n{row:{icon:share}|노트 공유하기}",
+      },
+      overlay: true,
+    },
+    {
+      selector: "[data-guide='note-sections']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "{row:{icon:edit}|Bulk edit mode}\n{row:{icon:share}|Copy card}\n{row:{icon:split}|AI splits cards}\n{row:{icon:delete}|Delete card}",
+        ko: "{row:{icon:edit}|일괄 편집 모드}\n{row:{icon:share}|카드 복사하기}\n{row:{icon:split}|카드 나누기}\n{row:{icon:delete}|카드 지우기}",
+      },
+      overlay: true,
+      fontSize: 18,
+    },
+  ],
   settings: [
     {
       selector: "[data-guide='settings-lang']",

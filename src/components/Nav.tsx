@@ -15,15 +15,16 @@ const GUIDE_PAGES: Record<string, string> = {
   "/notes": "notes",
   "/nuance": "nuance",
   "/settings": "settings",
+  "/notes/[id]": "note-detail",
 };
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, plan } = useAuth();
+  const { user, credits } = useAuth();
   const { t, locale } = useLocale();
 
-  const guideKey = GUIDE_PAGES[pathname];
+  const guideKey = GUIDE_PAGES[pathname] || (/^\/notes\/.+/.test(pathname) ? "note-detail" : undefined);
   const hasGuide = guideKey && GUIDE_STEPS[guideKey]?.length > 0;
   const [guideActive, setGuideActive] = useState(false);
 
@@ -48,10 +49,10 @@ export default function Nav() {
           <span className="text-primary/50">/</span>
           <span className="text-primary">JP</span>
           <span className="text-text-muted ml-1.5 text-sm font-normal">Lab</span>
-          {plan === "pro" ? (
-            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded font-normal">Pro</span>
-          ) : user ? (
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-bg-hover/50 text-text-muted rounded font-normal hover:bg-bg-hover transition-colors">Free</button>
+          {user && !user.is_anonymous ? (
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded font-normal hover:bg-primary/30 transition-colors">
+              🍃{credits}
+            </button>
           ) : null}
         </Link>
         <div className="ml-auto flex items-center gap-1 flex-shrink-0">

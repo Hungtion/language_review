@@ -7,8 +7,10 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
+import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage, useAiCredit } from "@/lib/aiUsage";
+import { getCredits } from "@/lib/credits";
 import GuideOverlay from "@/components/GuideOverlay";
+import CreditModal from "@/components/CreditModal";
 
 type Message = {
   role: "user" | "ai";
@@ -46,6 +48,8 @@ function NuanceContent() {
   const [selectedDate, setSelectedDate] = useState<string>("today");
   const [savingNote, setSavingNote] = useState<string | null>(null);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
   const [savedKeys, setSavedKeys] = useState<Set<string>>(new Set());
   const [swipedPair, setSwipedPair] = useState<number | null>(null);
   const swipeRef = useRef({ startX: 0, startY: 0, swiping: false });
@@ -56,15 +60,15 @@ function NuanceContent() {
 
   const todayStr = new Date().toISOString().split("T")[0];
 
-  // Load AI usage for free/guest users
+  // Load AI usage and credits
   useEffect(() => {
-    if (plan === "pro") return;
     if (!user) {
       setAiRemaining(getGuestUsage().remaining);
       return;
     }
     getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan]);
+    getCredits(user.id).then((c) => setUserCredits(c));
+  }, [user]);
 
   // Load available dates — current month: daily, past months: monthly
   useEffect(() => {
@@ -188,13 +192,17 @@ function NuanceContent() {
     }
 
     // Check AI usage limit
-    if (plan !== "pro") {
-      if (!user) {
-        const { remaining } = getGuestUsage();
-        if (remaining <= 0) { router.push("/login"); return; }
-      } else {
-        const { remaining } = await getAiUsage(user.id);
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+    if (!user) {
+      const { remaining } = getGuestUsage();
+      if (remaining <= 0) { router.push("/login"); return; }
+    } else if (plan !== "pro") {
+      const result = await useAiCredit(user.id);
+      if (result === "none") { setShowCreditModal(true); return; }
+      const { remaining } = await getAiUsage(user.id);
+      setAiRemaining(remaining);
+      if (result === "credit") {
+        const c = await getCredits(user.id);
+        setUserCredits(c);
       }
     }
 
@@ -226,16 +234,10 @@ function NuanceContent() {
         const results: NuanceResult[] = data.result.results;
         setMessages((prev) => [...prev, { role: "ai", results }]);
 
-        // Update usage tracking
-        if (plan !== "pro") {
-          if (!user) {
-            const { remaining } = incrementGuestUsage();
-            setAiRemaining(remaining);
-          } else {
-            await incrementAiUsage(user.id);
-            const { remaining } = await getAiUsage(user.id);
-            setAiRemaining(remaining);
-          }
+        // Update guest usage tracking
+        if (!user) {
+          const { remaining } = incrementGuestUsage();
+          setAiRemaining(remaining);
         }
 
         // Save to DB only for logged-in users
@@ -356,6 +358,7 @@ function NuanceContent() {
   return (
     <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="nuance" />
+      {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
 
       {/* Tone & Language */}
       <div className="flex items-center justify-between pb-3">
@@ -562,7 +565,11 @@ function NuanceContent() {
       {/* Free usage + Date Tabs + Input */}
       {plan !== "pro" && (
         <p className="text-center text-xs text-text-faint pt-2 pb-1">
-          {!user ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-primary" : "text-red-400"}>{aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
+          {!user
+            ? <>{locale === "ko" ? "무료 체험 " : "Free trial "}<span className={aiRemaining > 0 ? "text-primary" : "text-red-400"}>{aiRemaining}/{GUEST_LIMIT}</span>{t("aiRemaining")}</>
+            : aiRemaining > 0
+              ? <>{t("aiFree")}<span className="text-primary">{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}</>
+              : <><span className={userCredits > 0 ? "text-primary" : "text-red-400"}>🍃{userCredits}</span></>}
         </p>
       )}
       <div className="pt-3 border-t border-border">
@@ -601,18 +608,18 @@ function NuanceContent() {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            onFocus={() => { if (plan !== "pro" && aiRemaining <= 0) { inputRef.current?.blur(); router.push(!user ? "/login" : "/pricing"); } }}
+            onFocus={() => { if (!user && aiRemaining <= 0) { inputRef.current?.blur(); router.push("/login"); } }}
             onBlur={() => window.scrollTo(0, 0)}
-            placeholder={plan !== "pro" && aiRemaining <= 0 ? (locale === "ko" ? "무료 횟수를 모두 사용했어요" : "Free uses exhausted") : t("enterSentence")}
+            placeholder={t("enterSentence")}
             rows={1}
             className="flex-1 bg-bg-card border border-border rounded-xl px-4 py-3 text-sm resize-none focus:border-primary focus:ring-1 focus:ring-primary outline-none"
           />
           <button
-            onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push(!user ? "/login" : "/pricing"); return; } handleSend(); }}
-            disabled={loading || (!input.trim() && !(plan !== "pro" && aiRemaining <= 0))}
+            onClick={() => handleSend()}
+            disabled={loading || !input.trim()}
             className="px-4 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-xl text-sm font-medium transition-colors"
           >
-            {t("send")}
+            🍃 {t("send")}
           </button>
         </div>
       </div>

@@ -9,8 +9,10 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
-import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
+import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage, useAiCredit } from "@/lib/aiUsage";
+import { getCredits } from "@/lib/credits";
 import GuideOverlay from "@/components/GuideOverlay";
+import CreditModal from "@/components/CreditModal";
 
 type Card = {
   front: string;
@@ -63,6 +65,8 @@ function ReviewContent() {
   const [splitAiConfirm, setSplitAiConfirm] = useState(false);
   const [splitNoResult, setSplitNoResult] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
+  const [showCreditModal, setShowCreditModal] = useState(false);
+  const [userCredits, setUserCredits] = useState(0);
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
@@ -276,29 +280,34 @@ function ReviewContent() {
     }
   }, [index, loading]);
 
-  // Load AI usage for free/guest users
+  // Load AI usage and credits
   useEffect(() => {
-    if (plan === "pro") return;
     if (!user) {
       setAiRemaining(getGuestUsage().remaining);
       return;
     }
     getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
-  }, [user, plan]);
+    getCredits(user.id).then((c) => setUserCredits(c));
+  }, [user]);
 
   async function handleAi() {
     if (aiLoading || aiResults[index]) return;
 
     // Check AI usage limit
-    if (plan !== "pro") {
-      if (!user) {
-        const { remaining } = getGuestUsage();
-        if (remaining <= 0) { router.push("/login"); return; }
-      } else {
-        const { remaining } = await getAiUsage(user.id);
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
+    if (!user) {
+      const { remaining } = getGuestUsage();
+      if (remaining <= 0) { router.push("/login"); return; }
+    } else if (plan !== "pro") {
+      const result = await useAiCredit(user.id);
+      if (result === "none") { setShowCreditModal(true); return; }
+      const { remaining } = await getAiUsage(user.id);
+      setAiRemaining(remaining);
+      if (result === "credit") {
+        const c = await getCredits(user.id);
+        setUserCredits(c);
       }
     }
+
     const card = cards[index];
     setAiLoading(true);
 
@@ -317,16 +326,10 @@ function ReviewContent() {
       const data = await res.json();
       setAiResults((prev) => ({ ...prev, [index]: data.result || data.error || "No response" }));
 
-      // Increment AI usage on success
-      if (plan !== "pro" && data.result) {
-        if (!user) {
-          const { remaining } = incrementGuestUsage();
-          setAiRemaining(remaining);
-        } else {
-          await incrementAiUsage(user.id);
-          const { remaining } = await getAiUsage(user.id);
-          setAiRemaining(remaining);
-        }
+      // Guest usage tracking
+      if (!user && data.result) {
+        const { remaining } = incrementGuestUsage();
+        setAiRemaining(remaining);
       }
     } catch {
       setAiResults((prev) => ({ ...prev, [index]: t("requestFailed") }));
@@ -432,14 +435,12 @@ function ReviewContent() {
     if (!card || !card.sessionId || !card.sourceField || splitLoading) return;
 
     // Check AI usage limit
-    if (plan !== "pro") {
-      if (!user) {
-        const { remaining } = getGuestUsage();
-        if (remaining <= 0) { router.push("/login"); return; }
-      } else {
-        const { remaining } = await getAiUsage(user.id);
-        if (remaining <= 0) { alert(t("aiLimitReached")); return; }
-      }
+    if (!user) {
+      const { remaining } = getGuestUsage();
+      if (remaining <= 0) { router.push("/login"); return; }
+    } else if (plan !== "pro") {
+      const { remaining } = await getAiUsage(user.id);
+      if (remaining <= 0 && userCredits <= 0) { setShowCreditModal(true); return; }
     }
 
     setSplitLoading(true);
@@ -453,16 +454,18 @@ function ReviewContent() {
       if (data.error) {
         alert(data.error);
       } else if (data.result && data.result.length > 1) {
-        // Increment AI usage on success
-        if (plan !== "pro") {
-          if (!user) {
-            const { remaining } = incrementGuestUsage();
-            setAiRemaining(remaining);
-          } else {
-            await incrementAiUsage(user.id);
-            const { remaining } = await getAiUsage(user.id);
-            setAiRemaining(remaining);
+        // Deduct credit
+        if (!user) {
+          const { remaining } = incrementGuestUsage();
+          setAiRemaining(remaining);
+        } else if (plan !== "pro") {
+          const result = await useAiCredit(user.id);
+          if (result === "credit") {
+            const c = await getCredits(user.id);
+            setUserCredits(c);
           }
+          const { remaining } = await getAiUsage(user.id);
+          setAiRemaining(remaining);
         }
         setSplitPreview(data.result);
         setSplitSelected(new Set(data.result.map((_: string, i: number) => i)));
@@ -673,6 +676,7 @@ function ReviewContent() {
   return (
     <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="review" />
+      {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
       {noteId && (
         <div className="flex items-center justify-between px-4 pt-2 pb-1">
           <span className="text-xs text-primary">
@@ -993,35 +997,19 @@ function ReviewContent() {
                     </div>
                   </div>
                 </div>
-              ) : plan !== "pro" && aiRemaining <= 0 ? (
-                <div className="flex gap-2">
-                  <a href="/pricing" className="flex-1 py-2 text-center bg-primary/20 text-primary border border-primary/30 rounded-lg text-xs hover:bg-primary/30 transition-colors">
-                    {t("upgradeForUnlimited")}
-                  </a>
-                  <button
-                    onClick={async () => {
-                      alert(locale === "ko" ? "준비중입니다" : "Coming soon");
-                      if (user) {
-                        const { resetAiUsage } = await import("@/lib/aiUsage");
-                        await resetAiUsage(user.id);
-                        setAiRemaining(DAILY_LIMIT);
-                      }
-                    }}
-                    disabled
-                    className="flex-1 py-2 bg-bg-input/50 text-text-faint border border-border-light/30 rounded-lg text-xs cursor-not-allowed"
-                  >
-                    {locale === "ko" ? "광고 보기 (준비중)" : "Watch Ad (Coming soon)"}
-                  </button>
-                </div>
               ) : (
                 <button
                   onClick={handleAi}
                   className="w-full py-2.5 bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm hover:bg-primary/30 transition-colors"
                 >
-                  AI Example
+                  🍃 AI Example
                   {plan !== "pro" && (
                     <span className="ml-1 text-xs text-primary/60">
-                      · {!user ? (locale === "ko" ? `무료 체험 ${aiRemaining}/${GUEST_LIMIT}` : `Free trial ${aiRemaining}/${GUEST_LIMIT}`) : (locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`)}
+                      · {!user
+                        ? (locale === "ko" ? `무료 ${aiRemaining}/${GUEST_LIMIT}` : `Free ${aiRemaining}/${GUEST_LIMIT}`)
+                        : aiRemaining > 0
+                          ? (locale === "ko" ? `무료 ${aiRemaining}/${DAILY_LIMIT}` : `Free ${aiRemaining}/${DAILY_LIMIT}`)
+                          : (locale === "ko" ? `🍃${userCredits}` : `🍃${userCredits}`)}
                     </span>
                   )}
                 </button>
@@ -1183,8 +1171,8 @@ function ReviewContent() {
                   </p>
                   <p className="text-xs text-text-faint text-center">
                     {locale === "ko"
-                      ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`
-                      : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
+                      ? aiRemaining > 0 ? `무료 ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`
+                      : aiRemaining > 0 ? `Free ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`}
                   </p>
                   <div className="flex gap-3">
                     <button
@@ -1197,7 +1185,7 @@ function ReviewContent() {
                       onClick={() => { setSplitAiConfirm(false); handleSplit(); }}
                       className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
                     >
-                      {locale === "ko" ? "문장 나누기" : "Split"}
+                      {locale === "ko" ? "🍃 문장 나누기" : "🍃 Split"}
                     </button>
                   </div>
                 </div>
