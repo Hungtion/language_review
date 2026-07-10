@@ -5,8 +5,8 @@ const PAYAPP_API_URL = "https://payapp.kr/oapi/apiLoad.html";
 
 const LEAF_PACKAGES: Record<number, number> = {
   1000: 10,
-  2000: 20,
-  5000: 50,
+  1800: 20,
+  4000: 50,
 };
 
 export async function POST(req: NextRequest) {

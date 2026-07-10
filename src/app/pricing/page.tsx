@@ -7,9 +7,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 
 const PACKAGES = [
-  { credits: 10, price: 1000, icon: "🌱" },
-  { credits: 20, price: 2000, icon: "🌿" },
-  { credits: 50, price: 5000, icon: "🌳" },
+  { credits: 10, price: 1000, originalPrice: 1000, icon: "🌱", discount: 0 },
+  { credits: 20, price: 1800, originalPrice: 2000, icon: "🌿", discount: 10 },
+  { credits: 50, price: 4000, originalPrice: 5000, icon: "🌳", discount: 20 },
 ];
 
 function PricingContent() {
@@ -97,7 +97,13 @@ function PricingContent() {
           >
             <p className="text-2xl mb-1">{p.icon}</p>
             <p className="text-xl font-bold text-text">{p.credits}<span className="text-sm text-text-muted font-normal ml-0.5">Leaf</span></p>
-            <p className="text-sm text-text-secondary mt-1">{p.price.toLocaleString()}{isKo ? "원" : " KRW"}</p>
+            {p.discount > 0 && (
+              <p className="text-xs text-text-faint line-through">{p.originalPrice.toLocaleString()}{isKo ? "원" : " KRW"}</p>
+            )}
+            <p className="text-sm text-text-secondary mt-0.5">{p.price.toLocaleString()}{isKo ? "원" : " KRW"}</p>
+            {p.discount > 0 && (
+              <span className="text-[10px] text-primary font-medium">-{p.discount}%</span>
+            )}
           </button>
         ))}
       </div>
@@ -121,7 +127,7 @@ function PricingContent() {
       </div>
 
       <p className="text-xs text-text-faint text-center">
-        {isKo ? "카카오페이 · 네이버페이 · 카드결제 지원" : "KakaoPay · NaverPay · Card supported"}
+        {isKo ? "네이버페이 · 페이코 · 애플페이 · 카드 · 계좌이체" : "NaverPay · Payco · ApplePay · Card · Bank Transfer"}
       </p>
     </div>
   );

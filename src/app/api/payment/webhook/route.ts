@@ -5,8 +5,8 @@ const PAYAPP_USERID = "hungtion";
 
 const LEAF_PACKAGES: Record<number, number> = {
   1000: 10,
-  2000: 20,
-  5000: 50,
+  1800: 20,
+  4000: 50,
 };
 
 const supabase = createClient(
