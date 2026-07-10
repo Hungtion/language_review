@@ -239,7 +239,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               >
                 <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
                   {a.step.title[lang] && <p className="text-[20px] font-bold text-amber-300">{a.step.title[lang]}</p>}
-                  {a.step.description[lang] && <p className={`text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`} style={{ fontSize: a.step.fontSize || 17 }}>{renderDesc(a.step.description[lang])}</p>}
+                  {a.step.description[lang] && <div className={`text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`} style={{ fontSize: a.step.fontSize || 17 }}>{renderDesc(a.step.description[lang])}</div>}
                 </div>
               </div>
             );

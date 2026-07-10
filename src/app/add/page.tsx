@@ -120,8 +120,14 @@ function AddContent() {
 
     if (!user) { router.push("/login"); return; }
     if (plan !== "pro") {
+      const result = await useAiCredit(user.id);
+      if (result === "none") { setShowCreditModal(true); return; }
+      if (result === "credit") {
+        const c = await getCredits(user.id);
+        setUserCredits(c);
+      }
       const { remaining } = await getAiUsage(user.id);
-      if (remaining <= 0 && userCredits <= 0) { setShowCreditModal(true); return; }
+      setAiRemaining(remaining);
     }
 
     const abort = new AbortController();
@@ -362,11 +368,12 @@ function AddContent() {
 
       {/* Raw Input */}
       <div data-guide="add-textarea">
-        <div className="flex gap-2 mb-2 flex-wrap">
+        <div className="flex gap-2 mb-2 flex-wrap items-center">
+          <span className="text-xs text-text-faint">{locale === "ko" ? "예제:" : "Examples:"}</span>
           {TEMPLATES[language].map((tmpl, i) => (
             <button
               key={i}
-              onClick={() => setRawInput(tmpl.text)}
+              onClick={() => setRawInput(rawInput === tmpl.text ? "" : tmpl.text)}
               className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${
                 rawInput === tmpl.text
                   ? "border-primary text-primary bg-primary/10"
@@ -467,13 +474,12 @@ function AddContent() {
         ) : (
           <button
             onClick={() => fileInputRef.current?.click()}
-            title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다 (Pro)" : "Extract text from file and AI-parse (Pro)"}
+            title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다" : "Extract text from file and AI-parse"}
             className="ml-auto px-3 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              {locale === "ko" ? "파일" : "File"}
-              <span className="text-[10px] px-1 py-0.5 bg-primary/20 text-primary rounded">Pro</span>
+              🍃 {locale === "ko" ? "파일" : "File"}
               <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
             </span>
           </button>

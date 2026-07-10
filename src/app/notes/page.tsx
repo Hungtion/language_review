@@ -8,7 +8,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
-import AdBanner from "@/components/AdBanner";
+
 import { getGuestNotes } from "@/lib/guestStorage";
 
 function getSeenNotes(): Set<string> {
@@ -220,11 +220,6 @@ function NotesContent() {
                   </p>
                 )}
               </Link>
-              {(i + 1) % 5 === 0 && i < filtered.length - 1 && (
-                <div key={`ad-${i}`} className="mt-3 bg-bg-card border border-border rounded-xl p-5 overflow-hidden">
-                  <AdBanner />
-                </div>
-              )}
             </div>
           ))
         )}

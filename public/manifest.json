@@ -1,6 +1,6 @@
 {
-  "name": "LanguageLAB",
-  "short_name": "LangLAB",
+  "name": "Language LAB",
+  "short_name": "Language LAB",
   "description": "영어 & 일본어 학습 복습 노트",
   "start_url": "/",
   "display": "standalone",

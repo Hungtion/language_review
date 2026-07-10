@@ -156,7 +156,7 @@ function SettingsContent() {
         </div>
 
         <div className="border-t border-border pt-4 space-y-3">
-          <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "포인트 컬러" : "Accent Color"}</h2>
+          <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "나만의 컬러" : "Accent Color"}</h2>
           <div className="flex gap-3 justify-center">
             {([
               { key: "", color: "#818cf8", label: "Indigo" },
@@ -378,7 +378,7 @@ function SettingsContent() {
             onClick={() => router.push("/pricing")}
             className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
           >
-            {locale === "ko" ? "충전하기" : "Get Leaves"}
+            {locale === "ko" ? "충전하기" : "Top Up"}
           </button>
         </div>
         <div className="pt-2 border-t border-border">
@@ -410,8 +410,10 @@ function SettingsContent() {
           >
             {locale === "ko" ? "피드백 보내기" : "Send Feedback"}
           </button>
-          <div className="text-center space-y-1">
-            <p className="text-sm font-medium text-text-secondary">Language Lab</p>
+          <div className="text-center space-y-2">
+            <img src="/icon-192.png" alt="Language LAB" className="w-12 h-12 mx-auto rounded-xl" />
+            <p className="text-sm font-medium text-text-secondary">Language LAB</p>
+            <p className="text-xs text-text-faint">v{process.env.NEXT_PUBLIC_APP_VERSION}</p>
             <p className="text-xs text-text-faint">© 2026 Hungtion</p>
           </div>
         </div>

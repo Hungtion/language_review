@@ -50,7 +50,7 @@ export async function POST(req: NextRequest) {
         customerKey,
         amount: 1000,
         orderId,
-        orderName: "Sean's Language Lab Pro 월 구독",
+        orderName: "Language LAB Pro 월 구독",
         customerEmail: billingData.card?.ownerType === "개인" ? undefined : undefined,
       }),
     });

@@ -8,8 +8,8 @@ import { useLocale } from "@/lib/useLocale";
 
 const PACKAGES = [
   { credits: 10, price: 1000, icon: "🌱" },
-  { credits: 20, price: 2000, icon: "🍃" },
-  { credits: 50, price: 5000, icon: "🌿" },
+  { credits: 20, price: 2000, icon: "🌿" },
+  { credits: 50, price: 5000, icon: "🌳" },
 ];
 
 function PricingContent() {
@@ -39,7 +39,7 @@ function PricingContent() {
         body: JSON.stringify({
           userId: user.id,
           price: pkg.price,
-          goodname: `${pkg.icon} Leaf ${pkg.credits}`,
+          goodname: `Leaf ${pkg.credits}`,
         }),
       });
       const data = await res.json();
@@ -64,24 +64,24 @@ function PricingContent() {
     <div className="max-w-md mx-auto py-8 space-y-6">
       <div className="text-center">
         <h1 className="text-2xl font-bold mb-2">
-          {isKo ? "🍃 잎 충전" : "🍃 Get Leaves"}
+          {isKo ? "🌱 Leaf 충전" : "🌱 Top Up"}
         </h1>
         <p className="text-text-muted text-sm">
-          {isKo ? "AI 기능 1회 = 잎 1장 (매일 무료 5회)" : "1 AI use = 1 leaf (5 free daily)"}
+          {isKo ? "AI 기능 1회 = Leaf 1장 (매일 무료 5회)" : "1 AI use = 1 leaf (5 free daily)"}
         </p>
       </div>
 
       {done && (
         <div className="bg-green-500/10 border border-green-500/30 rounded-xl p-4 text-center">
           <p className="text-green-400 text-sm">
-            {isKo ? "✅ 결제가 완료되었습니다! 잎이 충전됩니다." : "✅ Payment complete! Leaves will be added."}
+            {isKo ? "✅ 결제가 완료되었습니다! Leaf이 충전됩니다." : "✅ Payment complete! Leaves will be added."}
           </p>
         </div>
       )}
 
       <div className="bg-bg-card border border-border rounded-xl p-5 text-center">
-        <p className="text-text-muted text-xs mb-1">{isKo ? "보유 잎" : "Your Leaves"}</p>
-        <p className="text-3xl font-bold text-primary">🍃 {credits}</p>
+        <p className="text-text-muted text-xs mb-1">{isKo ? "보유 Leaf" : "Your Leaves"}</p>
+        <p className="text-3xl font-bold text-primary">🌱 {credits}</p>
       </div>
 
       <div className="grid grid-cols-3 gap-3">
@@ -96,7 +96,7 @@ function PricingContent() {
             }`}
           >
             <p className="text-2xl mb-1">{p.icon}</p>
-            <p className="text-xl font-bold text-text">{p.credits}<span className="text-sm text-text-muted font-normal ml-0.5">{isKo ? "잎" : "leaves"}</span></p>
+            <p className="text-xl font-bold text-text">{p.credits}<span className="text-sm text-text-muted font-normal ml-0.5">Leaf</span></p>
             <p className="text-sm text-text-secondary mt-1">{p.price.toLocaleString()}{isKo ? "원" : " KRW"}</p>
           </button>
         ))}

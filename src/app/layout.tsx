@@ -19,13 +19,27 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "LanguageLAB",
-  description: "영어 & 일본어 학습 복습 노트",
+  title: "Language LAB",
+  description: "AI-powered English & Japanese Study Notes",
   manifest: "/manifest.json",
+  openGraph: {
+    title: "Language LAB",
+    description: "AI-powered English & Japanese Study Notes",
+    url: "https://language-review.vercel.app",
+    siteName: "Language LAB",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Language LAB",
+    description: "AI-powered English & Japanese Study Notes",
+    images: ["/og-image.png"],
+  },
   appleWebApp: {
     capable: true,
     statusBarStyle: "black-translucent",
-    title: "LangLAB",
+    title: "Language LAB",
   },
 };
 
@@ -35,7 +49,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       <head>
         <link rel="icon" href="/icon-192.png" type="image/png" />
         <link rel="apple-touch-icon" href="/icon-192.png" />
-        <script suppressHydrationWarning async src="https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=ca-pub-5231401865546098" crossOrigin="anonymous"></script>
         <script suppressHydrationWarning dangerouslySetInnerHTML={{ __html: `(function(){var d=document.documentElement,s=localStorage;var t=s.getItem("theme");if(t==="dark"||t==="light")d.setAttribute("data-theme",t);var v=s.getItem("theme-variant");if(v)d.setAttribute("data-variant",v);var a=s.getItem("theme-accent");if(a)d.setAttribute("data-accent",a);window.__fixPT=function(){var cs=getComputedStyle(d),c=cs.getPropertyValue("--primary").trim();if(!c)return;var r=parseInt(c.slice(1,3),16),g=parseInt(c.slice(3,5),16),b=parseInt(c.slice(5,7),16);var L=0.2126*(r/255)+0.7152*(g/255)+0.0722*(b/255);d.style.setProperty("--primary-text",L>0.5?"#1a1a1a":"#ffffff")};setTimeout(window.__fixPT,0)})()` }} />
       </head>
       <body className="min-h-screen flex flex-col">

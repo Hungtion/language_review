@@ -120,10 +120,8 @@ function LoginContent() {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div>
           <h1 className="text-2xl font-bold">
-            <span className="text-primary">EN</span>
-            <span className="text-text-faint">/</span>
-            <span className="text-primary">JP</span>
-            <span className="text-text-muted ml-2 text-lg font-normal">Lab</span>
+            <span className="text-primary">Language</span>
+            <span className="text-text-muted ml-2 text-lg font-normal">LAB</span>
           </h1>
           <p className="text-text-faint text-sm mt-2">
             {t("langLabDesc")}

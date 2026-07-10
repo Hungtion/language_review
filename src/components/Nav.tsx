@@ -45,13 +45,11 @@ export default function Nav() {
     <nav className="border-b border-border bg-bg-nav backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
         <Link href="/" onClick={playTabClick} className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0">
-          <span className="text-primary">EN</span>
-          <span className="text-primary/50">/</span>
-          <span className="text-primary">JP</span>
-          <span className="text-text-muted ml-1.5 text-sm font-normal">Lab</span>
+          <span className="text-primary">Language</span>
+          <span className="text-text-muted ml-1 text-sm font-normal">LAB</span>
           {user && !user.is_anonymous ? (
             <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded font-normal hover:bg-primary/30 transition-colors">
-              🍃{credits}
+              <span className="text-sm">{credits === 0 ? "🍃" : credits < 10 ? "🌱" : credits < 50 ? "🌿" : "🌳"}</span>{credits}
             </button>
           ) : null}
         </Link>

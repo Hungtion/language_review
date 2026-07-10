@@ -23,7 +23,7 @@ export default function BottomTab() {
 
   const tabs = [
     { href: "/", icon: HomeIcon, label: "홈", match: (p: string) => p === "/", guideLabel: "홈", desc: "Dashboard" },
-    { href: "/add", icon: AddIcon, label: "추가", match: (p: string) => p === "/add", guideLabel: "새 노트", desc: "Add Note" },
+    { href: "/add", icon: AddIcon, label: "새 노트", match: (p: string) => p === "/add", guideLabel: "새 노트", desc: "Add Note" },
     { href: "/review", icon: CardsIcon, label: "카드", match: (p: string) => p === "/review", guideLabel: "복습\n카드", desc: "Review Cards" },
     { href: "/notes", icon: NotesIcon, label: "노트", match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록", desc: "Note List" },
     { href: "/nuance", icon: NuanceIcon, label: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat", desc: "Nuance Chat" },

@@ -208,7 +208,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       title: { en: "", ko: "" },
       description: {
         en: "Customize display mode, theme style, and accent color.",
-        ko: "화면 모드, 세부 테마, 포인트 컬러를 설정하세요.",
+        ko: "화면 모드, 세부 테마, 나만의 컬러를 설정하세요.",
       },
       overlay: true,
     },
