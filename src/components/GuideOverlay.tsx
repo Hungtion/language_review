@@ -17,6 +17,15 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const [visible, setVisible] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
 
+  // One-time migration: reset old tutorial dismiss keys for new per-page guide
+  useEffect(() => {
+    if (localStorage.getItem("guide-v2-migrated")) return;
+    ["home", "add", "review", "notes", "nuance"].forEach((k) =>
+      localStorage.removeItem(`guide-dismissed-${k}`)
+    );
+    localStorage.setItem("guide-v2-migrated", "true");
+  }, []);
+
   // Auto-show on first visit (not dismissed)
   useEffect(() => {
     if (!steps || steps.length === 0) return;
