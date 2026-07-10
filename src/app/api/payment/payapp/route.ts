@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PAYAPP_USERID = "hungtion";
-const PAYAPP_API_URL = "https://api.payapp.kr/oapi/apiLoad.php";
+const PAYAPP_API_URL = "https://api.payapp.kr/oapi/api_load.html";
 
 const LEAF_PACKAGES: Record<number, number> = {
   500: 5,
@@ -42,6 +42,7 @@ export async function POST(req: NextRequest) {
     });
 
     const text = await res.text();
+    console.log("PayApp response status:", res.status);
     console.log("PayApp raw response:", text);
 
     const result = Object.fromEntries(new URLSearchParams(text));
@@ -52,7 +53,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: `PayApp error: ${text}` },
+      { error: `PayApp raw: ${text.substring(0, 500)}`, parsed: result },
       { status: 400 }
     );
   } catch (e) {
