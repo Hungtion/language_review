@@ -52,7 +52,7 @@ export async function POST(req: NextRequest) {
     }
 
     return NextResponse.json(
-      { error: result.errorMessage || result.error_message || `PayApp error: state=${result.state}` },
+      { error: `PayApp error: ${text}` },
       { status: 400 }
     );
   } catch (e) {
