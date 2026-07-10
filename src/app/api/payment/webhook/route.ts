@@ -18,26 +18,31 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.text();
     const params = Object.fromEntries(new URLSearchParams(body));
+    console.log("[webhook] params:", JSON.stringify(params));
 
     const { state, userid, mul_no, price, var1: userId, linkValue } = params;
 
     // Verify merchant
     if (userid !== PAYAPP_USERID) {
+      console.log("[webhook] FAIL: merchant mismatch", userid);
       return new Response("FAIL", { status: 400 });
     }
 
     // Verify link value
     const expectedValue = process.env.PAYAPP_LINK_VALUE;
     if (expectedValue && linkValue !== expectedValue) {
+      console.log("[webhook] FAIL: linkValue mismatch", linkValue, "expected:", expectedValue);
       return new Response("FAIL", { status: 400 });
     }
 
     // state === "1" means payment success
     if (state !== "1") {
+      console.log("[webhook] state not 1:", state);
       return new Response("SUCCESS", { status: 200 });
     }
 
     if (!userId || !mul_no) {
+      console.log("[webhook] FAIL: missing userId or mul_no", { userId, mul_no });
       return new Response("FAIL", { status: 400 });
     }
 
