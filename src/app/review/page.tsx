@@ -11,7 +11,6 @@ import { useTts } from "@/lib/useTts";
 import { useLocale } from "@/lib/useLocale";
 import { getAiUsage, incrementAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage } from "@/lib/aiUsage";
 import GuideOverlay from "@/components/GuideOverlay";
-import AdBanner from "@/components/AdBanner";
 
 type Card = {
   front: string;
@@ -644,22 +643,22 @@ function ReviewContent() {
   }
 
   if (loading) {
-    return <div className="text-gray-500 text-center py-12">{t("loading")}</div>;
+    return <div className="text-text-faint text-center py-12">{t("loading")}</div>;
   }
 
   const card = cards.length > 0 ? cards[index] : null;
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="review" />
       {noteId && (
         <div className="flex items-center justify-between px-4 pt-2 pb-1">
-          <span className="text-xs text-indigo-400">
+          <span className="text-xs text-primary">
             {locale === "ko" ? "이 노트의 카드만 보는 중" : "Viewing cards from this note only"}
           </span>
           <button
             onClick={() => router.push("/review")}
-            className="text-xs text-gray-500 hover:text-gray-300 transition-colors"
+            className="text-xs text-text-faint hover:text-text-secondary transition-colors"
           >
             {locale === "ko" ? "전체 카드 보기" : "Show all cards"}
           </button>
@@ -677,12 +676,12 @@ function ReviewContent() {
               localStorage.setItem("tts-autoplay", String(next));
             }}
             className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${
-              autoplay ? "bg-indigo-600" : "bg-gray-700"
+              autoplay ? "bg-primary" : "bg-bg-hover"
             }`}
           >
             <span
               className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
-                autoplay ? "translate-x-4 bg-white text-indigo-600" : "translate-x-0 bg-gray-500 text-gray-300"
+                autoplay ? "translate-x-4 bg-white text-primary" : "translate-x-0 bg-gray-500 text-text-secondary"
               }`}
             >
               A
@@ -701,8 +700,8 @@ function ReviewContent() {
             }}
             className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
               shuffled
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-900 text-gray-400 hover:text-gray-200"
+                ? "bg-primary text-primary-text"
+                : "bg-bg-card text-text-muted hover:text-text"
             }`}
           >
             🔀
@@ -714,8 +713,8 @@ function ReviewContent() {
             onClick={togglePlay}
             className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
               playing
-                ? "bg-indigo-600 text-white"
-                : "bg-gray-900 text-gray-400 hover:text-gray-200"
+                ? "bg-primary text-primary-text"
+                : "bg-bg-card text-text-muted hover:text-text"
             }`}
           >
             {playing ? "⏸" : "▶️"}
@@ -725,15 +724,15 @@ function ReviewContent() {
         <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
           {isEngChannel && (
             <>
-              <div data-guide="review-filter-type" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+              <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
                 {(["all", "vocab", "sentence"] as const).map((ct) => (
                   <button
                     key={ct}
                     onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
                     className={`px-3 py-1 rounded-md text-sm transition-colors ${
                       cardType === ct
-                        ? "bg-gray-700 text-white"
-                        : "text-gray-400 hover:text-gray-200"
+                        ? "bg-bg-hover text-text"
+                        : "text-text-muted hover:text-text"
                     }`}
                   >
                     {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
@@ -741,11 +740,11 @@ function ReviewContent() {
                 ))}
               </div>
 
-              <div className="w-px h-5 bg-gray-700 shrink-0" />
+              <div className="w-px h-5 bg-bg-hover shrink-0" />
             </>
           )}
 
-          <div data-guide="review-filter-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+          <div data-guide="review-filter-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
             {(["english", "japanese"] as const).map((f) => (
               <button
                 key={f}
@@ -753,8 +752,8 @@ function ReviewContent() {
                 onClick={() => { sessionStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
                 className={`px-3 py-1 rounded-md text-sm transition-colors ${
                   filter === f
-                    ? "bg-gray-700 text-white"
-                    : "text-gray-400 hover:text-gray-200"
+                    ? "bg-bg-hover text-text"
+                    : "text-text-muted hover:text-text"
                 }`}
               >
                 {f === "english" ? "🇺🇸" : "🇯🇵"}
@@ -789,7 +788,7 @@ function ReviewContent() {
             >
               <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
                 {/* Front */}
-                <div className="card-front absolute inset-0 bg-gray-900 border border-gray-800 rounded-2xl p-8 flex flex-col items-center justify-center">
+                <div className="card-front absolute inset-0 bg-bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center">
                   {/* Card toolbar: share, split, delete */}
                   <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
                     {typeof navigator !== "undefined" && navigator.share && (
@@ -801,7 +800,7 @@ function ReviewContent() {
                           navigator.share({ text: card.front }).catch(() => {});
                         }}
                         title={locale === "ko" ? "공유" : "Share"}
-                        className="text-gray-600 hover:text-gray-300 transition-colors"
+                        className="text-text-faint hover:text-text-secondary transition-colors"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                       </button>
@@ -813,7 +812,7 @@ function ReviewContent() {
                         onClick={(e) => { e.stopPropagation(); plan !== "pro" ? setSplitAiConfirm(true) : handleSplit(); }}
                         disabled={splitLoading}
                         title={locale === "ko" ? "문장 나누기" : "Split sentences"}
-                        className="text-gray-600 hover:text-orange-400 transition-colors disabled:opacity-50"
+                        className="text-text-faint hover:text-orange-400 transition-colors disabled:opacity-50"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="8" x2="12" y2="11"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="12" y1="22" x2="12" y2="23"/></svg>
                       </button>
@@ -824,7 +823,7 @@ function ReviewContent() {
                         onTouchEnd={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirm(true); }}
                         title={locale === "ko" ? "카드 삭제" : "Delete card"}
-                        className="text-gray-600 hover:text-red-400 transition-colors"
+                        className="text-text-faint hover:text-red-400 transition-colors"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                       </button>
@@ -834,8 +833,8 @@ function ReviewContent() {
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                         card.language === "english"
-                          ? "bg-blue-500/20 text-blue-400"
-                          : "bg-red-500/20 text-red-400"
+                          ? "bg-primary/20 text-primary"
+                          : "bg-primary/20 text-primary"
                       }`}
                     >
                       {card.language === "english" ? "EN" : "JP"}
@@ -843,13 +842,13 @@ function ReviewContent() {
                     <span
                       className={`text-xs px-2 py-0.5 rounded-full ${
                         card.type === "vocab"
-                          ? "bg-green-500/20 text-green-400"
-                          : "bg-blue-500/20 text-blue-400"
+                          ? "bg-primary/20 text-primary"
+                          : "bg-primary/20 text-primary"
                       }`}
                     >
                       {card.type === "vocab" ? t("vocab") : t("sentence")}
                     </span>
-                    <span className="text-xs text-gray-600">{card.sessionDate}</span>
+                    <span className="text-xs text-text-faint">{card.sessionDate}</span>
                   </div>
                   <p className="text-xl text-center font-medium leading-relaxed">
                     {card.front}
@@ -857,8 +856,8 @@ function ReviewContent() {
                 </div>
 
                 {/* Back */}
-                <div className="card-back absolute inset-0 bg-gray-900 border border-indigo-500/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-gray-300">
+                <div className="card-back absolute inset-0 bg-bg-card border border-primary/30 rounded-2xl p-8 flex flex-col items-center justify-center">
+                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-text-secondary">
                     {card.back}
                   </pre>
                 </div>
@@ -868,24 +867,24 @@ function ReviewContent() {
             {/* AI Panel - attached to card */}
             <div data-guide="review-ai" className="w-full max-w-lg mt-3">
               {aiLoading ? (
-                <div className="bg-gray-900 border border-purple-500/30 rounded-lg p-3">
-                  <p className="text-purple-400 text-sm animate-pulse">{t("analyzing")}</p>
+                <div className="bg-bg-card border border-primary/30 rounded-lg p-3">
+                  <p className="text-primary text-sm animate-pulse">{t("analyzing")}</p>
                 </div>
               ) : aiResults[index] ? (
                 <div
-                  className="bg-gray-900 border border-purple-500/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto cursor-pointer active:opacity-70 transition-opacity"
+                  className="bg-bg-card border border-primary/30 rounded-lg p-3 max-h-28 overflow-y-auto touch-auto cursor-pointer active:opacity-70 transition-opacity"
                   onClick={(e) => { e.stopPropagation(); speak(aiResults[index], card.language); }}
                 >
                   <div className="flex items-start gap-2">
-                    <pre className="text-sm text-gray-300 whitespace-pre-wrap font-sans leading-relaxed flex-1">{aiResults[index]}</pre>
+                    <pre className="text-sm text-text-secondary whitespace-pre-wrap font-sans leading-relaxed flex-1">{aiResults[index]}</pre>
                     <div className="flex items-center gap-1 shrink-0">
                       {aiSaved[index] ? (
-                        <span className="text-xs text-green-400">✓</span>
+                        <span className="text-xs text-primary">✓</span>
                       ) : (
                         <button
                           title={locale === "ko" ? "AI 예문을 노트에 저장합니다" : "Save AI example to notes"}
                           onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
-                          className="w-6 h-6 flex items-center justify-center rounded-full bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 transition-colors text-sm"
+                          className="w-6 h-6 flex items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors text-sm"
                         >
                           +
                         </button>
@@ -894,7 +893,7 @@ function ReviewContent() {
                         <button
                           title={locale === "ko" ? "예문을 다른 앱으로 공유합니다" : "Share example to other apps"}
                           onClick={(e) => { e.stopPropagation(); navigator.share({ text: aiResults[index] }).catch(() => {}); }}
-                          className="w-6 h-6 flex items-center justify-center text-gray-500 hover:text-gray-300 transition-colors"
+                          className="w-6 h-6 flex items-center justify-center text-text-faint hover:text-text-secondary transition-colors"
                         >
                           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
                         </button>
@@ -904,7 +903,7 @@ function ReviewContent() {
                 </div>
               ) : plan !== "pro" && aiRemaining <= 0 ? (
                 <div className="flex gap-2">
-                  <a href="/pricing" className="flex-1 py-2 text-center bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 rounded-lg text-xs hover:bg-indigo-600/30 transition-colors">
+                  <a href="/pricing" className="flex-1 py-2 text-center bg-primary/20 text-primary border border-primary/30 rounded-lg text-xs hover:bg-primary/30 transition-colors">
                     {t("upgradeForUnlimited")}
                   </a>
                   <button
@@ -917,7 +916,7 @@ function ReviewContent() {
                       }
                     }}
                     disabled
-                    className="flex-1 py-2 bg-gray-800/50 text-gray-600 border border-gray-700/30 rounded-lg text-xs cursor-not-allowed"
+                    className="flex-1 py-2 bg-bg-input/50 text-text-faint border border-border-light/30 rounded-lg text-xs cursor-not-allowed"
                   >
                     {locale === "ko" ? "광고 보기 (준비중)" : "Watch Ad (Coming soon)"}
                   </button>
@@ -925,11 +924,11 @@ function ReviewContent() {
               ) : (
                 <button
                   onClick={handleAi}
-                  className="w-full py-2.5 bg-purple-600/20 text-purple-400 border border-purple-500/30 rounded-lg text-sm hover:bg-purple-600/30 transition-colors"
+                  className="w-full py-2.5 bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm hover:bg-primary/30 transition-colors"
                 >
                   AI Example
                   {plan !== "pro" && (
-                    <span className="ml-1 text-xs text-purple-400/60">
+                    <span className="ml-1 text-xs text-primary/60">
                       · {!user ? (locale === "ko" ? `무료 체험 ${aiRemaining}/${GUEST_LIMIT}` : `Free trial ${aiRemaining}/${GUEST_LIMIT}`) : (locale === "ko" ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}` : `Daily Free ${aiRemaining}/${DAILY_LIMIT}`)}
                     </span>
                   )}
@@ -941,12 +940,12 @@ function ReviewContent() {
             {/* Split Preview Modal */}
             {(splitLoading || splitPreview) && (
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { if (!splitLoading) setSplitPreview(null); }}>
-                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4 touch-auto" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4 touch-auto" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-lg font-semibold text-center">
                     {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
                   </h3>
-                  <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400">
-                    <span className="text-xs text-gray-600 block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
+                  <div className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-muted">
+                    <span className="text-xs text-text-faint block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
                     {cards[index]?.front}
                   </div>
                   {splitLoading ? (
@@ -956,12 +955,12 @@ function ReviewContent() {
                   ) : splitPreview ? (
                     <>
                       <div className="flex items-center justify-between">
-                        <span className="text-xs text-gray-500">
+                        <span className="text-xs text-text-faint">
                           {splitSelected.size}/{splitPreview.length} {locale === "ko" ? "선택" : "selected"}
                         </span>
                         <button
                           onClick={() => setSplitSelected(splitSelected.size === splitPreview.length ? new Set() : new Set(splitPreview.map((_, i) => i)))}
-                          className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                          className="text-xs text-primary hover:text-primary transition-colors"
                         >
                           {splitSelected.size === splitPreview.length
                             ? (locale === "ko" ? "전체 해제" : "Deselect all")
@@ -975,8 +974,8 @@ function ReviewContent() {
                             onClick={() => setSplitSelected((prev) => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; })}
                             className={`rounded-lg p-3 text-sm cursor-pointer transition-colors ${
                               splitSelected.has(i)
-                                ? "bg-indigo-600/20 border border-indigo-500/40 text-gray-200"
-                                : "bg-gray-800/30 text-gray-600"
+                                ? "bg-primary/20 border border-primary/40 text-text"
+                                : "bg-bg-input/30 text-text-faint"
                             }`}
                           >
                             {s}
@@ -984,10 +983,10 @@ function ReviewContent() {
                         ))}
                       </div>
                       <div className="flex items-center justify-between pt-1">
-                        <span className="text-sm text-gray-400">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
+                        <span className="text-sm text-text-muted">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
                         <button
                           onClick={() => setSplitDeleteOrig((v) => !v)}
-                          className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-gray-700"}`}
+                          className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-bg-hover"}`}
                         >
                           <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${splitDeleteOrig ? "translate-x-5" : "translate-x-0"}`} />
                         </button>
@@ -995,7 +994,7 @@ function ReviewContent() {
                       <div className="flex gap-3">
                         <button
                           onClick={() => setSplitPreview(null)}
-                          className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                          className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
                         >
                           {locale === "ko" ? "취소" : "Cancel"}
                         </button>
@@ -1025,11 +1024,11 @@ function ReviewContent() {
             {/* Split Delete Confirm Popup */}
             {splitDeleteConfirm && (
               <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setSplitDeleteConfirm(false)}>
-                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-sm text-gray-300 text-center">
+                <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-sm text-text-secondary text-center">
                     {locale === "ko" ? "기존 카드는 삭제되고 나뉘어진 카드로 대체됩니다" : "The original card will be deleted and replaced with split cards"}
                   </p>
-                  <label className="flex items-center justify-center gap-2 text-xs text-gray-500 cursor-pointer">
+                  <label className="flex items-center justify-center gap-2 text-xs text-text-faint cursor-pointer">
                     <input
                       type="checkbox"
                       checked={splitDontAsk}
@@ -1041,7 +1040,7 @@ function ReviewContent() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setSplitDeleteConfirm(false)}
-                      className="flex-1 py-2 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                      className="flex-1 py-2 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
                     >
                       {locale === "ko" ? "취소" : "Cancel"}
                     </button>
@@ -1063,13 +1062,13 @@ function ReviewContent() {
             {/* Split No Result Modal */}
             {splitNoResult && (
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitNoResult(false)}>
-                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-                  <p className="text-sm text-gray-400 text-center">
+                <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                  <p className="text-sm text-text-muted text-center">
                     {locale === "ko" ? "나눌 문장이 없습니다" : "No sentences to split"}
                   </p>
                   <button
                     onClick={() => setSplitNoResult(false)}
-                    className="w-full py-2.5 bg-gray-800 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                    className="w-full py-2.5 bg-bg-input text-text-secondary rounded-lg text-sm hover:bg-bg-hover transition-colors"
                   >
                     {locale === "ko" ? "확인" : "OK"}
                   </button>
@@ -1080,16 +1079,16 @@ function ReviewContent() {
             {/* Split AI Confirm Modal */}
             {splitAiConfirm && (
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(false)}>
-                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-lg font-semibold text-center">
                     {locale === "ko" ? "문장 나누기" : "Split Sentences"}
                   </h3>
-                  <p className="text-sm text-gray-400 text-center">
+                  <p className="text-sm text-text-muted text-center">
                     {locale === "ko"
                       ? "AI를 이용한 문장 나누기 기능입니다."
                       : "This feature uses AI to split sentences."}
                   </p>
-                  <p className="text-xs text-gray-500 text-center">
+                  <p className="text-xs text-text-faint text-center">
                     {locale === "ko"
                       ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`
                       : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
@@ -1097,7 +1096,7 @@ function ReviewContent() {
                   <div className="flex gap-3">
                     <button
                       onClick={() => setSplitAiConfirm(false)}
-                      className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                      className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
                     >
                       {locale === "ko" ? "취소" : "Cancel"}
                     </button>
@@ -1115,17 +1114,17 @@ function ReviewContent() {
             {/* Delete Confirm Modal */}
             {deleteConfirm && (
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDeleteConfirm(false)}>
-                <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+                <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-lg font-semibold text-center">
                     {locale === "ko" ? "카드 삭제" : "Delete Card"}
                   </h3>
-                  <p className="text-sm text-gray-400 text-center">
+                  <p className="text-sm text-text-muted text-center">
                     {locale === "ko" ? "이 카드를 삭제하시겠습니까?" : "Delete this card?"}
                   </p>
                   <div className="flex gap-3">
                     <button
                       onClick={() => setDeleteConfirm(false)}
-                      className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                      className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
                     >
                       {locale === "ko" ? "취소" : "Cancel"}
                     </button>
@@ -1144,14 +1143,14 @@ function ReviewContent() {
           <>
             {/* Empty card placeholder — visible to guide overlay */}
             <div data-guide="review-card" className="w-full max-w-lg" style={{ height: "min(50vh, 350px)" }}>
-              <div className="w-full h-full bg-gray-900 border border-gray-800 rounded-2xl flex items-center justify-center">
-                <p className="text-gray-500 text-sm">{t("noCards")}</p>
+              <div className="w-full h-full bg-bg-card border border-border rounded-2xl flex items-center justify-center">
+                <p className="text-text-faint text-sm">{t("noCards")}</p>
               </div>
             </div>
             <div data-guide="review-ai" className="w-full max-w-lg mt-3">
               <button
                 disabled
-                className="w-full py-2.5 bg-purple-600/10 text-purple-400/40 border border-purple-500/20 rounded-lg text-sm cursor-not-allowed"
+                className="w-full py-2.5 bg-primary/10 text-primary/40 border border-primary/20 rounded-lg text-sm cursor-not-allowed"
               >
                 AI Example
               </button>
@@ -1160,18 +1159,14 @@ function ReviewContent() {
         )}
       </div>
 
-      {/* Ad */}
-      <div className="px-4 pt-2">
-        <AdBanner format="horizontal" className="h-[50px]" />
-      </div>
 
       {/* Bottom Progress */}
       <div className="px-4 pb-6 pt-3">
-        <div className="text-center text-xs text-gray-500 mb-1.5">
+        <div className="text-center text-xs text-text-faint mb-1.5">
           {cards.length > 0 ? `${index + 1} / ${cards.length}` : "0 / 0"}
         </div>
         <div
-          className="h-2 bg-gray-800 rounded-full overflow-hidden cursor-pointer relative touch-none"
+          className="h-2 bg-bg-input rounded-full overflow-hidden cursor-pointer relative touch-none"
           onClick={(e) => {
             if (cards.length === 0) return;
             const rect = e.currentTarget.getBoundingClientRect();
@@ -1202,7 +1197,7 @@ function ReviewContent() {
           }}
         >
           <div
-            className="h-full bg-indigo-500 rounded-full transition-all duration-100"
+            className="h-full bg-primary rounded-full transition-all duration-100"
             style={{ width: cards.length > 0 ? `${((index + 1) / cards.length) * 100}%` : "0%" }}
           />
         </div>

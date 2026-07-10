@@ -61,16 +61,16 @@ export default function SharePage() {
   }
 
   if (loading) {
-    return <div className="text-gray-500 text-center py-20">Loading...</div>;
+    return <div className="text-text-faint text-center py-20">Loading...</div>;
   }
 
   if (!session) {
     return (
       <div className="text-center py-20">
-        <p className="text-gray-500 text-lg mb-2">
+        <p className="text-text-faint text-lg mb-2">
           {locale === "ko" ? "공유된 노트를 찾을 수 없습니다" : "Shared note not found"}
         </p>
-        <p className="text-gray-600 text-sm">
+        <p className="text-text-faint text-sm">
           {locale === "ko" ? "링크가 만료되었거나 공유가 해제되었습니다" : "The link may have expired or been unshared"}
         </p>
       </div>
@@ -85,18 +85,18 @@ export default function SharePage() {
     <div className="max-w-2xl mx-auto px-4 py-8 space-y-6">
       {/* Header */}
       <div className="text-center space-y-2">
-        <p className="text-xs text-indigo-400 font-medium uppercase tracking-wider">
+        <p className="text-xs text-primary font-medium uppercase tracking-wider">
           {locale === "ko" ? "공유된 노트" : "Shared Note"}
         </p>
         <div className="flex items-center justify-center gap-3">
           <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
             session.language === "english"
-              ? "bg-blue-500/20 text-blue-400"
-              : "bg-red-500/20 text-red-400"
+              ? "bg-primary/20 text-primary"
+              : "bg-primary/20 text-primary"
           }`}>
             {session.language === "english" ? "English" : "Japanese"}
           </span>
-          <span className="text-sm text-gray-500">{session.study_date}</span>
+          <span className="text-sm text-text-faint">{session.study_date}</span>
         </div>
         {session.title && <h1 className="text-2xl font-bold">{session.title}</h1>}
       </div>
@@ -104,14 +104,14 @@ export default function SharePage() {
       {/* Add Button */}
       <div className="text-center">
         {added ? (
-          <p className="text-green-400 font-medium">
+          <p className="text-primary font-medium">
             {locale === "ko" ? "노트가 추가되었습니다! 이동 중..." : "Note added! Redirecting..."}
           </p>
         ) : (
           <button
             onClick={handleAdd}
             disabled={adding}
-            className="px-8 py-3 bg-indigo-600 hover:bg-indigo-500 disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
+            className="px-8 py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-white rounded-xl font-medium transition-colors"
           >
             {adding
               ? (locale === "ko" ? "추가 중..." : "Adding...")
@@ -125,7 +125,7 @@ export default function SharePage() {
         <Section title={`Stress & Pronunciation (${stressLines.length})`} icon="🔊">
           <div className="space-y-2">
             {stressLines.map((s, i) => (
-              <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">{s}</div>
+              <div key={i} className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-secondary">{s}</div>
             ))}
           </div>
         </Section>
@@ -136,10 +136,10 @@ export default function SharePage() {
         <Section title={`Vocabulary (${vocabEntries.length})`} icon="📖">
           <div className="space-y-3">
             {vocabEntries.map((v, i) => (
-              <div key={i} className="bg-gray-800/50 rounded-lg p-3">
-                <div className="font-semibold text-green-400 text-sm">{v.term}</div>
-                <div className="text-gray-300 text-sm mt-1">{v.definition}</div>
-                {v.example && <div className="text-gray-400 text-sm mt-1 italic">→ {v.example}</div>}
+              <div key={i} className="bg-bg-input/50 rounded-lg p-3">
+                <div className="font-semibold text-primary text-sm">{v.term}</div>
+                <div className="text-text-secondary text-sm mt-1">{v.definition}</div>
+                {v.example && <div className="text-text-muted text-sm mt-1 italic">→ {v.example}</div>}
               </div>
             ))}
           </div>
@@ -151,7 +151,7 @@ export default function SharePage() {
         <Section title={`Sentences (${sentences.length})`} icon="✏️">
           <div className="space-y-2">
             {sentences.map((s, i) => (
-              <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300">{s}</div>
+              <div key={i} className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-secondary">{s}</div>
             ))}
           </div>
         </Section>
@@ -160,7 +160,7 @@ export default function SharePage() {
       {/* Comment */}
       {session.comment && (
         <Section title="Comment" icon="💬">
-          <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300">{session.comment}</pre>
+          <pre className="whitespace-pre-wrap font-sans text-sm text-text-secondary">{session.comment}</pre>
         </Section>
       )}
 
@@ -170,8 +170,8 @@ export default function SharePage() {
 
 function Section({ title, icon, children }: { title: string; icon: string; children: React.ReactNode }) {
   return (
-    <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-      <h2 className="text-sm font-semibold text-gray-400 mb-3">{icon} {title}</h2>
+    <div className="bg-bg-card border border-border rounded-xl p-5">
+      <h2 className="text-sm font-semibold text-text-muted mb-3">{icon} {title}</h2>
       {children}
     </div>
   );

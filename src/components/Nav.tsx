@@ -5,12 +5,25 @@ import { usePathname, useRouter } from "next/navigation";
 import { useAuth } from "./AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import { playTabClick } from "@/lib/unlockAudio";
+import { GUIDE_STEPS } from "@/lib/guide";
+
+const GUIDE_PAGES: Record<string, string> = {
+  "/": "home",
+  "/add": "add",
+  "/review": "review",
+  "/notes": "notes",
+  "/nuance": "nuance",
+  "/settings": "settings",
+};
 
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
   const { user, plan } = useAuth();
   const { t, locale } = useLocale();
+
+  const guideKey = GUIDE_PAGES[pathname];
+  const hasGuide = guideKey && GUIDE_STEPS[guideKey]?.length > 0;
 
   const pageTitle = pathname === "/add" ? t("addNewNote")
     : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
@@ -20,27 +33,25 @@ export default function Nav() {
     : null;
 
   return (
-    <nav className="border-b border-gray-800 bg-gray-950 backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
+    <nav className="border-b border-border bg-bg-nav backdrop-blur-sm sticky top-0 z-50 pt-[env(safe-area-inset-top)]">
       <div className="max-w-4xl mx-auto px-2 sm:px-4 flex items-center h-14 gap-0.5 sm:gap-1 overflow-x-auto scrollbar-hide">
-        <Link href="/" onClick={playTabClick} className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0 self-end pb-2 sm:self-center sm:pb-0">
-          <span className="text-blue-400">EN</span>
-          <span className="text-gray-500">/</span>
-          <span className="text-red-400">JP</span>
-          <span className="text-gray-400 ml-1.5 text-sm font-normal">Lab</span>
+        <Link href="/" onClick={playTabClick} className="font-bold text-lg mr-2 sm:mr-4 tracking-tight flex-shrink-0">
+          <span className="text-primary">EN</span>
+          <span className="text-primary/50">/</span>
+          <span className="text-primary">JP</span>
+          <span className="text-text-muted ml-1.5 text-sm font-normal">Lab</span>
           {plan === "pro" ? (
-            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded font-normal">Pro</span>
+            <span className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded font-normal">Pro</span>
           ) : user ? (
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-gray-700/50 text-gray-400 rounded font-normal hover:bg-gray-700 transition-colors">Free</button>
+            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-[10px] px-1.5 py-0.5 bg-bg-hover/50 text-text-muted rounded font-normal hover:bg-bg-hover transition-colors">Free</button>
           ) : null}
         </Link>
-        {pageTitle && (
-          <span className="ml-auto mr-3 text-sm text-gray-300 font-medium sm:hidden flex-shrink-0 self-end pb-2">{pageTitle}</span>
-        )}
-        <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
+        <div className="ml-auto flex items-center gap-1 flex-shrink-0">
+          <div className="hidden sm:flex items-center gap-0.5 sm:gap-1">
             <Link
               href="/add"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
-                pathname === "/add" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                pathname === "/add" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
               {t("add")}
@@ -48,7 +59,7 @@ export default function Nav() {
             <Link
               href="/review"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
-                pathname === "/review" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                pathname === "/review" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
               {t("cards")}
@@ -56,7 +67,7 @@ export default function Nav() {
             <Link
               href="/notes"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
-                pathname === "/notes" || pathname.startsWith("/notes/") ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                pathname === "/notes" || pathname.startsWith("/notes/") ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
               {t("notes")}
@@ -64,7 +75,7 @@ export default function Nav() {
             <Link
               href="/nuance"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
-                pathname === "/nuance" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                pathname === "/nuance" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
               Nuance Chat
@@ -72,12 +83,29 @@ export default function Nav() {
             <Link
               href="/settings"
               className={`px-2 sm:px-3 py-1.5 rounded-md text-sm whitespace-nowrap flex-shrink-0 transition-colors ${
-                pathname === "/settings" ? "bg-gray-800 text-white" : "text-gray-400 hover:text-gray-200 hover:bg-gray-800/50"
+                pathname === "/settings" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
               {t("settingsTitle")}
             </Link>
           </div>
+          {pageTitle && (
+            <span className="mr-1 text-sm text-text-secondary font-medium sm:hidden">{pageTitle}</span>
+          )}
+          {hasGuide && (
+            <button
+              onClick={() => window.dispatchEvent(new CustomEvent("show-guide"))}
+              title={locale === "ko" ? "도움말" : "Help"}
+              className="sm:ml-auto p-1.5 rounded-lg text-text-faint hover:text-primary hover:bg-bg-input/50 transition-colors flex-shrink-0"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <path d="M9.09 9a3 3 0 015.83 1c0 2-3 3-3 3"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </button>
+          )}
+        </div>
       </div>
     </nav>
   );

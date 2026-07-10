@@ -1,18 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
-import { GUIDE_STEPS, isGuideDismissed, dismissGuide, dismissTutorial, isTutorialActive, GuideStep } from "@/lib/guide";
+import { GUIDE_STEPS, isGuideDismissed, dismissGuide, GuideStep } from "@/lib/guide";
 import { useLocale } from "@/lib/useLocale";
-import { useAuth } from "./AuthProvider";
-
-const TUTORIAL_ORDER = [
-  { key: "home", path: "/" },
-  { key: "add", path: "/add" },
-  { key: "review", path: "/review" },
-  { key: "notes", path: "/notes" },
-  { key: "nuance", path: "/nuance" },
-];
 
 type Annotation = {
   step: GuideStep;
@@ -21,30 +11,26 @@ type Annotation = {
 
 export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   const { locale } = useLocale();
-  const { user, isAnonymous } = useAuth();
   const lang = locale === "ko" ? "ko" : "en";
   const steps = GUIDE_STEPS[pageKey];
-  const router = useRouter();
-  const isGuest = !user || isAnonymous;
 
   const [visible, setVisible] = useState(false);
   const [annotations, setAnnotations] = useState<Annotation[]>([]);
-  const [doneModal, setDoneModal] = useState(false);
 
-  const tutorialOn = isGuest || isTutorialActive();
-  const currentIdx = TUTORIAL_ORDER.findIndex((t) => t.key === pageKey);
-  const prevStep = currentIdx > 0 ? TUTORIAL_ORDER[currentIdx - 1] : null;
-  const nextStep = currentIdx >= 0 && currentIdx < TUTORIAL_ORDER.length - 1
-    ? TUTORIAL_ORDER[currentIdx + 1]
-    : null;
-  const isLastStep = currentIdx === TUTORIAL_ORDER.length - 1;
-
+  // Auto-show on first visit (not dismissed)
   useEffect(() => {
     if (!steps || steps.length === 0) return;
-    if (!isGuest && isGuideDismissed(pageKey)) return;
+    if (isGuideDismissed(pageKey)) return;
     const timer = setTimeout(() => setVisible(true), 600);
     return () => clearTimeout(timer);
-  }, [pageKey]);
+  }, [pageKey, steps]);
+
+  // Listen for Nav help button
+  useEffect(() => {
+    const handler = () => setVisible(true);
+    window.addEventListener("show-guide", handler);
+    return () => window.removeEventListener("show-guide", handler);
+  }, []);
 
   const updateRects = useCallback(() => {
     if (!visible || !steps) return;
@@ -69,330 +55,221 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
   }, [updateRects]);
 
   function close() {
-    if (!isGuest && !tutorialOn) {
-      dismissGuide(pageKey);
-    }
     setVisible(false);
   }
 
-  if (!visible && !doneModal) return null;
-  if (doneModal) {
-    return (
-      <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/60" onClick={() => setDoneModal(false)}>
-        <div
-          className="mx-6 max-w-xs w-full bg-gray-900 border border-gray-700 rounded-2xl p-6 text-center shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="text-3xl mb-3">🎉</div>
-          <p className="text-white text-[17px] leading-relaxed whitespace-pre-line">
-            {lang === "ko"
-              ? "준비 완료! 이제 학습을 시작해 보세요.\n가이드는 설정에서 다시 켤 수 있어요."
-              : "All set! Start learning now.\nYou can turn the guide back on in Settings."}
-          </p>
-          <button
-            onClick={() => setDoneModal(false)}
-            className="mt-5 px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
-          >
-            {lang === "ko" ? "확인" : "OK"}
-          </button>
-        </div>
-      </div>
-    );
+  function closeAndDismiss() {
+    dismissGuide(pageKey);
+    setVisible(false);
   }
+
+  if (!visible) return null;
 
   const vh = window.innerHeight;
   const vw = window.innerWidth;
 
   return (
-    <div
-      className="fixed inset-0 z-[999]"
-      style={{
-        top: "calc(3.5rem + env(safe-area-inset-top))",
-        bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
-      }}
-      onClick={close}
-    >
-      {/* Semi-transparent overlay */}
+    <>
       <div
-        className="fixed inset-0 bg-black/70 z-[999]"
+        className="fixed inset-0 z-[999]"
         style={{
           top: "calc(3.5rem + env(safe-area-inset-top))",
           bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
         }}
-      />
+        onClick={close}
+      >
+        {/* Semi-transparent overlay */}
+        <div
+          className="fixed inset-0 bg-black/70 z-[999]"
+          style={{
+            top: "calc(3.5rem + env(safe-area-inset-top))",
+            bottom: "calc(3.5rem + env(safe-area-inset-bottom))",
+          }}
+        />
 
-      {/* SVG curly arrows */}
-      <svg className="fixed inset-0 w-full h-full z-[1001] pointer-events-none">
-        <defs>
-          <marker id="guide-arrow" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 4 L 0 8 z" fill="rgba(251,191,36,0.9)" />
-          </marker>
-          <marker id="guide-chevron" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
-            <path d="M 2 1 L 5 5 L 2 9" fill="none" stroke="rgba(251,191,36,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-          </marker>
-        </defs>
+        {/* SVG curly arrows */}
+        <svg className="fixed inset-0 w-full h-full z-[1001] pointer-events-none">
+          <defs>
+            <marker id="guide-arrow" viewBox="0 0 10 8" refX="9" refY="4" markerWidth="7" markerHeight="5" orient="auto-start-reverse">
+              <path d="M 0 0 L 10 4 L 0 8 z" fill="rgba(251,191,36,0.9)" />
+            </marker>
+            <marker id="guide-chevron" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="8" markerHeight="8" orient="auto">
+              <path d="M 2 1 L 5 5 L 2 9" fill="none" stroke="rgba(251,191,36,0.9)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+            </marker>
+          </defs>
+          {annotations.map((a, i) => {
+            if (a.step.overlay || a.step.tabLabels || a.step.noArrow) return null;
+            const label = getLabelPos(a, i, vh, vw);
+
+            const pos = a.step.position || "bottom";
+
+            if (pos === "right") {
+              const btnCX = a.rect.left + a.rect.width / 2;
+              const btnTop = a.rect.top;
+              const textX = label.x - 12;
+              const textY = label.y + label.h / 2;
+              const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
+              return (
+                <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
+              );
+            } else if (pos === "top-left") {
+              const btnLeft = a.rect.left;
+              const btnCY = a.rect.top + a.rect.height / 2;
+              const textX = label.x;
+              const textY = label.y + label.h;
+              const d = `M ${textX} ${textY} Q ${textX} ${btnCY}, ${btnLeft} ${btnCY}`;
+              return (
+                <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
+              );
+            } else if (pos === "left") {
+              const btnCX = a.rect.left + a.rect.width / 2;
+              const btnTop = a.rect.top;
+              const textX = label.x + label.w + 12;
+              const textY = label.y + label.h / 2;
+              const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
+              return (
+                <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
+              );
+            } else {
+              const startPtX = a.rect.left + 20;
+              const startPtY = a.rect.top + a.rect.height + 4;
+              const cornerY = label.y + label.h / 2;
+              const endPtX = label.x - 6;
+              const r = 12;
+              const d = `M ${startPtX} ${startPtY} L ${startPtX} ${cornerY - r} Q ${startPtX} ${cornerY}, ${startPtX + r} ${cornerY} L ${endPtX} ${cornerY}`;
+              return (
+                <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
+              );
+            }
+          })}
+        </svg>
+
+        {/* Target element highlight */}
         {annotations.map((a, i) => {
-          if (a.step.overlay || a.step.tabLabels || a.step.noArrow) return null;
-          const label = getLabelPos(a, i, vh, vw);
-          const targetX = a.rect.left + a.rect.width / 2;
-          const targetY = a.rect.top + Math.min(a.rect.height, vh * 0.5) / 2;
-          const labelCX = label.x + label.w / 2;
-          const labelCY = label.y + label.h / 2;
-
-          const pos = a.step.position || "bottom";
-
-          let startX: number, startY: number, endX: number, endY: number;
-          let cp1X: number, cp1Y: number, cp2X: number, cp2Y: number;
-
-          if (pos === "right") {
-            const btnCX = a.rect.left + a.rect.width / 2;
-            const btnTop = a.rect.top;
-            const textX = label.x - 12;
-            const textY = label.y + label.h / 2;
-
-            const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
-
-            return (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke="rgba(251,191,36,0.7)"
-                strokeWidth="2"
-                strokeDasharray="5 4"
-                strokeLinecap="round"
-                markerEnd="url(#guide-chevron)"
-              />
-            );
-          } else if (pos === "top-left") {
-            const btnLeft = a.rect.left;
-            const btnCY = a.rect.top + a.rect.height / 2;
-            const textX = label.x;
-            const textY = label.y + label.h;
-
-            const d = `M ${textX} ${textY} Q ${textX} ${btnCY}, ${btnLeft} ${btnCY}`;
-
-            return (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke="rgba(251,191,36,0.7)"
-                strokeWidth="2"
-                strokeDasharray="5 4"
-                strokeLinecap="round"
-                markerEnd="url(#guide-chevron)"
-              />
-            );
-          } else if (pos === "left") {
-            const btnCX = a.rect.left + a.rect.width / 2;
-            const btnTop = a.rect.top;
-            const textX = label.x + label.w + 12;
-            const textY = label.y + label.h / 2;
-
-            const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
-
-            return (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke="rgba(251,191,36,0.7)"
-                strokeWidth="2"
-                strokeDasharray="5 4"
-                strokeLinecap="round"
-                markerEnd="url(#guide-chevron)"
-              />
-            );
-          } else {
-            // ㄴ-shape: from target bottom → down → right to text
-            const startPtX = a.rect.left + 20;
-            const startPtY = a.rect.top + a.rect.height + 4;
-            const cornerY = label.y + label.h / 2;
-            const endPtX = label.x - 6;
-
-            const r = 12;
-            const d = `M ${startPtX} ${startPtY} L ${startPtX} ${cornerY - r} Q ${startPtX} ${cornerY}, ${startPtX + r} ${cornerY} L ${endPtX} ${cornerY}`;
-
-            return (
-              <path
-                key={i}
-                d={d}
-                fill="none"
-                stroke="rgba(251,191,36,0.7)"
-                strokeWidth="2"
-                strokeDasharray="5 4"
-                strokeLinecap="round"
-                markerEnd="url(#guide-chevron)"
-              />
-            );
-          }
-        })}
-      </svg>
-
-      {/* Target element highlight */}
-      {annotations.map((a, i) => {
-        if (a.step.tabLabels || a.step.noHighlight) return null;
-        return (
-          <div
-            key={`hl-${i}`}
-            className="fixed z-[1000] rounded-lg pointer-events-none"
-            style={{
-              top: a.rect.top - 4,
-              left: a.rect.left - 4,
-              width: a.rect.width + 8,
-              height: Math.min(a.rect.height + 8, vh * 0.5),
-              border: "1.5px solid rgba(165,180,252,0.35)",
-              boxShadow: "0 0 12px rgba(99,102,241,0.15)",
-            }}
-          />
-        );
-      })}
-
-      {/* Tab labels */}
-      {annotations.map((a, i) => {
-        if (!a.step.tabLabels) return null;
-        const parent = document.querySelector(a.step.selector);
-        const tabEls = parent ? parent.querySelectorAll("[data-guide-tab]") : [];
-        return Array.from(tabEls).map((el, ti) => {
-          const tabRect = el.getBoundingClientRect();
-          const label = (lang === "en" ? el.getAttribute("data-guide-tab-en") : null) || el.getAttribute("data-guide-tab") || "";
+          if (a.step.tabLabels || a.step.noHighlight) return null;
           return (
-            <div key={`tab-${i}-${ti}`} className="contents">
+            <div
+              key={`hl-${i}`}
+              className="fixed z-[1000] rounded-lg pointer-events-none"
+              style={{
+                top: a.rect.top - 4,
+                left: a.rect.left - 4,
+                width: a.rect.width + 8,
+                height: a.rect.height + 8,
+                border: "1.5px solid rgba(165,180,252,0.35)",
+                boxShadow: "0 0 12px rgba(99,102,241,0.15)",
+              }}
+            />
+          );
+        })}
+
+        {/* Tab labels */}
+        {annotations.map((a, i) => {
+          if (!a.step.tabLabels) return null;
+          const parent = document.querySelector(a.step.selector);
+          const tabEls = parent ? parent.querySelectorAll("[data-guide-tab]") : [];
+          return Array.from(tabEls).map((el, ti) => {
+            const tabRect = el.getBoundingClientRect();
+            const tabLabel = (lang === "en" ? el.getAttribute("data-guide-tab-en") : null) || el.getAttribute("data-guide-tab") || "";
+            return (
+              <div key={`tab-${i}-${ti}`} className="contents">
+                <div
+                  className="fixed z-[1000] rounded-lg pointer-events-none"
+                  style={{
+                    top: tabRect.top - 4,
+                    left: tabRect.left - 4,
+                    width: tabRect.width + 8,
+                    height: tabRect.height + 8,
+                    border: "1.5px solid rgba(165,180,252,0.35)",
+                    boxShadow: "0 0 12px rgba(99,102,241,0.15)",
+                  }}
+                />
+                <div
+                  className="fixed z-[1002] pointer-events-none text-center flex items-center justify-center"
+                  style={{
+                    top: tabRect.top,
+                    left: tabRect.left - 8,
+                    width: tabRect.width + 16,
+                    height: tabRect.height,
+                    fontFamily: "var(--font-gaegu), cursive",
+                  }}
+                >
+                  <span className="text-[16px] font-bold text-white whitespace-pre-line leading-tight">{tabLabel}</span>
+                </div>
+              </div>
+            );
+          });
+        })}
+
+        {/* Labels */}
+        {annotations.map((a, i) => {
+          if (a.step.tabLabels) return null;
+          if (a.step.overlay) {
+            const elH = Math.min(a.rect.height, vh * 0.5);
+            const alignItems = a.step.position === "top" || a.step.position === "bottom" ? "flex-start" : "center";
+            const paddingTop = a.step.position === "top" ? elH * 0.2 : a.step.position === "bottom" ? elH * 0.6 : 0;
+            return (
               <div
-                className="fixed z-[1000] rounded-lg pointer-events-none"
+                key={`label-${i}`}
+                className="fixed z-[1002] pointer-events-none flex justify-center text-center"
                 style={{
-                  top: tabRect.top - 4,
-                  left: tabRect.left - 4,
-                  width: tabRect.width + 8,
-                  height: tabRect.height + 8,
-                  border: "1.5px solid rgba(165,180,252,0.35)",
-                  boxShadow: "0 0 12px rgba(99,102,241,0.15)",
-                }}
-              />
-              <div
-                className="fixed z-[1002] pointer-events-none text-center flex items-center justify-center"
-                style={{
-                  top: tabRect.top,
-                  left: tabRect.left - 8,
-                  width: tabRect.width + 16,
-                  height: tabRect.height,
-                  fontFamily: "var(--font-gaegu), cursive",
+                  top: a.rect.top,
+                  left: a.rect.left,
+                  width: a.rect.width,
+                  height: elH,
+                  alignItems,
+                  paddingTop,
                 }}
               >
-                <span className="text-[16px] font-bold text-white whitespace-pre-line leading-tight">{label}</span>
+                <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
+                  {a.step.title[lang] && <p className="text-[20px] font-bold text-amber-300">{a.step.title[lang]}</p>}
+                  {a.step.description[lang] && <p className={`text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`} style={{ fontSize: a.step.fontSize || 17 }}>{renderDesc(a.step.description[lang])}</p>}
+                </div>
               </div>
-            </div>
-          );
-        });
-      })}
-
-      {/* Labels */}
-      {annotations.map((a, i) => {
-        if (a.step.tabLabels) return null;
-        if (a.step.overlay) {
-          // Overlay: text on the element; position "top" = top 25%
-          const elH = Math.min(a.rect.height, vh * 0.5);
-          const alignItems = a.step.position === "top" || a.step.position === "bottom" ? "flex-start" : "center";
-          const paddingTop = a.step.position === "top" ? elH * 0.2 : a.step.position === "bottom" ? elH * 0.6 : 0;
-          const paddingBottom = 0;
+            );
+          }
+          const label = getLabelPos(a, i, vh, vw);
+          const alignRight = a.step.position === "bottom-right";
           return (
             <div
               key={`label-${i}`}
-              className="fixed z-[1002] pointer-events-none flex justify-center text-center"
-              style={{
-                top: a.rect.top,
-                left: a.rect.left,
-                width: a.rect.width,
-                height: elH,
-                alignItems,
-                paddingTop,
-                paddingBottom,
-              }}
+              className={`fixed z-[1002] pointer-events-none flex items-center ${alignRight ? "justify-end text-right" : ""}`}
+              style={{ top: label.y, left: label.x, width: label.w, height: label.h }}
             >
               <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
-                {a.step.title[lang] && <p className="text-[20px] font-bold text-amber-300">{a.step.title[lang]}</p>}
-                {a.step.description[lang] && <p className={`text-white leading-tight whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`} style={{ fontSize: a.step.fontSize || 17 }}>{renderDesc(a.step.description[lang])}</p>}
+                {a.step.title[lang] && <p className="text-[19px] font-bold text-amber-300 leading-snug">{a.step.title[lang]}</p>}
+                {a.step.description[lang] && (
+                  <p className={`text-[17px] text-white leading-relaxed whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>
+                )}
               </div>
             </div>
           );
-        }
-        const label = getLabelPos(a, i, vh, vw);
-        const alignRight = a.step.position === "bottom-right";
-        return (
-          <div
-            key={`label-${i}`}
-            className={`fixed z-[1002] pointer-events-none flex items-center ${alignRight ? "justify-end text-right" : ""}`}
-            style={{ top: label.y, left: label.x, width: label.w, height: label.h }}
-          >
-            <div style={{ fontFamily: "var(--font-gaegu), cursive" }}>
-              {a.step.title[lang] && <p className="text-[19px] font-bold text-amber-300 leading-snug">{a.step.title[lang]}</p>}
-              {a.step.description[lang] && (
-                <p className={`text-[17px] text-white leading-relaxed whitespace-pre-line ${a.step.title[lang] ? "mt-1" : ""}`}>{renderDesc(a.step.description[lang])}</p>
-              )}
-            </div>
-          </div>
-        );
-      })}
+        })}
 
-      {/* Tutorial next/done button OR guest tap-to-close hint */}
-      {isGuest ? (
-        <div
-          className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
-          style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
-        >
-          <p className="text-sm text-gray-400 animate-pulse" style={{ fontFamily: "var(--font-gaegu), cursive" }}>
-            {lang === "ko" ? "아무 곳이나 터치하여 닫기" : "Tap anywhere to close"}
-          </p>
-        </div>
-      ) : tutorialOn && (
+        {/* Bottom: dismiss button */}
         <div
           className="fixed left-0 right-0 z-[1002] flex justify-center pointer-events-none"
           style={{ bottom: "calc(4rem + env(safe-area-inset-bottom))" }}
         >
           <div className="flex flex-col items-center gap-2 pointer-events-auto" onClick={(e) => e.stopPropagation()}>
-            <div className="flex items-center gap-3">
+            {!isGuideDismissed(pageKey) && (
               <button
-                onClick={() => { if (prevStep) { close(); router.push(prevStep.path); } }}
-                disabled={!prevStep}
-                className={`px-6 py-2.5 rounded-xl text-sm font-medium transition-colors flex items-center gap-2 ${
-                  prevStep
-                    ? "bg-gray-800 hover:bg-gray-700 text-gray-300"
-                    : "bg-gray-800/50 text-gray-600 cursor-not-allowed"
-                }`}
+                onClick={closeAndDismiss}
+                className="text-xs text-text-faint hover:text-text-muted transition-colors"
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
-                {lang === "ko" ? "이전" : "Prev"}
+                {lang === "ko" ? "다시 보지 않기" : "Don't show again"}
               </button>
-              {isLastStep ? (
-                <button
-                  onClick={() => {
-                    dismissTutorial();
-                    close();
-                    setDoneModal(true);
-                  }}
-                  className="px-8 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors"
-                >
-                  {lang === "ko" ? "완료" : "Done"}
-                </button>
-              ) : (
-                <button
-                  onClick={() => { if (nextStep) { close(); router.push(nextStep.path); } }}
-                  className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl text-sm font-medium transition-colors flex items-center gap-2"
-                >
-                  {lang === "ko" ? "다음" : "Next"}
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
-                </button>
-              )}
-            </div>
+            )}
+            <p className="text-sm text-text-muted animate-pulse" style={{ fontFamily: "var(--font-gaegu), cursive" }}>
+              {lang === "ko" ? "아무 곳이나 터치하여 닫기" : "Tap anywhere to close"}
+            </p>
           </div>
         </div>
-      )}
-    </div>
+      </div>
+    </>
   );
 }
 
-/** Calculate label position for each annotation */
 function getLabelPos(
   a: Annotation,
   _index: number,
@@ -438,21 +315,19 @@ function getLabelPos(
     y = rect.top + Math.min(rect.height, vh * 0.5) + gap;
   }
 
-  // Clamp within viewport
   y = Math.max(16, Math.min(y, vh - labelH - 70));
   x = Math.max(16, Math.min(x, vw - labelW - 16));
 
   return { x, y, w: labelW, h: labelH };
 }
 
-/** Render description text, replacing [+] with a styled icon */
 function renderDesc(text: string) {
   const parts = text.split(/(\[\+\])/);
   return parts.map((part, i) =>
     part === "[+]" ? (
       <span
         key={i}
-        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-indigo-600/40 text-indigo-300 border border-indigo-500/50 text-xs font-bold align-middle mx-0.5"
+        className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary/40 text-primary border border-primary/50 text-xs font-bold align-middle mx-0.5"
       >
         +
       </span>

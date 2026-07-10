@@ -1,45 +1,80 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playTabClick } from "@/lib/unlockAudio";
 import { useUploadStatus, clearNotesBadge } from "@/lib/uploadStatus";
 
+function getVisitedTabs(): Set<string> {
+  try { return new Set(JSON.parse(localStorage.getItem("visited-tabs") || "[]")); } catch { return new Set(); }
+}
+
+function markTabVisited(href: string) {
+  const visited = getVisitedTabs();
+  visited.add(href);
+  localStorage.setItem("visited-tabs", JSON.stringify([...visited]));
+}
+
 export default function BottomTab() {
   const pathname = usePathname();
   const { status: uploadStatus, notesBadge } = useUploadStatus();
+  const [visited, setVisited] = useState<Set<string>>(new Set());
 
   const tabs = [
     { href: "/", icon: HomeIcon, label: "홈", match: (p: string) => p === "/", guideLabel: "홈", desc: "Dashboard" },
     { href: "/add", icon: AddIcon, label: "추가", match: (p: string) => p === "/add", guideLabel: "새 노트", desc: "Add Note" },
     { href: "/review", icon: CardsIcon, label: "카드", match: (p: string) => p === "/review", guideLabel: "복습\n카드", desc: "Review Cards" },
     { href: "/notes", icon: NotesIcon, label: "노트", match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록", desc: "Note List" },
-    { href: "/nuance", icon: NuanceIcon, label: "튜터", match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat", desc: "Nuance Chat" },
+    { href: "/nuance", icon: NuanceIcon, label: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat", desc: "Nuance Chat" },
     { href: "/settings", icon: SettingsIcon, label: "설정", match: (p: string) => p === "/settings", guideLabel: "설정", desc: "Settings" },
   ];
 
+  useEffect(() => {
+    setVisited(getVisitedTabs());
+  }, []);
+
+  useEffect(() => {
+    const tab = tabs.find((t) => t.match(pathname));
+    if (tab && !visited.has(tab.href)) {
+      markTabVisited(tab.href);
+      setVisited((prev) => new Set(prev).add(tab.href));
+    }
+  }, [pathname]);
+
   return (
-    <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-gray-950/95 backdrop-blur-sm border-t border-gray-800 z-50 pb-[env(safe-area-inset-bottom)]">
+    <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-bg-nav backdrop-blur-sm border-t border-border z-50 pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-16">
         {tabs.map(({ href, icon: Icon, label, match, guideLabel, desc }) => {
           const active = match(pathname);
+          const isNew = !visited.has(href) && !active;
           return (
             <Link
               key={href}
               href={href}
               title={desc}
-              onClick={() => { playTabClick(); if (href === "/notes") clearNotesBadge(); }}
+              onClick={() => {
+                playTabClick();
+                if (href === "/notes") clearNotesBadge();
+                if (!visited.has(href)) {
+                  markTabVisited(href);
+                  setVisited((prev) => new Set(prev).add(href));
+                }
+              }}
               data-guide-tab={guideLabel}
               className={`relative flex flex-col items-center justify-center gap-0.5 w-14 h-14 rounded-lg transition-colors ${
-                active ? "text-indigo-400" : "text-gray-500"
+                active ? "text-primary" : isNew ? "text-primary" : "text-text-muted"
               }`}
+              style={isNew ? { filter: "drop-shadow(0 0 6px rgba(129,140,248,0.7)) drop-shadow(0 0 12px rgba(129,140,248,0.4))" } : undefined}
             >
               <Icon active={active} />
-              <span className={`text-[10px] leading-none ${active ? "text-indigo-400 font-medium" : "text-gray-500"}`}>{label}</span>
+              <span className={`text-[10px] leading-none ${
+                active ? "text-primary font-medium" : isNew ? "text-primary font-medium" : "text-text-muted"
+              }`}>{label}</span>
               {href === "/add" && uploadStatus === "uploading" && (
                 <>
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full animate-ping" />
-                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-indigo-400 rounded-full" />
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping" />
+                  <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full" />
                 </>
               )}
               {href === "/add" && uploadStatus === "done" && (

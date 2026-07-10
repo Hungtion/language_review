@@ -3,11 +3,11 @@ export type GuideStep = {
   title: { en: string; ko: string };
   description: { en: string; ko: string };
   position?: "top" | "bottom" | "center" | "right" | "left" | "top-left" | "bottom-right";
-  overlay?: boolean; // label directly on the element, no arrow
-  noArrow?: boolean; // hide arrow even when not overlay
-  noHighlight?: boolean; // hide highlight border
-  fontSize?: number; // override description font size
-  tabLabels?: boolean; // render individual labels on each [data-guide-tab] child
+  overlay?: boolean;
+  noArrow?: boolean;
+  noHighlight?: boolean;
+  fontSize?: number;
+  tabLabels?: boolean;
 };
 
 export const GUIDE_STEPS: Record<string, GuideStep[]> = {
@@ -71,19 +71,13 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     {
       selector: "[data-guide='review-filter-lang']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Language",
-        ko: "언어",
-      },
+      description: { en: "Language", ko: "언어" },
       overlay: true,
     },
     {
       selector: "[data-guide='review-filter-type']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Type",
-        ko: "유형별 필터",
-      },
+      description: { en: "Type", ko: "유형별 필터" },
       overlay: true,
     },
     {
@@ -116,28 +110,19 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     {
       selector: "[data-guide='notes-search']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Search",
-        ko: "검색",
-      },
+      description: { en: "Search", ko: "검색" },
       overlay: true,
     },
     {
       selector: "[data-guide='notes-add']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Add\nNote",
-        ko: "새 노트",
-      },
+      description: { en: "Add\nNote", ko: "새 노트" },
       overlay: true,
     },
     {
       selector: "[data-guide='notes-lang']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Language",
-        ko: "언어",
-      },
+      description: { en: "Language", ko: "언어" },
       overlay: true,
     },
     {
@@ -154,10 +139,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     {
       selector: "[data-guide='nuance-langs']",
       title: { en: "", ko: "" },
-      description: {
-        en: "Language",
-        ko: "언어",
-      },
+      description: { en: "Language", ko: "언어" },
       overlay: true,
     },
     {
@@ -181,56 +163,46 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       fontSize: 20,
     },
   ],
+  settings: [
+    {
+      selector: "[data-guide='settings-lang']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Switch app language\nbetween English and Korean.",
+        ko: "앱 언어를 영어/한국어로\n전환할 수 있어요.",
+      },
+      overlay: true,
+    },
+    {
+      selector: "[data-guide='settings-theme']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Customize display mode, theme style, and accent color.",
+        ko: "화면 모드, 세부 테마, 포인트 컬러를 설정하세요.",
+      },
+      overlay: true,
+    },
+    {
+      selector: "[data-guide='settings-tts']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Choose your preferred TTS voice for each language.",
+        ko: "언어별 음성(TTS)을 선택할 수 있어요.",
+      },
+      overlay: true,
+    },
+  ],
 };
-
-const TUTORIAL_PAGES = ["home", "add", "review", "notes", "nuance"];
-
-export function isTutorialActive(): boolean {
-  if (typeof window === "undefined") return false;
-  return localStorage.getItem("tutorial-dismissed") !== "true";
-}
-
-export function dismissTutorial(): void {
-  localStorage.setItem("tutorial-dismissed", "true");
-  TUTORIAL_PAGES.forEach((p) => {
-    localStorage.setItem(`guide-dismissed-${p}`, "true");
-    localStorage.setItem(`tutorial-visited-${p}`, "true");
-  });
-}
-
-export function resetTutorial(): void {
-  localStorage.removeItem("tutorial-dismissed");
-  TUTORIAL_PAGES.forEach((p) => {
-    localStorage.removeItem(`tutorial-visited-${p}`);
-    localStorage.removeItem(`guide-dismissed-${p}`);
-  });
-}
-
-export function markPageVisited(pageKey: string): void {
-  localStorage.setItem(`tutorial-visited-${pageKey}`, "true");
-}
-
-export function isPageVisited(pageKey: string): boolean {
-  if (typeof window === "undefined") return true;
-  return localStorage.getItem(`tutorial-visited-${pageKey}`) === "true";
-}
-
-export function getUnvisitedPages(): string[] {
-  return TUTORIAL_PAGES.filter((p) => !isPageVisited(p));
-}
 
 export function isGuideDismissed(pageKey: string): boolean {
   if (typeof window === "undefined") return true;
-  // In tutorial mode, show guide for unvisited pages
-  if (isTutorialActive() && !isPageVisited(pageKey)) return false;
   return localStorage.getItem(`guide-dismissed-${pageKey}`) === "true";
 }
 
 export function dismissGuide(pageKey: string): void {
   localStorage.setItem(`guide-dismissed-${pageKey}`, "true");
-  markPageVisited(pageKey);
-  // Auto-dismiss tutorial when all pages visited
-  if (getUnvisitedPages().length === 0) {
-    dismissTutorial();
-  }
+}
+
+export function resetGuide(pageKey: string): void {
+  localStorage.removeItem(`guide-dismissed-${pageKey}`);
 }

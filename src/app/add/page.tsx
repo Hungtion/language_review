@@ -323,17 +323,17 @@ function AddContent() {
             value={title}
             onChange={(e) => setTitle(e.target.value)}
             placeholder={`${t("titleOptional")} | Lesson 12 - Business English`}
-            className="flex-1 min-w-0 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm h-[38px]"
+            className="flex-1 min-w-0 bg-bg-input border border-border-light rounded-lg px-3 py-2 text-sm h-[38px]"
           />
           <input
             data-guide-tab="날짜" data-guide-tab-en="Date"
             type="date"
             value={studyDate}
             onChange={(e) => setStudyDate(e.target.value)}
-            className="bg-gray-800 border border-gray-700 rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
+            className="bg-bg-input border border-border-light rounded-lg px-2 py-2 text-sm shrink-0 h-[38px] appearance-none"
           />
         </div>
-        <div data-guide-tab="언어" data-guide-tab-en="Language" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+        <div data-guide-tab="언어" data-guide-tab-en="Language" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
@@ -341,8 +341,8 @@ function AddContent() {
               onClick={() => { setLanguage(f); localStorage.setItem("lang-filter", f); }}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 language === f
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
               }`}
             >
               {f === "english" ? "🇺🇸" : "🇯🇵"}
@@ -360,8 +360,8 @@ function AddContent() {
               onClick={() => setRawInput(tmpl.text)}
               className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${
                 rawInput === tmpl.text
-                  ? "border-indigo-500 text-indigo-400 bg-indigo-500/10"
-                  : "text-gray-500 border-gray-800 hover:border-indigo-500/50 hover:text-indigo-400"
+                  ? "border-primary text-primary bg-primary/10"
+                  : "text-text-faint border-border hover:border-primary/50 hover:text-primary"
               }`}
             >
               {locale === "ko" ? tmpl.label.ko : tmpl.label.en}
@@ -388,11 +388,11 @@ function AddContent() {
             }}
             placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
             rows={16}
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-y"
+            className="w-full bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
           />
           {uploading && (
-            <div className="absolute inset-0 bg-gray-900/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
-              <svg className="w-10 h-10 text-indigo-400 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" /></svg>
+            <div className="absolute inset-0 bg-bg-card/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
+              <svg className="w-10 h-10 text-primary animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" /></svg>
               <div className="w-full max-w-[240px] space-y-2">
                 {[
                   locale === "ko" ? "파일 읽는 중..." : "Reading file...",
@@ -400,7 +400,7 @@ function AddContent() {
                   locale === "ko" ? "저장 중..." : "Saving...",
                 ].map((label, i) => (
                   <div key={i} className={`flex items-center gap-2 text-xs transition-colors ${
-                    uploadStep === i + 1 ? "text-indigo-400" : uploadStep > i + 1 ? "text-green-500" : "text-gray-600"
+                    uploadStep === i + 1 ? "text-primary" : uploadStep > i + 1 ? "text-primary" : "text-text-faint"
                   }`}>
                     <span className="w-4 text-center">
                       {uploadStep > i + 1 ? "✓" : uploadStep === i + 1 ? "●" : "○"}
@@ -409,13 +409,13 @@ function AddContent() {
                   </div>
                 ))}
               </div>
-              <p className="text-xs text-gray-500 mt-2">
+              <p className="text-xs text-text-faint mt-2">
                 {locale === "ko" ? "탭을 이동해도 안전합니다" : "Safe to switch tabs"}
               </p>
             </div>
           )}
         </div>
-        <p className={`text-right text-xs mt-1 ${rawInput.length > AI_PARSE_CHAR_LIMIT ? "text-red-400" : "text-gray-600"}`}>
+        <p className={`text-right text-xs mt-1 ${rawInput.length > AI_PARSE_CHAR_LIMIT ? "text-red-400" : "text-text-faint"}`}>
           {rawInput.length.toLocaleString()}/{AI_PARSE_CHAR_LIMIT.toLocaleString()}
         </p>
       </div>
@@ -425,7 +425,7 @@ function AddContent() {
         {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}
-            className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+            className="px-4 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
           >
             {t("previewBtn")}
           </button>
@@ -434,7 +434,7 @@ function AddContent() {
           data-guide="add-actions"
           onClick={handleSaveClick}
           disabled={saving || !rawInput.trim()}
-          className="px-6 py-2 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-lg text-sm font-medium transition-colors"
+          className="px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-lg text-sm font-medium transition-colors"
         >
           {saving ? t("saving") : t("save")}
         </button>
@@ -459,12 +459,12 @@ function AddContent() {
           <button
             onClick={() => fileInputRef.current?.click()}
             title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다 (Pro)" : "Extract text from file and AI-parse (Pro)"}
-            className="ml-auto px-3 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-sm transition-colors"
+            className="ml-auto px-3 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
           >
             <span className="flex items-center gap-1.5">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
               {locale === "ko" ? "파일" : "File"}
-              <span className="text-[10px] px-1 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
+              <span className="text-[10px] px-1 py-0.5 bg-primary/20 text-primary rounded">Pro</span>
               <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
             </span>
           </button>
@@ -474,9 +474,9 @@ function AddContent() {
       {/* Parse Choice Modal */}
       {showParseChoice && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-xl p-6 max-w-md w-full space-y-4">
+          <div className="bg-bg-card border border-border-light rounded-xl p-6 max-w-md w-full space-y-4">
             <h3 className="text-lg font-bold">{t("parseChoice")}</h3>
-            <p className="text-sm text-gray-400">{t("noFormatDetected")}</p>
+            <p className="text-sm text-text-muted">{t("noFormatDetected")}</p>
             <div className="space-y-3">
               {/* AI Extract option */}
               {plan === "pro" ? (
@@ -488,30 +488,30 @@ function AddContent() {
                     }
                     setShowParseChoice(false); doSave("ai");
                   }}
-                  className="w-full text-left p-4 bg-purple-600/10 border border-purple-500/30 rounded-xl hover:bg-purple-600/20 transition-colors group"
+                  className="w-full text-left p-4 bg-primary/10 border border-primary/30 rounded-xl hover:bg-primary/20 transition-colors group"
                 >
-                  <span className="flex items-center gap-2 text-purple-400 font-medium text-sm">
+                  <span className="flex items-center gap-2 text-primary font-medium text-sm">
                     {t("aiExtract")}
-                    <span className="text-[10px] px-1.5 py-0.5 bg-indigo-500/20 text-indigo-400 rounded">Pro</span>
+                    <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">Pro</span>
                   </span>
-                  <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
-                  <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
-                    <div className="text-purple-400/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
-                    <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
-                    <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
+                  <span className="block text-xs text-text-faint mt-1">{t("aiExtractDesc")}</span>
+                  <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
+                    <div className="text-primary/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
+                    <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
+                    <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
                   </div>
                 </button>
               ) : (
                 <>
                   <button
                     onClick={() => router.push(!user ? "/login" : "/pricing")}
-                    className="w-full text-left p-4 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl font-medium transition-colors"
+                    className="w-full text-left p-4 bg-primary hover:bg-primary-hover text-primary-text rounded-xl font-medium transition-colors"
                   >
                     <span className="flex items-center gap-2 text-sm">
                       {t("aiExtract")}
                       <span className="text-[10px] px-1.5 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Pro</span>
                     </span>
-                    <span className="block text-xs text-indigo-200 mt-1">{t("subscribe")}</span>
+                    <span className="block text-xs text-primary-hover mt-1">{t("subscribe")}</span>
                   </button>
                   <button
                     onClick={() => {
@@ -524,19 +524,19 @@ function AddContent() {
                       doSave("ai");
                     }}
                     disabled={aiRemaining <= 0}
-                    className="w-full text-left p-4 bg-purple-600/10 border border-purple-500/30 rounded-xl hover:bg-purple-600/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+                    className="w-full text-left p-4 bg-primary/10 border border-primary/30 rounded-xl hover:bg-primary/20 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
                   >
-                    <span className="flex items-center gap-2 text-purple-400 font-medium text-sm">
+                    <span className="flex items-center gap-2 text-primary font-medium text-sm">
                       {!user ? (locale === "ko" ? "AI 추출 (무료 체험)" : "AI Extract (Free trial)") : t("aiFreeExtract")}
-                      <span className="text-[10px] px-1.5 py-0.5 bg-purple-500/20 text-purple-300 rounded">
+                      <span className="text-[10px] px-1.5 py-0.5 bg-primary/20 text-primary rounded">
                         {aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}
                       </span>
                     </span>
-                    <span className="block text-xs text-gray-500 mt-1">{t("aiExtractDesc")}</span>
-                    <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
-                      <div className="text-purple-400/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
-                      <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
-                      <div className="pl-2 text-gray-600">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
+                    <span className="block text-xs text-text-faint mt-1">{t("aiExtractDesc")}</span>
+                    <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
+                      <div className="text-primary/60">{locale === "ko" ? "▸ 핵심 문장만 카드로" : "▸ Key sentences as cards"}</div>
+                      <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 1: \"Practice makes perfect\"" : "Card 1: \"Practice makes perfect\""}</div>
+                      <div className="pl-2 text-text-faint">{locale === "ko" ? "카드 2: \"brave = not afraid\"" : "Card 2: \"brave = not afraid\""}</div>
                     </div>
                   </button>
                 </>
@@ -545,21 +545,21 @@ function AddContent() {
               {/* Line-by-line option */}
               <button
                 onClick={() => { setShowParseChoice(false); doSave("line"); }}
-                className="w-full text-left p-4 bg-gray-800 border border-gray-700 rounded-xl hover:bg-gray-700 transition-colors"
+                className="w-full text-left p-4 bg-bg-input border border-border-light rounded-xl hover:bg-bg-hover transition-colors"
               >
-                <span className="text-gray-300 font-medium text-sm">{t("lineByLine")}</span>
-                <span className="block text-xs text-gray-500 mt-1">{t("lineByLineDesc")}</span>
-                <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-gray-500 space-y-1">
-                  <div className="text-gray-400/60">{locale === "ko" ? "▸ 각 줄 = 카드 1장" : "▸ Each line = 1 card"}</div>
-                  <div className="pl-2 text-gray-600">{locale === "ko" ? "1줄 → 카드 1" : "Line 1 → Card 1"}</div>
-                  <div className="pl-2 text-gray-600">{locale === "ko" ? "2줄 → 카드 2" : "Line 2 → Card 2"}</div>
-                  <div className="pl-2 text-gray-600">{locale === "ko" ? "3줄 → 카드 3 ..." : "Line 3 → Card 3 ..."}</div>
+                <span className="text-text-secondary font-medium text-sm">{t("lineByLine")}</span>
+                <span className="block text-xs text-text-faint mt-1">{t("lineByLineDesc")}</span>
+                <div className="mt-3 bg-black/30 rounded-lg p-3 text-xs font-mono text-text-faint space-y-1">
+                  <div className="text-text-muted/60">{locale === "ko" ? "▸ 각 줄 = 카드 1장" : "▸ Each line = 1 card"}</div>
+                  <div className="pl-2 text-text-faint">{locale === "ko" ? "1줄 → 카드 1" : "Line 1 → Card 1"}</div>
+                  <div className="pl-2 text-text-faint">{locale === "ko" ? "2줄 → 카드 2" : "Line 2 → Card 2"}</div>
+                  <div className="pl-2 text-text-faint">{locale === "ko" ? "3줄 → 카드 3 ..." : "Line 3 → Card 3 ..."}</div>
                 </div>
               </button>
             </div>
             <button
               onClick={() => setShowParseChoice(false)}
-              className="w-full py-2 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+              className="w-full py-2 text-sm text-text-faint hover:text-text-secondary transition-colors"
             >
               {t("cancel")}
             </button>
@@ -569,9 +569,9 @@ function AddContent() {
 
       {/* Preview */}
       {preview && (
-        <div className="border border-gray-800 rounded-xl overflow-hidden">
-          <div className="bg-gray-900 px-4 py-2 border-b border-gray-800">
-            <span className="text-sm font-medium text-gray-300">{t("previewResult")}</span>
+        <div className="border border-border rounded-xl overflow-hidden">
+          <div className="bg-bg-card px-4 py-2 border-b border-border">
+            <span className="text-sm font-medium text-text-secondary">{t("previewResult")}</span>
           </div>
           <div className="p-4 space-y-4">
             {preview.stress_pronunciation && (
@@ -603,16 +603,16 @@ export default function AddPage() {
 
 function Section({ title, content, color }: { title: string; content: string; color: string }) {
   const colorMap: Record<string, string> = {
-    purple: "border-purple-500/30 text-purple-400",
-    green: "border-green-500/30 text-green-400",
-    blue: "border-blue-500/30 text-blue-400",
-    yellow: "border-yellow-500/30 text-yellow-400",
+    purple: "border-primary/30 text-primary",
+    green: "border-primary/30 text-primary",
+    blue: "border-primary/30 text-primary",
+    yellow: "border-primary/30 text-primary",
   };
 
   return (
     <div className={`border-l-2 pl-4 ${colorMap[color]}`}>
       <h3 className="text-sm font-semibold mb-1">{title}</h3>
-      <pre className="text-gray-300 text-sm whitespace-pre-wrap font-sans">{content}</pre>
+      <pre className="text-text-secondary text-sm whitespace-pre-wrap font-sans">{content}</pre>
     </div>
   );
 }

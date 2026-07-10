@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
-import { resetTutorial, dismissTutorial, isTutorialActive } from "@/lib/guide";
+import GuideOverlay from "@/components/GuideOverlay";
 
 function SettingsContent() {
   const { user, plan, signOut } = useAuth();
@@ -13,6 +13,9 @@ function SettingsContent() {
   const { locale, setLocale, t } = useLocale();
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [feedbackType, setFeedbackType] = useState<"bug" | "feedback" | null>(null);
+  const [feedbackMsg, setFeedbackMsg] = useState("");
+  const [feedbackSending, setFeedbackSending] = useState(false);
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedEN, setSelectedEN] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
@@ -26,11 +29,17 @@ function SettingsContent() {
   const [engChannel, setEngChannel] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("eng-channel") === "true" : false
   );
-  const [tutorialOn, setTutorialOn] = useState(() =>
-    typeof window !== "undefined" ? isTutorialActive() : false
-  );
   const [splitAuto, setSplitAuto] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("split-auto") : null
+  );
+  const [theme, setThemeState] = useState<"system" | "dark" | "light">(() =>
+    typeof window !== "undefined" ? (localStorage.getItem("theme") as "system" | "dark" | "light") || "system" : "system"
+  );
+  const [variant, setVariantState] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme-variant") || "default" : "default"
+  );
+  const [accent, setAccentState] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("theme-accent") || "" : ""
   );
 
   useEffect(() => {
@@ -62,8 +71,9 @@ function SettingsContent() {
 
   return (
     <div className="space-y-6 max-w-lg mx-auto">
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{t("language")}</h2>
+      <GuideOverlay pageKey="settings" />
+      <div data-guide="settings-lang" className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{t("language")}</h2>
         <div className="flex gap-2">
           {(["en", "ko"] as const).map((l) => (
             <button
@@ -71,8 +81,8 @@ function SettingsContent() {
               onClick={() => setLocale(l)}
               className={`px-4 py-2 rounded-lg text-sm transition-colors ${
                 locale === l
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  ? "bg-primary text-primary-text"
+                  : "bg-bg-input text-text-muted hover:text-text"
               }`}
             >
               {l === "en" ? "English" : "한국어"}
@@ -81,12 +91,116 @@ function SettingsContent() {
         </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-5">
-        <h2 className="text-sm font-medium text-gray-300">{t("ttsVoice")}</h2>
+      <div data-guide="settings-theme" className="bg-bg-card border border-border rounded-xl p-5 space-y-5">
+        <div className="space-y-3">
+          <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "화면 모드" : "Display Mode"}</h2>
+          <div className="flex gap-2">
+            {(["light", "dark", "system"] as const).map((t) => (
+              <button
+                key={t}
+                onClick={() => {
+                  setThemeState(t);
+                  if (t === "system") {
+                    localStorage.removeItem("theme");
+                    document.documentElement.removeAttribute("data-theme");
+                  } else {
+                    localStorage.setItem("theme", t);
+                    document.documentElement.setAttribute("data-theme", t);
+                  }
+                }}
+                className={`flex-1 px-3 py-2 rounded-lg text-sm transition-colors ${
+                  theme === t
+                    ? "bg-primary text-primary-text"
+                    : "bg-bg-input text-text-muted hover:text-text"
+                }`}
+              >
+                {t === "light" ? (locale === "ko" ? "밝은 화면" : "Light")
+                  : t === "dark" ? (locale === "ko" ? "어두운 화면" : "Dark")
+                  : (locale === "ko" ? "내 기기에 맞춤" : "System")}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-4 space-y-3">
+          <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "세부 테마" : "Theme Style"}</h2>
+          <div className="flex flex-col gap-2">
+            {([
+              { key: "default", ko: "기본", en: "Default", desc_ko: "깔끔하고 선명한 톤", desc_en: "Clean & crisp" },
+              { key: "comfort", ko: "눈 편한 모드", en: "Comfort", desc_ko: "눈의 피로를 줄여주는 따뜻한 톤", desc_en: "Warm sepia tones" },
+              { key: "midnight", ko: "차분한 화면", en: "Calm", desc_ko: "부드러운 네이비 블루 톤", desc_en: "Soft navy blue tones" },
+            ] as const).map((v) => (
+              <button
+                key={v.key}
+                onClick={() => {
+                  setVariantState(v.key);
+                  if (v.key === "default") {
+                    localStorage.removeItem("theme-variant");
+                    document.documentElement.removeAttribute("data-variant");
+                  } else {
+                    localStorage.setItem("theme-variant", v.key);
+                    document.documentElement.setAttribute("data-variant", v.key);
+                  }
+                }}
+                className={`w-full text-left px-4 py-3 rounded-lg transition-colors ${
+                  variant === v.key
+                    ? "bg-primary/15 border border-primary/40 text-text"
+                    : "bg-bg-input text-text-muted hover:text-text"
+                }`}
+              >
+                <span className="text-sm font-medium">{locale === "ko" ? v.ko : v.en}</span>
+                <span className="block text-xs mt-0.5 opacity-70">{locale === "ko" ? v.desc_ko : v.desc_en}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="border-t border-border pt-4 space-y-3">
+          <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "포인트 컬러" : "Accent Color"}</h2>
+          <div className="flex gap-3 justify-center">
+            {([
+              { key: "", color: "#818cf8", label: "Indigo" },
+              { key: "mint", color: "#2dd4bf", label: "Mint" },
+              { key: "coral", color: "#f0a0a0", label: "Coral" },
+              { key: "lavender", color: "#b8a5f5", label: "Lavender" },
+              { key: "gold", color: "#e5b835", label: "Gold" },
+              { key: "rose", color: "#f28b9a", label: "Rose" },
+            ]).map((a) => (
+              <button
+                key={a.key}
+                onClick={() => {
+                  setAccentState(a.key);
+                  if (a.key === "") {
+                    localStorage.removeItem("theme-accent");
+                    document.documentElement.removeAttribute("data-accent");
+                  } else {
+                    localStorage.setItem("theme-accent", a.key);
+                    document.documentElement.setAttribute("data-accent", a.key);
+                  }
+                  setTimeout(() => (window as unknown as { __fixPT?: () => void }).__fixPT?.(), 0);
+                }}
+                className="flex flex-col items-center gap-1.5"
+                title={a.label}
+              >
+                <span
+                  className={`w-8 h-8 rounded-full transition-all ${
+                    accent === a.key ? "ring-2 ring-offset-2 ring-offset-bg scale-110" : "hover:scale-105"
+                  }`}
+                  style={{ backgroundColor: a.color, ...(accent === a.key ? { boxShadow: `0 0 12px ${a.color}80` } : {}) }}
+                />
+                <span className="text-[10px] text-text-faint">{a.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+
+      <div data-guide="settings-tts" className="bg-bg-card border border-border rounded-xl p-5 space-y-5">
+        <h2 className="text-sm font-medium text-text-secondary">{t("ttsVoice")}</h2>
 
         <div className="space-y-2">
-          <label className="text-xs text-gray-400">{t("englishUS")}</label>
-          <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-800 p-1.5 flex flex-wrap gap-1.5">
+          <label className="text-xs text-text-muted">{t("englishUS")}</label>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-border p-1.5 flex flex-wrap gap-1.5">
             <button
               onClick={() => {
                 setSelectedEN("");
@@ -94,8 +208,8 @@ function SettingsContent() {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                 selectedEN === ""
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  ? "bg-primary text-primary-text"
+                  : "bg-bg-input text-text-muted hover:text-text"
               }`}
             >
               {t("default")}
@@ -112,8 +226,8 @@ function SettingsContent() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                     selectedEN === v.name
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                      ? "bg-primary text-primary-text"
+                      : "bg-bg-input text-text-muted hover:text-text"
                   }`}
                 >
                   {label}
@@ -124,8 +238,8 @@ function SettingsContent() {
         </div>
 
         <div className="space-y-2">
-          <label className="text-xs text-gray-400">{t("japanese")}</label>
-          <div className="max-h-40 overflow-y-auto rounded-lg border border-gray-800 p-1.5 flex flex-wrap gap-1.5">
+          <label className="text-xs text-text-muted">{t("japanese")}</label>
+          <div className="max-h-40 overflow-y-auto rounded-lg border border-border p-1.5 flex flex-wrap gap-1.5">
             <button
               onClick={() => {
                 setSelectedJP("");
@@ -133,8 +247,8 @@ function SettingsContent() {
               }}
               className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                 selectedJP === ""
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                  ? "bg-primary text-primary-text"
+                  : "bg-bg-input text-text-muted hover:text-text"
               }`}
             >
               {t("default")}
@@ -151,8 +265,8 @@ function SettingsContent() {
                   }}
                   className={`px-3 py-1.5 rounded-lg text-xs transition-colors ${
                     selectedJP === v.name
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-800 text-gray-400 hover:text-gray-200"
+                      ? "bg-primary text-primary-text"
+                      : "bg-bg-input text-text-muted hover:text-text"
                   }`}
                 >
                   {label}
@@ -162,13 +276,13 @@ function SettingsContent() {
           </div>
         </div>
 
-        <p className="text-xs text-gray-600">{t("iosVoiceGuide")}</p>
+        <p className="text-xs text-text-faint">{t("iosVoiceGuide")}</p>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{t("autoPlay")}</h2>
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{t("autoPlay")}</h2>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{t("autoPlayDesc")}</span>
+          <span className="text-sm text-text-muted">{t("autoPlayDesc")}</span>
           <button
             onClick={() => {
               const next = !autoplay;
@@ -176,7 +290,7 @@ function SettingsContent() {
               setAutoplay(next);
             }}
             className={`w-12 h-6 rounded-full transition-colors relative ${
-              autoplay ? "bg-indigo-600" : "bg-gray-700"
+              autoplay ? "bg-primary" : "bg-bg-hover"
             }`}
           >
             <span
@@ -188,10 +302,10 @@ function SettingsContent() {
         </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{t("engChannel")}</h2>
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{t("engChannel")}</h2>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{t("engChannelDesc")}</span>
+          <span className="text-sm text-text-muted">{t("engChannelDesc")}</span>
           <button
             onClick={() => {
               const next = !engChannel;
@@ -199,7 +313,7 @@ function SettingsContent() {
               setEngChannel(next);
             }}
             className={`w-12 h-6 rounded-full transition-colors relative ${
-              engChannel ? "bg-indigo-600" : "bg-gray-700"
+              engChannel ? "bg-primary" : "bg-bg-hover"
             }`}
           >
             <span
@@ -211,37 +325,10 @@ function SettingsContent() {
         </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{locale === "ko" ? "설명 가이드" : "Guide Tutorial"}</h2>
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "카드 나눌 때 기존 카드 삭제" : "Delete original when splitting"}</h2>
         <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">{locale === "ko" ? "각 화면의 설명을 표시합니다" : "Show guide on each screen"}</span>
-          <button
-            onClick={() => {
-              if (tutorialOn) {
-                dismissTutorial();
-                setTutorialOn(false);
-              } else {
-                resetTutorial();
-                setTutorialOn(true);
-              }
-            }}
-            className={`w-12 h-6 rounded-full transition-colors relative ${
-              tutorialOn ? "bg-indigo-600" : "bg-gray-700"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                tutorialOn ? "translate-x-[24px]" : "translate-x-0"
-              }`}
-            />
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{locale === "ko" ? "카드 나눌 때 기존 카드 삭제" : "Delete original when splitting"}</h2>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-gray-400">
+          <span className="text-sm text-text-muted">
             {splitAuto === "keep"
               ? (locale === "ko" ? "기존 카드를 유지합니다" : "Keep original card")
               : (locale === "ko" ? "나뉘어진 카드로 대체합니다" : "Replace with split cards")}
@@ -259,7 +346,7 @@ function SettingsContent() {
               }
             }}
             className={`w-12 h-6 rounded-full transition-colors relative ${
-              splitAuto !== "keep" ? "bg-orange-500" : "bg-gray-700"
+              splitAuto !== "keep" ? "bg-primary" : "bg-bg-hover"
             }`}
           >
             <span
@@ -271,33 +358,19 @@ function SettingsContent() {
         </div>
       </div>
 
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5">
-        <a
-          href="https://qr.kakaopay.com/Ej7lvEtQc"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="w-full py-3 bg-[#FEE500] hover:bg-[#FDD835] text-[#191919] rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2"
-        >
-          <svg className="w-5 h-5" viewBox="0 0 24 24">
-            <path fill="#191919" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
-          </svg>
-          {locale === "ko" ? "카카오페이로 후원하기" : "Support via KakaoPay"}
-        </a>
-      </div>
-
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-gray-300">{t("account")}</h2>
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{t("account")}</h2>
         <div className="flex items-center justify-between">
-          <p className="text-sm text-gray-400">{user?.email}</p>
+          <p className="text-sm text-text-muted">{user?.email}</p>
           <div className="flex items-center gap-2">
             {plan === "pro" ? (
-              <span className="px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 rounded-lg">
+              <span className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg">
                 Pro
               </span>
             ) : (
               <button
                 onClick={() => router.push("/pricing")}
-                className="px-3 py-1.5 text-xs font-medium text-indigo-400 bg-indigo-500/10 border border-indigo-500/30 rounded-lg hover:bg-indigo-500/20 transition-colors"
+                className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
               >
                 {locale === "ko" ? "Pro 전환" : "Upgrade"}
               </button>
@@ -310,23 +383,49 @@ function SettingsContent() {
             </button>
           </div>
         </div>
-        <div className="pt-2 border-t border-gray-800">
+        <div className="pt-2 border-t border-border">
           <button
             onClick={() => setShowDeleteConfirm(true)}
-            className="text-xs text-gray-600 hover:text-red-400 transition-colors"
+            className="text-xs text-text-faint hover:text-red-400 transition-colors"
           >
             {locale === "ko" ? "회원 탈퇴" : "Delete Account"}
           </button>
         </div>
       </div>
 
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <a
+          href="https://qr.kakaopay.com/Ej7lvEtQc"
+          target="_blank"
+          rel="noopener noreferrer"
+          className="w-full py-2.5 bg-[#FEE500]/20 hover:bg-[#FEE500]/30 text-text-secondary rounded-lg text-sm transition-colors flex items-center justify-center gap-2"
+        >
+          <svg className="w-5 h-5" viewBox="0 0 24 24">
+            <path fill="currentColor" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
+          </svg>
+          {locale === "ko" ? "카카오페이로 후원하기" : "Support via KakaoPay"}
+        </a>
+        <div className="border-t border-border pt-4 space-y-3">
+          <button
+            onClick={() => { setFeedbackType("bug"); setFeedbackMsg(""); }}
+            className="w-full py-2.5 rounded-lg text-sm bg-bg-input text-text-muted hover:text-text hover:bg-bg-hover transition-colors"
+          >
+            {locale === "ko" ? "피드백 보내기" : "Send Feedback"}
+          </button>
+          <div className="text-center space-y-1">
+            <p className="text-sm font-medium text-text-secondary">Language Lab</p>
+            <p className="text-xs text-text-faint">© 2026 Hungtion</p>
+          </div>
+        </div>
+      </div>
+
       {showDeleteConfirm && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
-          <div className="bg-gray-900 border border-gray-700 rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
-            <h3 className="text-lg font-bold text-white">
+          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
+            <h3 className="text-lg font-bold text-text">
               {locale === "ko" ? "정말 탈퇴하시겠습니까?" : "Delete your account?"}
             </h3>
-            <p className="text-sm text-gray-400 whitespace-pre-line">
+            <p className="text-sm text-text-muted whitespace-pre-line">
               {locale === "ko"
                 ? "모든 노트, 복습 카드, 채팅 기록이 삭제되며\n복구할 수 없습니다."
                 : "All notes, flashcards, and chat history will be permanently deleted.\nThis cannot be undone."}
@@ -334,7 +433,7 @@ function SettingsContent() {
             <div className="flex gap-3 justify-center pt-2">
               <button
                 onClick={() => setShowDeleteConfirm(false)}
-                className="px-6 py-2.5 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-xl text-sm transition-colors"
+                className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
               >
                 {locale === "ko" ? "취소" : "Cancel"}
               </button>
@@ -367,6 +466,83 @@ function SettingsContent() {
                 {deleting
                   ? (locale === "ko" ? "처리 중..." : "Deleting...")
                   : (locale === "ko" ? "탈퇴하기" : "Delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {feedbackType && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4">
+            <h3 className="text-lg font-bold text-text text-center">
+              {locale === "ko" ? "피드백 보내기" : "Send Feedback"}
+            </h3>
+            <div className="flex gap-2">
+              {(["bug", "feedback"] as const).map((t) => (
+                <button
+                  key={t}
+                  onClick={() => setFeedbackType(t)}
+                  className={`flex-1 py-2 rounded-lg text-sm transition-colors ${
+                    feedbackType === t
+                      ? "bg-primary text-primary-text"
+                      : "bg-bg-input text-text-muted hover:text-text"
+                  }`}
+                >
+                  {t === "bug"
+                    ? (locale === "ko" ? "오류 신고" : "Bug Report")
+                    : (locale === "ko" ? "개선 요청" : "Suggestion")}
+                </button>
+              ))}
+            </div>
+            <textarea
+              value={feedbackMsg}
+              onChange={(e) => setFeedbackMsg(e.target.value)}
+              placeholder={feedbackType === "bug"
+                ? (locale === "ko" ? "어떤 오류가 발생했나요?" : "What went wrong?")
+                : (locale === "ko" ? "의견을 자유롭게 적어주세요." : "Share your thoughts.")}
+              className="w-full h-32 bg-bg-input border border-border rounded-xl p-3 text-sm text-text placeholder:text-text-faint resize-none focus:outline-none focus:border-primary"
+            />
+            <div className="flex gap-3 justify-center">
+              <button
+                onClick={() => setFeedbackType(null)}
+                className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={async () => {
+                  if (!feedbackMsg.trim()) return;
+                  setFeedbackSending(true);
+                  try {
+                    const res = await fetch("/api/feedback", {
+                      method: "POST",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        userId: user?.id,
+                        email: user?.email,
+                        type: feedbackType,
+                        message: feedbackMsg,
+                      }),
+                    });
+                    const data = await res.json();
+                    if (data.success) {
+                      alert(locale === "ko" ? "전송되었습니다. 감사합니다!" : "Sent! Thank you!");
+                    } else {
+                      alert(data.error || "Failed");
+                    }
+                  } catch {
+                    alert("Failed to send");
+                  }
+                  setFeedbackSending(false);
+                  setFeedbackType(null);
+                }}
+                disabled={feedbackSending || !feedbackMsg.trim()}
+                className="px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text rounded-xl text-sm font-medium transition-colors"
+              >
+                {feedbackSending
+                  ? (locale === "ko" ? "전송 중..." : "Sending...")
+                  : (locale === "ko" ? "보내기" : "Send")}
               </button>
             </div>
           </div>

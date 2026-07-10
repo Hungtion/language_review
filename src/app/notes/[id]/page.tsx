@@ -279,8 +279,8 @@ function NoteDetailContent() {
     await doSplitConfirm(splitTarget, selected, false);
   }
 
-  if (loading) return <div className="text-gray-500 text-center py-12">{t("loading")}</div>;
-  if (!session) return <div className="text-gray-500 text-center py-12">{t("noteNotFound")}</div>;
+  if (loading) return <div className="text-text-faint text-center py-12">{t("loading")}</div>;
+  if (!session) return <div className="text-text-faint text-center py-12">{t("noteNotFound")}</div>;
 
   const stressLines = session.stress_pronunciation ? parseSentences(session.stress_pronunciation) : [];
   const vocabEntries = session.vocabulary ? parseVocabulary(session.vocabulary) : [];
@@ -292,7 +292,7 @@ function NoteDetailContent() {
       <div className="flex items-center justify-between">
         <Link
           href={`/notes?filter=${session?.language || "english"}`}
-          className="inline-flex items-center gap-1 text-sm text-gray-500 hover:text-gray-300 transition-colors"
+          className="inline-flex items-center gap-1 text-sm text-text-faint hover:text-text-secondary transition-colors"
         >
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
           {locale === "ko" ? "목록으로" : "Back to list"}
@@ -302,23 +302,23 @@ function NoteDetailContent() {
             <Link
               href={`/notes/${prevId}`}
               title={locale === "ko" ? "이전 노트로 이동" : "Go to previous note"}
-              className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+              className="p-1.5 text-text-faint hover:text-text-secondary transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
             </Link>
           ) : (
-            <span className="p-1.5 text-gray-700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
+            <span className="p-1.5 text-text-faint"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6"/></svg></span>
           )}
           {nextId ? (
             <Link
               href={`/notes/${nextId}`}
               title={locale === "ko" ? "다음 노트로 이동" : "Go to next note"}
-              className="p-1.5 text-gray-500 hover:text-gray-300 transition-colors"
+              className="p-1.5 text-text-faint hover:text-text-secondary transition-colors"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
             </Link>
           ) : (
-            <span className="p-1.5 text-gray-700"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
+            <span className="p-1.5 text-text-faint"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6"/></svg></span>
           )}
         </div>
       </div>
@@ -329,12 +329,12 @@ function NoteDetailContent() {
           <div className="flex items-center gap-3 mb-1">
             <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
               session.language === "english"
-                ? "bg-blue-500/20 text-blue-400"
-                : "bg-red-500/20 text-red-400"
+                ? "bg-primary/20 text-primary"
+                : "bg-primary/20 text-primary"
             }`}>
               {session.language === "english" ? "English" : "日本語"}
             </span>
-            <span className="text-sm text-gray-500">{session.study_date}</span>
+            <span className="text-sm text-text-faint">{session.study_date}</span>
           </div>
           {session.title && <h1 className="text-2xl font-bold">{session.title}</h1>}
         </div>
@@ -342,7 +342,7 @@ function NoteDetailContent() {
           <Link
             href={`/review?noteId=${params.id}`}
             title={locale === "ko" ? "이 노트 카드로 복습" : "Review this note as cards"}
-            className="p-2 rounded-lg text-gray-500 hover:text-indigo-400 transition-colors"
+            className="p-2 rounded-lg text-text-faint hover:text-primary transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
@@ -366,7 +366,7 @@ function NoteDetailContent() {
               }
             }}
             title={locale === "ko" ? "공유하기" : "Share"}
-            className={`p-2 rounded-lg transition-colors ${session.shared ? "text-indigo-400 hover:text-indigo-300" : "text-gray-500 hover:text-gray-300"}`}
+            className={`p-2 rounded-lg transition-colors ${session.shared ? "text-primary hover:text-primary" : "text-text-faint hover:text-text-secondary"}`}
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
@@ -384,17 +384,17 @@ function NoteDetailContent() {
           color="purple"
           action={editingField === "stress_pronunciation" ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleSaveEdit} disabled={saving} className="text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors">
+              <button onClick={handleSaveEdit} disabled={saving} className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
-              <button onClick={() => setEditingField(null)} className="text-gray-500 hover:text-gray-300 transition-colors">
+              <button onClick={() => setEditingField(null)} className="text-text-faint hover:text-text-secondary transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           ) : (
             <button
               onClick={() => startEditing("stress_pronunciation")}
-              className="text-xs text-gray-500 hover:text-purple-400 transition-colors"
+              className="text-xs text-text-faint hover:text-primary transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
@@ -412,7 +412,7 @@ function NoteDetailContent() {
           ) : (
             <div className="space-y-2">
               {stressLines.map((s, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300 flex items-center gap-2">
+                <div key={i} className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-secondary flex items-center gap-2">
                   <span className="flex-1">{s}</span>
                   <LineActions
                     text={s}
@@ -436,17 +436,17 @@ function NoteDetailContent() {
           color="green"
           action={editingField === "vocabulary" ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleSaveEdit} disabled={saving} className="text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors">
+              <button onClick={handleSaveEdit} disabled={saving} className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
-              <button onClick={() => setEditingField(null)} className="text-gray-500 hover:text-gray-300 transition-colors">
+              <button onClick={() => setEditingField(null)} className="text-text-faint hover:text-text-secondary transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           ) : (
             <button
               onClick={() => startEditing("vocabulary")}
-              className="text-xs text-gray-500 hover:text-green-400 transition-colors"
+              className="text-xs text-text-faint hover:text-primary transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
@@ -464,12 +464,12 @@ function NoteDetailContent() {
           ) : vocabEntries.length > 0 ? (
             <div className="space-y-3">
               {vocabEntries.map((v, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3 flex items-start gap-2">
+                <div key={i} className="bg-bg-input/50 rounded-lg p-3 flex items-start gap-2">
                   <div className="flex-1">
-                    <div className="font-semibold text-green-400 text-sm">{v.term}</div>
-                    <div className="text-gray-300 text-sm mt-1">{v.definition}</div>
+                    <div className="font-semibold text-primary text-sm">{v.term}</div>
+                    <div className="text-text-secondary text-sm mt-1">{v.definition}</div>
                     {v.example && (
-                      <div className="text-gray-400 text-sm mt-1 italic">→ {v.example}</div>
+                      <div className="text-text-muted text-sm mt-1 italic">→ {v.example}</div>
                     )}
                   </div>
                   <LineActions
@@ -483,7 +483,7 @@ function NoteDetailContent() {
               ))}
             </div>
           ) : (
-            <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300">
+            <pre className="whitespace-pre-wrap font-sans text-sm text-text-secondary">
               {session.vocabulary}
             </pre>
           )}
@@ -498,17 +498,17 @@ function NoteDetailContent() {
           color="blue"
           action={editingField === "sentence_grammar" ? (
             <div className="flex items-center gap-2">
-              <button onClick={handleSaveEdit} disabled={saving} className="text-green-400 hover:text-green-300 disabled:opacity-50 transition-colors">
+              <button onClick={handleSaveEdit} disabled={saving} className="text-primary hover:text-primary-hover disabled:opacity-50 transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </button>
-              <button onClick={() => setEditingField(null)} className="text-gray-500 hover:text-gray-300 transition-colors">
+              <button onClick={() => setEditingField(null)} className="text-text-faint hover:text-text-secondary transition-colors">
                 <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
               </button>
             </div>
           ) : (
             <button
               onClick={() => startEditing("sentence_grammar")}
-              className="text-xs text-gray-500 hover:text-blue-400 transition-colors"
+              className="text-xs text-text-faint hover:text-primary transition-colors"
             >
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
             </button>
@@ -526,7 +526,7 @@ function NoteDetailContent() {
           ) : (
             <div className="space-y-2">
               {sentences.map((s, i) => (
-                <div key={i} className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-300 flex items-center gap-2">
+                <div key={i} className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-secondary flex items-center gap-2">
                   <span className="flex-1">{s}</span>
                   <LineActions
                     text={s}
@@ -545,7 +545,7 @@ function NoteDetailContent() {
       {/* Comment */}
       {session.comment && (
         <SectionCard title="Comment" icon="💬" color="yellow">
-          <pre className="whitespace-pre-wrap font-sans text-sm text-gray-300">
+          <pre className="whitespace-pre-wrap font-sans text-sm text-text-secondary">
             {session.comment}
           </pre>
         </SectionCard>
@@ -564,12 +564,12 @@ function NoteDetailContent() {
       {/* Split Preview Modal */}
       {(splitTarget && (splitLoading || splitPreview)) && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSplitTarget(null); setSplitPreview(null); }}>
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-center">
               {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
             </h3>
-            <div className="bg-gray-800/50 rounded-lg p-3 text-sm text-gray-400">
-              <span className="text-xs text-gray-600 block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
+            <div className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-muted">
+              <span className="text-xs text-text-faint block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
               {splitTarget?.text}
             </div>
             {splitLoading ? (
@@ -579,12 +579,12 @@ function NoteDetailContent() {
             ) : splitPreview ? (
               <>
                 <div className="flex items-center justify-between">
-                  <span className="text-xs text-gray-500">
+                  <span className="text-xs text-text-faint">
                     {splitSelected.size}/{splitPreview.length} {locale === "ko" ? "선택" : "selected"}
                   </span>
                   <button
                     onClick={() => setSplitSelected(splitSelected.size === splitPreview.length ? new Set() : new Set(splitPreview.map((_, i) => i)))}
-                    className="text-xs text-indigo-400 hover:text-indigo-300 transition-colors"
+                    className="text-xs text-primary hover:text-primary transition-colors"
                   >
                     {splitSelected.size === splitPreview.length
                       ? (locale === "ko" ? "전체 해제" : "Deselect all")
@@ -598,8 +598,8 @@ function NoteDetailContent() {
                       onClick={() => setSplitSelected((prev) => { const next = new Set(prev); if (next.has(i)) next.delete(i); else next.add(i); return next; })}
                       className={`rounded-lg p-3 text-sm cursor-pointer transition-colors ${
                         splitSelected.has(i)
-                          ? "bg-indigo-600/20 border border-indigo-500/40 text-gray-200"
-                          : "bg-gray-800/30 text-gray-600"
+                          ? "bg-primary/20 border border-primary/40 text-text"
+                          : "bg-bg-input/30 text-text-faint"
                       }`}
                     >
                       {s}
@@ -607,10 +607,10 @@ function NoteDetailContent() {
                   ))}
                 </div>
                 <div className="flex items-center justify-between pt-1">
-                  <span className="text-sm text-gray-400">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
+                  <span className="text-sm text-text-muted">{locale === "ko" ? "나눈 카드로 대체" : "Replace with split cards"}</span>
                   <button
                     onClick={() => setSplitDeleteOrig((v) => !v)}
-                    className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-gray-700"}`}
+                    className={`w-10 h-5 rounded-full transition-colors relative ${splitDeleteOrig ? "bg-orange-500" : "bg-bg-hover"}`}
                   >
                     <span className={`absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full transition-transform ${splitDeleteOrig ? "translate-x-5" : "translate-x-0"}`} />
                   </button>
@@ -618,7 +618,7 @@ function NoteDetailContent() {
                 <div className="flex gap-3">
                   <button
                     onClick={() => { setSplitTarget(null); setSplitPreview(null); }}
-                    className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                    className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
                   >
                     {locale === "ko" ? "취소" : "Cancel"}
                   </button>
@@ -648,11 +648,11 @@ function NoteDetailContent() {
       {/* Split Delete Confirm Popup */}
       {splitDeleteConfirm && (
         <div className="fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4" onClick={() => setSplitDeleteConfirm(false)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm text-gray-300 text-center">
+          <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-text-secondary text-center">
               {locale === "ko" ? "기존 카드는 삭제되고 나뉘어진 카드로 대체됩니다" : "The original card will be deleted and replaced with split cards"}
             </p>
-            <label className="flex items-center justify-center gap-2 text-xs text-gray-500 cursor-pointer">
+            <label className="flex items-center justify-center gap-2 text-xs text-text-faint cursor-pointer">
               <input
                 type="checkbox"
                 checked={splitDontAsk}
@@ -664,7 +664,7 @@ function NoteDetailContent() {
             <div className="flex gap-3">
               <button
                 onClick={() => setSplitDeleteConfirm(false)}
-                className="flex-1 py-2 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                className="flex-1 py-2 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
               >
                 {locale === "ko" ? "취소" : "Cancel"}
               </button>
@@ -686,13 +686,13 @@ function NoteDetailContent() {
       {/* Split No Result Modal */}
       {splitNoResult && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitNoResult(false)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
-            <p className="text-sm text-gray-400 text-center">
+          <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+            <p className="text-sm text-text-muted text-center">
               {locale === "ko" ? "나눌 문장이 없습니다" : "No sentences to split"}
             </p>
             <button
               onClick={() => setSplitNoResult(false)}
-              className="w-full py-2.5 bg-gray-800 text-gray-300 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+              className="w-full py-2.5 bg-bg-input text-text-secondary rounded-lg text-sm hover:bg-bg-hover transition-colors"
             >
               {locale === "ko" ? "확인" : "OK"}
             </button>
@@ -703,16 +703,16 @@ function NoteDetailContent() {
       {/* Split AI Confirm Modal */}
       {splitAiConfirm && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(null)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-center">
               {locale === "ko" ? "문장 나누기" : "Split Sentences"}
             </h3>
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-sm text-text-muted text-center">
               {locale === "ko"
                 ? "AI를 이용한 문장 나누기 기능입니다."
                 : "This feature uses AI to split sentences."}
             </p>
-            <p className="text-xs text-gray-500 text-center">
+            <p className="text-xs text-text-faint text-center">
               {locale === "ko"
                 ? `남은 횟수: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}회`
                 : `Remaining: ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}`}
@@ -720,7 +720,7 @@ function NoteDetailContent() {
             <div className="flex gap-3">
               <button
                 onClick={() => setSplitAiConfirm(null)}
-                className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
               >
                 {locale === "ko" ? "취소" : "Cancel"}
               </button>
@@ -738,17 +738,17 @@ function NoteDetailContent() {
       {/* Delete Confirm Modal */}
       {deleteTarget && (
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setDeleteTarget(null)}>
-          <div className="bg-gray-900 border border-gray-700 rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
+          <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-center">
               {locale === "ko" ? "항목 삭제" : "Delete Item"}
             </h3>
-            <p className="text-sm text-gray-400 text-center">
+            <p className="text-sm text-text-muted text-center">
               {locale === "ko" ? "이 항목을 삭제하시겠습니까?" : "Delete this item?"}
             </p>
             <div className="flex gap-3">
               <button
                 onClick={() => setDeleteTarget(null)}
-                className="flex-1 py-2.5 bg-gray-800 text-gray-400 rounded-lg text-sm hover:bg-gray-700 transition-colors"
+                className="flex-1 py-2.5 bg-bg-input text-text-muted rounded-lg text-sm hover:bg-bg-hover transition-colors"
               >
                 {locale === "ko" ? "취소" : "Cancel"}
               </button>
@@ -849,11 +849,11 @@ function EditableLines({
             type="text"
             value={line}
             onChange={(e) => onChangeLine(i, e.target.value)}
-            className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
+            className="flex-1 bg-bg-input border border-border-light rounded-lg px-3 py-2 text-sm focus:border-blue-500 outline-none"
           />
           <button
             onClick={() => onRemoveLine(i)}
-            className="text-gray-600 hover:text-red-400 px-1 transition-colors"
+            className="text-text-faint hover:text-red-400 px-1 transition-colors"
           >
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
           </button>
@@ -869,21 +869,21 @@ function SectionCard({
   title: string; icon: string; color: string; children: React.ReactNode; action?: React.ReactNode;
 }) {
   const borderColors: Record<string, string> = {
-    purple: "border-purple-500/30",
-    green: "border-green-500/30",
-    blue: "border-blue-500/30",
-    yellow: "border-yellow-500/30",
+    purple: "border-primary/30",
+    green: "border-primary/30",
+    blue: "border-primary/30",
+    yellow: "border-primary/30",
   };
   const titleColors: Record<string, string> = {
-    purple: "text-purple-400",
-    green: "text-green-400",
-    blue: "text-blue-400",
-    yellow: "text-yellow-400",
+    purple: "text-primary",
+    green: "text-primary",
+    blue: "text-primary",
+    yellow: "text-primary",
   };
 
   return (
-    <div className={`bg-gray-900 border ${borderColors[color]} rounded-xl overflow-hidden`}>
-      <div className="px-5 py-3 border-b border-gray-800/50 flex items-center justify-between">
+    <div className={`bg-bg-card border ${borderColors[color]} rounded-xl overflow-hidden`}>
+      <div className="px-5 py-3 border-b border-border/50 flex items-center justify-between">
         <h2 className={`text-sm font-semibold ${titleColors[color]}`}>
           {icon} {title}
         </h2>
@@ -903,15 +903,15 @@ function LineActions({ showSplit, onShare, onSplit, onDelete }: {
 }) {
   return (
     <div className="flex items-center gap-1.5 shrink-0">
-      <button onClick={onShare} title="Share" className="text-gray-600 hover:text-gray-300 transition-colors">
+      <button onClick={onShare} title="Share" className="text-text-faint hover:text-text-secondary transition-colors">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/></svg>
       </button>
       {showSplit && (
-        <button onClick={onSplit} title="Split" className="text-gray-600 hover:text-orange-400 transition-colors">
+        <button onClick={onSplit} title="Split" className="text-text-faint hover:text-orange-400 transition-colors">
           <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="8" x2="12" y2="11"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="12" y1="22" x2="12" y2="23"/></svg>
         </button>
       )}
-      <button onClick={onDelete} title="Delete" className="text-gray-600 hover:text-red-400 transition-colors">
+      <button onClick={onDelete} title="Delete" className="text-text-faint hover:text-red-400 transition-colors">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
       </button>
     </div>

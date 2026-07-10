@@ -354,7 +354,7 @@ function NuanceContent() {
   }
 
   return (
-    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-[#0a0a0a] overflow-hidden px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="nuance" />
 
       {/* Tone & Language */}
@@ -367,15 +367,15 @@ function NuanceContent() {
               onClick={() => changeTone(opt.value)}
               className={`px-2.5 py-1 rounded-lg text-xs font-medium border transition-all ${
                 tone === opt.value
-                  ? "bg-emerald-500/20 border-emerald-500 text-emerald-400"
-                  : "bg-gray-900 border-gray-700 text-gray-400 hover:bg-gray-800"
+                  ? "bg-primary/20 border-primary text-primary"
+                  : "bg-bg-card border-border-light text-text-muted hover:bg-bg-input"
               }`}
             >
               {opt.label}
             </button>
           ))}
         </div>
-        <div data-guide="nuance-langs" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+        <div data-guide="nuance-langs" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
           {LANGS_OPTIONS.map((lang) => (
             <button
               key={lang}
@@ -383,8 +383,8 @@ function NuanceContent() {
               onClick={() => selectLang(lang)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 targetLangs.includes(lang)
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
               }`}
             >
               {lang === "English" ? "🇺🇸" : "🇯🇵"}
@@ -397,13 +397,13 @@ function NuanceContent() {
       <div className="flex-1 overflow-y-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
         {initialLoading && (
           <div className="text-center py-12">
-            <p className="text-gray-500 text-sm">{t("loadingChat")}</p>
+            <p className="text-text-faint text-sm">{t("loadingChat")}</p>
           </div>
         )}
 
         {!initialLoading && messages.length === 0 && (
           <div className="text-center py-16">
-            <p className="text-gray-400 text-lg">
+            <p className="text-text-muted text-lg">
               {t("askAnything")}
             </p>
           </div>
@@ -442,12 +442,12 @@ function NuanceContent() {
                     <button
                       onClick={() => handleDeletePair(pairIdx)}
                       title={locale === "ko" ? "이 대화를 삭제합니다" : "Delete this conversation"}
-                      className="hidden [@media(hover:hover)]:flex opacity-0 group-hover/msg:opacity-100 self-center mr-2 p-1.5 text-gray-600 hover:text-red-400 transition-all"
+                      className="hidden [@media(hover:hover)]:flex opacity-0 group-hover/msg:opacity-100 self-center mr-2 p-1.5 text-text-faint hover:text-red-400 transition-all"
                     >
                       <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                     </button>
                     <div
-                      className="bg-indigo-600 text-white rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] cursor-pointer active:bg-indigo-500 transition-colors"
+                      className="bg-primary text-primary-text rounded-2xl rounded-tr-sm px-4 py-3 max-w-[85%] cursor-pointer active:bg-primary-hover transition-colors"
                       onClick={() => { if (!isSwiped && userMsg.text) { setInput(userMsg.text); inputRef.current?.focus(); } }}
                     >
                       <p className="text-sm leading-relaxed">{userMsg.text}</p>
@@ -464,15 +464,15 @@ function NuanceContent() {
                         className={`rounded-2xl rounded-tl-sm px-4 py-4 max-w-[95%] ${
                           result.language === "Error"
                             ? "bg-red-900/30 border border-red-500/30"
-                            : "bg-gray-900 border border-gray-800"
+                            : "bg-bg-card border border-border"
                         }`}
                       >
                         {result.language !== "Error" && (
-                          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-gray-800">
+                          <div className="flex items-center gap-2 mb-2 pb-2 border-b border-border">
                             <span className="text-sm">
                               {result.language === "English" ? "🇺🇸" : result.language === "Japanese" ? "🇯🇵" : "🌐"}
                             </span>
-                            <span className="text-xs font-medium text-emerald-400 uppercase tracking-wider">
+                            <span className="text-xs font-medium text-primary uppercase tracking-wider">
                               {result.language}
                             </span>
                           </div>
@@ -492,8 +492,8 @@ function NuanceContent() {
                             disabled={savingNote === `${result.language}-${result.translation}` || savedKeys.has(`${result.language}-${result.translation}`)}
                             className={`shrink-0 mt-1 w-6 h-6 flex items-center justify-center rounded-full transition-colors text-sm ${
                               savedKeys.has(`${result.language}-${result.translation}`)
-                                ? "text-green-400 border border-green-500/30 bg-green-600/20"
-                                : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                                ? "text-primary border border-primary/30 bg-primary/20"
+                                : "bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 disabled:opacity-50"
                             }`}
                           >
                             {savedKeys.has(`${result.language}-${result.translation}`) ? "✓" : savingNote === `${result.language}-${result.translation}` ? "·" : "+"}
@@ -501,22 +501,22 @@ function NuanceContent() {
                         </div>
 
                         {result.nuance && (
-                          <div className="bg-gray-800/50 rounded-lg p-3 mb-3">
-                            <p className="text-xs font-medium text-indigo-400 mb-1">{t("whyExpression")}</p>
-                            <p className="text-sm text-gray-300 leading-relaxed">{result.nuance}</p>
+                          <div className="bg-bg-input/50 rounded-lg p-3 mb-3">
+                            <p className="text-xs font-medium text-primary mb-1">{t("whyExpression")}</p>
+                            <p className="text-sm text-text-secondary leading-relaxed">{result.nuance}</p>
                           </div>
                         )}
 
                         {result.alternatives?.length > 0 && (
                           <div className="mb-3">
-                            <p className="text-xs font-medium text-gray-500 mb-1.5">{t("alternatives")}</p>
+                            <p className="text-xs font-medium text-text-faint mb-1.5">{t("alternatives")}</p>
                             <div className="space-y-1">
                               {result.alternatives.map((alt, altIdx) => {
                                 const altText = alt.replace(/\s*\([^)]*[가-힣][^)]*\)\s*$/, "").trim();
                                 return (
                                   <div key={altIdx} className="flex items-center gap-1.5">
                                     <div
-                                      className="flex-1 text-sm text-gray-400 bg-gray-800/30 rounded-md px-3 py-1.5 cursor-pointer active:opacity-70 transition-opacity"
+                                      className="flex-1 text-sm text-text-muted bg-bg-input/30 rounded-md px-3 py-1.5 cursor-pointer active:opacity-70 transition-opacity"
                                       onClick={() => speak(altText, result.language === "Japanese" ? "japanese" : "english")}
                                     >
                                       {alt}
@@ -526,8 +526,8 @@ function NuanceContent() {
                                       disabled={savingNote === `${result.language}-${altText}` || savedKeys.has(`${result.language}-${altText}`)}
                                       className={`shrink-0 w-5 h-5 flex items-center justify-center rounded-full transition-colors text-xs ${
                                         savedKeys.has(`${result.language}-${altText}`)
-                                          ? "text-green-400 border border-green-500/30 bg-green-600/20"
-                                          : "bg-indigo-600/20 text-indigo-400 border border-indigo-500/30 hover:bg-indigo-600/30 disabled:opacity-50"
+                                          ? "text-primary border border-primary/30 bg-primary/20"
+                                          : "bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 disabled:opacity-50"
                                       }`}
                                     >
                                       {savedKeys.has(`${result.language}-${altText}`) ? "✓" : savingNote === `${result.language}-${altText}` ? "·" : "+"}
@@ -550,8 +550,8 @@ function NuanceContent() {
 
         {loading && (
           <div className="flex justify-start">
-            <div className="bg-gray-900 border border-gray-800 rounded-2xl rounded-tl-sm px-4 py-3">
-              <p className="text-sm text-purple-400 animate-pulse">{t("translating")}</p>
+            <div className="bg-bg-card border border-border rounded-2xl rounded-tl-sm px-4 py-3">
+              <p className="text-sm text-primary animate-pulse">{t("translating")}</p>
             </div>
           </div>
         )}
@@ -561,19 +561,19 @@ function NuanceContent() {
 
       {/* Free usage + Date Tabs + Input */}
       {plan !== "pro" && (
-        <p className="text-center text-xs text-gray-500 pt-2 pb-1">
-          {!user ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-indigo-400" : "text-red-400"}>{aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
+        <p className="text-center text-xs text-text-faint pt-2 pb-1">
+          {!user ? (locale === "ko" ? "무료 체험 " : "Free trial ") : t("aiFree")}<span className={aiRemaining > 0 ? "text-primary" : "text-red-400"}>{aiRemaining}/{!user ? GUEST_LIMIT : DAILY_LIMIT}</span>{t("aiRemaining")}
         </p>
       )}
-      <div className="pt-3 border-t border-gray-800">
+      <div className="pt-3 border-t border-border">
         <div className="flex items-center gap-1 mb-2">
           <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">
             <button
               onClick={() => setSelectedDate("today")}
               className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                 selectedDate === "today"
-                  ? "bg-indigo-600 text-white"
-                  : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                  ? "bg-primary text-primary-text"
+                  : "bg-bg-input text-text-muted hover:bg-bg-hover"
               }`}
             >
               {t("today")}
@@ -586,8 +586,8 @@ function NuanceContent() {
                   onClick={() => setSelectedDate(date)}
                   className={`px-3 py-1 rounded-lg text-xs font-medium whitespace-nowrap transition-colors ${
                     selectedDate === date
-                      ? "bg-indigo-600 text-white"
-                      : "bg-gray-800 text-gray-400 hover:bg-gray-700"
+                      ? "bg-primary text-primary-text"
+                      : "bg-bg-input text-text-muted hover:bg-bg-hover"
                   }`}
                 >
                   {formatDateTab(date)}
@@ -605,12 +605,12 @@ function NuanceContent() {
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={plan !== "pro" && aiRemaining <= 0 ? (locale === "ko" ? "무료 횟수를 모두 사용했어요" : "Free uses exhausted") : t("enterSentence")}
             rows={1}
-            className="flex-1 bg-gray-900 border border-gray-800 rounded-xl px-4 py-3 text-sm resize-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+            className="flex-1 bg-bg-card border border-border rounded-xl px-4 py-3 text-sm resize-none focus:border-primary focus:ring-1 focus:ring-primary outline-none"
           />
           <button
             onClick={() => { if (plan !== "pro" && aiRemaining <= 0) { router.push(!user ? "/login" : "/pricing"); return; } handleSend(); }}
             disabled={loading || (!input.trim() && !(plan !== "pro" && aiRemaining <= 0))}
-            className="px-4 bg-indigo-600 hover:bg-indigo-500 disabled:bg-gray-700 disabled:text-gray-500 rounded-xl text-sm font-medium transition-colors"
+            className="px-4 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-xl text-sm font-medium transition-colors"
           >
             {t("send")}
           </button>

@@ -101,14 +101,14 @@ function LoginContent() {
   return (
     <div>
       <div className="flex justify-end mb-4">
-        <div className="flex gap-1 bg-gray-900 rounded-lg p-1">
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1">
           {(["ko", "en"] as const).map((l) => (
             <button
               key={l}
               title={l === "ko" ? "한국어로 전환" : "Switch to English"}
               onClick={() => setLocale(l)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                locale === l ? "bg-gray-700 text-white" : "text-gray-400 hover:text-gray-200"
+                locale === l ? "bg-bg-hover text-text" : "text-text-muted hover:text-text"
               }`}
             >
               {l === "ko" ? "🇰🇷" : "🇺🇸"}
@@ -120,12 +120,12 @@ function LoginContent() {
       <div className="w-full max-w-sm space-y-6 text-center">
         <div>
           <h1 className="text-2xl font-bold">
-            <span className="text-blue-400">EN</span>
-            <span className="text-gray-500">/</span>
-            <span className="text-red-400">JP</span>
-            <span className="text-gray-400 ml-2 text-lg font-normal">Lab</span>
+            <span className="text-primary">EN</span>
+            <span className="text-text-faint">/</span>
+            <span className="text-primary">JP</span>
+            <span className="text-text-muted ml-2 text-lg font-normal">Lab</span>
           </h1>
-          <p className="text-gray-500 text-sm mt-2">
+          <p className="text-text-faint text-sm mt-2">
             {t("langLabDesc")}
           </p>
         </div>
@@ -136,7 +136,7 @@ function LoginContent() {
               <p className="text-yellow-400 text-sm font-medium mb-2">
                 {t("redirectingBrowser")}
               </p>
-              <p className="text-gray-400 text-xs">
+              <p className="text-text-muted text-xs">
                 {t("autoRedirectFail")}
               </p>
             </div>
@@ -150,7 +150,7 @@ function LoginContent() {
                   window.location.href = `intent://${url}#Intent;scheme=https;package=com.android.chrome;end`;
                 }
               }}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
+              className="w-full py-3 bg-primary hover:bg-primary-hover text-primary-text rounded-lg font-medium text-sm transition-colors"
             >
               {t("openInBrowser")}
             </button>
@@ -161,18 +161,18 @@ function LoginContent() {
               <p className="text-yellow-400 text-sm font-medium mb-2">
                 {t("inAppRestricted")}
               </p>
-              <p className="text-gray-400 text-xs leading-relaxed">
-                {t("tapMenu")} <span className="text-gray-300 font-medium">⋯</span> {t("menuAbove")}<br />
-                <span className="text-gray-300 font-medium">&quot;{t("openDefault")}&quot;</span>.
+              <p className="text-text-muted text-xs leading-relaxed">
+                {t("tapMenu")} <span className="text-text-secondary font-medium">⋯</span> {t("menuAbove")}<br />
+                <span className="text-text-secondary font-medium">&quot;{t("openDefault")}&quot;</span>.
               </p>
             </div>
             <button
               onClick={handleCopyUrl}
-              className="w-full py-3 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg font-medium text-sm transition-colors"
+              className="w-full py-3 bg-primary hover:bg-primary-hover text-primary-text rounded-lg font-medium text-sm transition-colors"
             >
               {t("copyUrl")}
             </button>
-            <p className="text-gray-600 text-xs">
+            <p className="text-text-faint text-xs">
               {t("orPasteSafari")}
             </p>
           </div>
@@ -201,9 +201,9 @@ function LoginContent() {
             </button>
             <button
               onClick={() => { sessionStorage.setItem("browsing", "1"); router.push("/"); }}
-              className="mx-auto flex flex-col items-center justify-center h-[44px] px-6 rounded-lg border border-gray-800 hover:border-gray-600 transition-colors"
+              className="mx-auto flex flex-col items-center justify-center h-[44px] px-6 rounded-lg border border-border hover:border-border-light transition-colors"
             >
-              <span className="text-sm text-gray-400 leading-none">{locale === "ko" ? "먼저 둘러보기" : "Browse first"}</span>
+              <span className="text-sm text-text-muted leading-none">{locale === "ko" ? "먼저 둘러보기" : "Browse first"}</span>
               <span className="text-[10px] text-yellow-600/80 leading-none mt-1">{locale === "ko" ? "데이터가 저장되지 않습니다" : "Data will not be saved"}</span>
             </button>
           </div>

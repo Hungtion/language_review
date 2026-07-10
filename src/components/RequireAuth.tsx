@@ -15,7 +15,7 @@ export default function RequireAuth({ children, strict }: { children: React.Reac
   }, [user, loading, router, strict, isAnonymous]);
 
   if (loading) {
-    return <div className="text-gray-500 text-center py-12">로딩 중...</div>;
+    return <div className="text-text-faint text-center py-12">로딩 중...</div>;
   }
 
   if (strict && (!user || isAnonymous)) return null;

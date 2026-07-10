@@ -115,18 +115,18 @@ function NotesContent() {
             value={search}
             onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="🔍"
-            className="w-full bg-gray-900 border border-gray-800 rounded-lg px-3 py-2 text-sm focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none"
+            className="w-full bg-bg-card border border-border rounded-lg px-3 py-2 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
           />
         </div>
         <Link
           title={locale === "ko" ? "새 노트 추가" : "Add new note"}
           data-guide="notes-add"
           href={`/add?lang=${filter}`}
-          className="px-7 py-2 rounded-lg text-sm bg-indigo-600 hover:bg-indigo-500 text-white transition-colors shrink-0"
+          className="px-7 py-2 rounded-lg text-sm bg-primary hover:bg-primary-hover text-primary-text transition-colors shrink-0"
         >
           +
         </Link>
-        <div data-guide="notes-lang" className="flex gap-1 bg-gray-900 rounded-lg p-1 shrink-0">
+        <div data-guide="notes-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
@@ -134,8 +134,8 @@ function NotesContent() {
               onClick={() => handleFilterChange(f)}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 filter === f
-                  ? "bg-gray-700 text-white"
-                  : "text-gray-400 hover:text-gray-200"
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
               }`}
             >
               {f === "english" ? "🇺🇸" : "🇯🇵"}
@@ -147,19 +147,19 @@ function NotesContent() {
       {!loading && filtered.length > 0 && !search.trim() && (
         <Link
           href="/review"
-          className="flex items-center justify-between bg-indigo-600/10 border border-indigo-500/20 rounded-xl px-4 py-3 hover:bg-indigo-600/20 transition-colors group"
+          className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 hover:bg-primary/20 transition-colors group"
         >
           <div className="flex items-center gap-3">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
               <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
               <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
               <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
             </svg>
-            <span className="text-sm text-indigo-400 font-medium">
+            <span className="text-sm text-primary font-medium">
               {locale === "ko" ? "카드로 복습하기" : "Review with Cards"}
             </span>
           </div>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-indigo-400/60 group-hover:translate-x-1 transition-transform">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary/60 group-hover:translate-x-1 transition-transform">
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </Link>
@@ -167,15 +167,15 @@ function NotesContent() {
 
       <div data-guide="notes-list" className="space-y-3 flex-1" style={{ minHeight: "calc(100vh - 10rem)" }}>
         {loading ? (
-          <div className="text-gray-500 text-center py-12">{t("loading")}</div>
+          <div className="text-text-faint text-center py-12">{t("loading")}</div>
         ) : filtered.length === 0 ? (
           <div className="text-center py-16">
             {search.trim() ? (
-              <p className="text-gray-500">{t("noSearchResults")}</p>
+              <p className="text-text-faint">{t("noSearchResults")}</p>
             ) : (
               <>
-                <p className="text-gray-500 mb-4">{t("noNotes")}</p>
-                <Link href="/add" className="text-indigo-400 hover:text-indigo-300">
+                <p className="text-text-faint mb-4">{t("noNotes")}</p>
+                <Link href="/add" className="text-primary hover:text-primary">
                   {t("firstNote")}
                 </Link>
               </>
@@ -187,26 +187,26 @@ function NotesContent() {
               <Link
                 href={`/notes/${s.id}`}
                 onClick={() => { markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id)); }}
-                className="block bg-gray-900 border border-gray-800 rounded-xl p-5 hover:border-gray-700 transition-colors group"
+                className="block bg-bg-card border border-border rounded-xl p-5 hover:border-border-light transition-colors group"
               >
                 <div className="flex items-center gap-3 mb-2">
                   <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
                     s.language === "english"
-                      ? "bg-blue-500/20 text-blue-400"
-                      : "bg-red-500/20 text-red-400"
+                      ? "bg-primary/20 text-primary"
+                      : "bg-primary/20 text-primary"
                   }`}>
                     {s.language === "english" ? "English" : "日本語"}
                   </span>
-                  <span className="text-sm text-gray-500">{s.study_date}</span>
+                  <span className="text-sm text-text-faint">{s.study_date}</span>
                   {s.title && (
-                    <span className="text-sm text-gray-300 font-medium">{s.title}</span>
+                    <span className="text-sm text-text-secondary font-medium">{s.title}</span>
                   )}
                   {!seenNotes.has(s.id) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-green-500/20 text-green-400 font-medium">NEW</span>
+                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">NEW</span>
                   )}
                 </div>
 
-                <div className="flex gap-4 text-xs text-gray-600">
+                <div className="flex gap-4 text-xs text-text-faint">
                   {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
                   {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
                   {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
@@ -214,13 +214,13 @@ function NotesContent() {
                 </div>
 
                 {s.vocabulary && (
-                  <p className="text-gray-500 text-sm mt-2 truncate group-hover:text-gray-400">
+                  <p className="text-text-faint text-sm mt-2 truncate group-hover:text-text-muted">
                     {s.vocabulary.slice(0, 120)}...
                   </p>
                 )}
               </Link>
               {(i + 1) % 5 === 0 && i < filtered.length - 1 && (
-                <div key={`ad-${i}`} className="mt-3 bg-gray-900 border border-gray-800 rounded-xl p-5 overflow-hidden">
+                <div key={`ad-${i}`} className="mt-3 bg-bg-card border border-border rounded-xl p-5 overflow-hidden">
                   <AdBanner />
                 </div>
               )}
