@@ -116,7 +116,7 @@ function SettingsContent() {
               >
                 {t === "light" ? (locale === "ko" ? "밝은 화면" : "Light")
                   : t === "dark" ? (locale === "ko" ? "어두운 화면" : "Dark")
-                  : (locale === "ko" ? "내 기기에 맞춤" : "System")}
+                  : (locale === "ko" ? "시스템" : "System")}
               </button>
             ))}
           </div>
