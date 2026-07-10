@@ -4,9 +4,9 @@ import { NextRequest } from "next/server";
 const PAYAPP_USERID = "hungtion";
 
 const LEAF_PACKAGES: Record<number, number> = {
-  500: 5,
   1000: 10,
   2000: 20,
+  5000: 50,
 };
 
 const supabase = createClient(

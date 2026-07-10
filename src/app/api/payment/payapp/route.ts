@@ -1,12 +1,12 @@
 import { NextRequest, NextResponse } from "next/server";
 
 const PAYAPP_USERID = "hungtion";
-const PAYAPP_API_URL = "https://api.payapp.kr/oapi/api_load.html";
+const PAYAPP_API_URL = "https://payapp.kr/oapi/apiLoad.html";
 
 const LEAF_PACKAGES: Record<number, number> = {
-  500: 5,
   1000: 10,
   2000: 20,
+  5000: 50,
 };
 
 export async function POST(req: NextRequest) {
@@ -21,7 +21,7 @@ export async function POST(req: NextRequest) {
     const feedbackUrl = `${siteUrl}/api/payment/webhook`;
 
     const params = new URLSearchParams({
-      cmd: "paylink",
+      cmd: "payrequest",
       userid: PAYAPP_USERID,
       goodname: goodname || `Leaf ${LEAF_PACKAGES[price]}`,
       price: String(price),
@@ -30,10 +30,10 @@ export async function POST(req: NextRequest) {
       var1: userId,
       var2: String(price),
       returnurl: `${siteUrl}/pricing?done=1`,
-      linkkey: process.env.PAYAPP_LINK_KEY || "",
     });
 
-    console.log("PayApp request params:", Object.fromEntries(params));
+    const linkKey = process.env.PAYAPP_LINK_KEY;
+    if (linkKey) params.set("linkkey", linkKey);
 
     const res = await fetch(PAYAPP_API_URL, {
       method: "POST",
@@ -42,18 +42,14 @@ export async function POST(req: NextRequest) {
     });
 
     const text = await res.text();
-    console.log("PayApp response status:", res.status);
-    console.log("PayApp raw response:", text);
-
     const result = Object.fromEntries(new URLSearchParams(text));
-    console.log("PayApp parsed response:", result);
 
-    if (result.state === "1" && result.online_url) {
-      return NextResponse.json({ url: result.online_url });
+    if (result.state === "1" && result.payurl) {
+      return NextResponse.json({ url: result.payurl });
     }
 
     return NextResponse.json(
-      { error: `PayApp raw: ${text.substring(0, 500)}`, parsed: result },
+      { error: result.errorMessage || "Failed to create payment" },
       { status: 400 }
     );
   } catch (e) {

@@ -7,9 +7,9 @@ import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 
 const PACKAGES = [
-  { credits: 5, price: 500, icon: "🌱" },
-  { credits: 10, price: 1000, icon: "🍃" },
-  { credits: 20, price: 2000, icon: "🌿" },
+  { credits: 10, price: 1000, icon: "🌱" },
+  { credits: 20, price: 2000, icon: "🍃" },
+  { credits: 50, price: 5000, icon: "🌿" },
 ];
 
 function PricingContent() {
