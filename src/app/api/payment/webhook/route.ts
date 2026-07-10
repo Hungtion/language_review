@@ -28,12 +28,7 @@ export async function POST(req: NextRequest) {
       return new Response("FAIL", { status: 400 });
     }
 
-    // Verify link value
-    const expectedValue = process.env.PAYAPP_LINK_VALUE;
-    if (expectedValue && linkValue !== expectedValue) {
-      console.log("[webhook] FAIL: linkValue mismatch", linkValue, "expected:", expectedValue);
-      return new Response("FAIL", { status: 400 });
-    }
+    // linkValue verification removed — PayApp doesn't always send it
 
     // state === "1" means payment success
     if (state !== "1") {
