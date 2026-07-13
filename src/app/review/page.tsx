@@ -288,16 +288,19 @@ function ReviewContent() {
       if (cards[index]) {
         speak(cards[index].front, cards[index].language, () => {
           if (!playingRef.current) return;
-          setIndex((prev) => {
-            if (prev < cards.length - 1) {
-              return prev + 1;
-            } else {
-              playingRef.current = false;
-              setPlaying(false);
-              return prev;
-            }
-          });
-          setFlipped(false);
+          setTimeout(() => {
+            if (!playingRef.current) return;
+            setIndex((prev) => {
+              if (prev < cards.length - 1) {
+                return prev + 1;
+              } else {
+                playingRef.current = false;
+                setPlaying(false);
+                return prev;
+              }
+            });
+            setFlipped(false);
+          }, 800);
         });
       }
     }
@@ -308,16 +311,19 @@ function ReviewContent() {
     if (playing && playingRef.current) {
       speak(cards[index].front, cards[index].language, () => {
         if (!playingRef.current) return;
-        setIndex((prev) => {
-          if (prev < cards.length - 1) {
-            return prev + 1;
-          } else {
-            playingRef.current = false;
-            setPlaying(false);
-            return prev;
-          }
-        });
-        setFlipped(false);
+        setTimeout(() => {
+          if (!playingRef.current) return;
+          setIndex((prev) => {
+            if (prev < cards.length - 1) {
+              return prev + 1;
+            } else {
+              playingRef.current = false;
+              setPlaying(false);
+              return prev;
+            }
+          });
+          setFlipped(false);
+        }, 800);
       });
     } else if (autoplay && !playing) {
       speak(cards[index].front, cards[index].language);
@@ -693,6 +699,11 @@ function ReviewContent() {
     // Quick tap (not a real swipe) → TTS + flip
     if ((e.target as HTMLElement).closest(".card-toolbar")) return;
     if (Math.abs(dx) <= 50) {
+      // Stop auto-play on card tap
+      if (playingRef.current) {
+        playingRef.current = false;
+        setPlaying(false);
+      }
       const c = cards[index];
       if (!c) return;
       if (c.back) {
