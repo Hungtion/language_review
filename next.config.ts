@@ -4,7 +4,7 @@ import { readFileSync } from "fs";
 function getVersion() {
   try {
     const count = readFileSync(".build-number", "utf-8").trim();
-    return `0.1.${count}`;
+    return `1.0.${count}`;
   } catch {
     return "0.1.0";
   }
