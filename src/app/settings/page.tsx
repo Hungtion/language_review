@@ -112,7 +112,7 @@ function SettingsContent() {
         {/* My Name */}
         <div className="flex items-center justify-between">
           {nameEditing ? (
-            <div className="flex items-center gap-2 flex-1">
+            <>
               <div className="relative w-[120px] shrink-0">
                 <input
                   type="text"
@@ -128,23 +128,25 @@ function SettingsContent() {
                 />
                 <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-faint">{displayName.length}/20</span>
               </div>
-              <button
-                onClick={saveDisplayName}
-                disabled={nameSaving || !displayName.trim()}
-                className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50"
-              >
-                {nameSaving ? "..." : (locale === "ko" ? "저장" : "Save")}
-              </button>
-              <button
-                onClick={() => {
-                  setDisplayName(user?.user_metadata?.full_name || user?.user_metadata?.name || "");
-                  setNameEditing(false);
-                }}
-                className="px-3 py-1.5 text-xs font-medium text-text-muted bg-bg-input border border-border rounded-lg hover:bg-bg-hover transition-colors"
-              >
-                {locale === "ko" ? "취소" : "Cancel"}
-              </button>
-            </div>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={saveDisplayName}
+                  disabled={nameSaving || !displayName.trim()}
+                  className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50"
+                >
+                  {nameSaving ? "..." : (locale === "ko" ? "저장" : "Save")}
+                </button>
+                <button
+                  onClick={() => {
+                    setDisplayName(user?.user_metadata?.full_name || user?.user_metadata?.name || "");
+                    setNameEditing(false);
+                  }}
+                  className="px-3 py-1.5 text-xs font-medium text-text-muted bg-bg-input border border-border rounded-lg hover:bg-bg-hover transition-colors"
+                >
+                  {locale === "ko" ? "취소" : "Cancel"}
+                </button>
+              </div>
+            </>
           ) : (
             <>
               <div className="flex items-center gap-2">
