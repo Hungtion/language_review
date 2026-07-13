@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useLocale } from "@/lib/useLocale";
 
 export type PronResult = {
@@ -62,6 +62,11 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
   const [listening, setListening] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+
+  useEffect(() => {
+    setResult(null);
+    setListening(false);
+  }, [targetText]);
 
   const supported = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
 
