@@ -113,19 +113,21 @@ function SettingsContent() {
         <div className="flex items-center justify-between">
           {nameEditing ? (
             <div className="flex items-center gap-2 flex-1">
-              <input
-                type="text"
-                value={displayName}
-                onChange={(e) => {
-                  const v = e.target.value.replace(/[<>"'&;]/g, "");
-                  if (v.length <= 20) setDisplayName(v);
-                }}
-                placeholder={locale === "ko" ? "내 이름" : "My Name"}
-                maxLength={20}
-                autoFocus
-                className="flex-1 bg-bg-input border border-border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-primary"
-              />
-              <span className="text-[10px] text-text-faint">{displayName.length}/20</span>
+              <div className="relative w-[120px] shrink-0">
+                <input
+                  type="text"
+                  value={displayName}
+                  onChange={(e) => {
+                    const v = e.target.value.replace(/[<>"'&;]/g, "");
+                    if (v.length <= 20) setDisplayName(v);
+                  }}
+                  placeholder={locale === "ko" ? "내 이름" : "My Name"}
+                  maxLength={20}
+                  autoFocus
+                  className="w-full bg-bg-input border border-border rounded-lg px-3 py-1.5 pr-10 text-sm outline-none focus:border-primary"
+                />
+                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-[10px] text-text-faint">{displayName.length}/20</span>
+              </div>
               <button
                 onClick={saveDisplayName}
                 disabled={nameSaving || !displayName.trim()}
