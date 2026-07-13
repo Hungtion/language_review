@@ -64,8 +64,11 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
   const recognitionRef = useRef<SpeechRecognition | null>(null);
 
   useEffect(() => {
+    recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setResult(null);
     setListening(false);
+    onResult?.(null);
   }, [targetText]);
 
   const supported = typeof window !== "undefined" && ("SpeechRecognition" in window || "webkitSpeechRecognition" in window);
