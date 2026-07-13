@@ -307,7 +307,7 @@ function HomeContent() {
               href="/pricing"
               className="bg-bg-card border border-border rounded-xl p-4 text-center hover:border-border-light transition-colors"
             >
-              <div className="text-2xl font-bold text-green-500">🍃 {credits}</div>
+              <div className="text-2xl font-bold text-green-500">{credits === 0 ? "🍃" : credits <= 10 ? "🌱" : credits <= 50 ? "🌿" : "🌳"} {credits}</div>
               <div className="text-xs text-text-faint mt-0.5">Leaf</div>
             </Link>
           </div>
