@@ -14,20 +14,20 @@ type Props = {
 };
 
 function getLeafLevel(a: DailyActivity): number {
-  const total = a.cards_reviewed + a.notes_added * 5 + a.nuance_used * 3;
-  if (total === 0) return 0;
-  if (total < 5) return 1;
-  if (total < 10) return 2;
-  if (total < 20) return 3;
-  return 4;
+  const earned = a.leaf_earned || 0;
+  if (earned === 0) return 0;
+  if (earned === 1) return 1;
+  if (earned <= 3) return 2;
+  if (earned === 4) return 3;
+  return 4; // 5+
 }
 
 const GROWTH_ICONS = [
   "",   // 0: nothing
-  "🌱", // 1: sprout
-  "🌿", // 2: grass
-  "🌳", // 3: tree
-  "🌲🌳", // 4: forest
+  "🌱", // 1 Leaf
+  "🌿", // 2-3 Leaf
+  "🌲", // 4 Leaf
+  "🌳", // 5+ Leaf
 ];
 
 type DayCell = {
