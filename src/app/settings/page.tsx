@@ -410,6 +410,14 @@ function SettingsContent() {
           >
             {locale === "ko" ? "피드백 보내기" : "Send Feedback"}
           </button>
+          <div className="flex gap-2">
+            <a href="/terms" className="flex-1 py-2.5 rounded-lg text-sm bg-bg-input text-text-muted hover:text-text hover:bg-bg-hover transition-colors text-center">
+              {locale === "ko" ? "이용약관" : "Terms"}
+            </a>
+            <a href="/privacy" className="flex-1 py-2.5 rounded-lg text-sm bg-bg-input text-text-muted hover:text-text hover:bg-bg-hover transition-colors text-center">
+              {locale === "ko" ? "개인정보 처리방침" : "Privacy"}
+            </a>
+          </div>
           <div className="text-center space-y-2">
             <img src="/icon-192.png" alt="Language LAB" className="w-12 h-12 mx-auto rounded-xl" />
             <p className="text-sm font-medium text-text-secondary">Language LAB</p>
