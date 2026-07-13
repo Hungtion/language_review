@@ -2,6 +2,7 @@
 
 import { Suspense, useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
+import Link from "next/link";
 import { supabase } from "@/lib/supabase";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
@@ -43,6 +44,7 @@ function LoginContent() {
   const redirect = searchParams.get("redirect") || "/";
   const { locale, setLocale, t } = useLocale();
   const [inAppType, setInAppType] = useState<InAppType>(null);
+  const [agreed, setAgreed] = useState(false);
 
   useEffect(() => {
     if (user && !user.is_anonymous) {
@@ -68,7 +70,7 @@ function LoginContent() {
   }, [user, router]);
 
   async function handleGoogleLogin() {
-    if (inAppType) return;
+    if (inAppType || !agreed) return;
     await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
@@ -78,7 +80,7 @@ function LoginContent() {
   }
 
   async function handleKakaoLogin() {
-    if (inAppType) return;
+    if (inAppType || !agreed) return;
     await supabase.auth.signInWithOAuth({
       provider: "kakao",
       options: {
@@ -176,9 +178,29 @@ function LoginContent() {
           </div>
         ) : (
           <div className="space-y-3 w-full">
+            <label className="flex items-start gap-2 cursor-pointer text-left">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => setAgreed(e.target.checked)}
+                className="mt-0.5 w-4 h-4 rounded border-border accent-primary flex-shrink-0"
+              />
+              <span className="text-xs text-text-muted leading-relaxed">
+                {locale === "ko" ? (
+                  <><Link href="/terms" className="text-primary underline">이용약관</Link>{" "}및{" "}<Link href="/privacy" className="text-primary underline">개인정보 처리방침</Link>에 동의합니다.</>
+                ) : (
+                  <>I agree to the <Link href="/terms" className="text-primary underline">Terms of Service</Link> and <Link href="/privacy" className="text-primary underline">Privacy Policy</Link>.</>
+                )}
+              </span>
+            </label>
             <button
               onClick={handleGoogleLogin}
-              className="w-full flex items-center justify-center gap-3 py-3 bg-white text-gray-800 rounded-lg font-medium text-sm hover:bg-gray-100 transition-colors"
+              disabled={!agreed}
+              className={`w-full flex items-center justify-center gap-3 py-3 rounded-lg font-medium text-sm transition-colors ${
+                agreed
+                  ? "bg-white text-gray-800 hover:bg-gray-100"
+                  : "bg-white/50 text-gray-400 cursor-not-allowed"
+              }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z"/>
@@ -190,7 +212,12 @@ function LoginContent() {
             </button>
             <button
               onClick={handleKakaoLogin}
-              className="w-full flex items-center justify-center gap-3 py-3 bg-[#FEE500] text-[#191919] rounded-lg font-medium text-sm hover:bg-[#FDD835] transition-colors"
+              disabled={!agreed}
+              className={`w-full flex items-center justify-center gap-3 py-3 rounded-lg font-medium text-sm transition-colors ${
+                agreed
+                  ? "bg-[#FEE500] text-[#191919] hover:bg-[#FDD835]"
+                  : "bg-[#FEE500]/50 text-[#191919]/40 cursor-not-allowed"
+              }`}
             >
               <svg className="w-5 h-5" viewBox="0 0 24 24">
                 <path fill="#191919" d="M12 3C6.48 3 2 6.44 2 10.65c0 2.68 1.78 5.05 4.48 6.42-.15.54-.97 3.5-.99 3.7 0 0-.02.17.09.23.11.07.24.01.24.01.32-.04 3.7-2.44 4.28-2.86.6.09 1.23.13 1.9.13 5.52 0 10-3.44 10-7.65S17.52 3 12 3z"/>
