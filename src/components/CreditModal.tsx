@@ -11,27 +11,27 @@ export default function CreditModal({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={onClose}>
       <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full text-center space-y-4" onClick={(e) => e.stopPropagation()}>
-        <div className="text-3xl">💳</div>
+        <div className="text-3xl">🍃</div>
         <h3 className="text-text font-bold text-lg">
-          {isKo ? "🍃 Leaf가 부족합니다" : "🍃 Not enough leaves"}
+          {isKo ? "Leaf가 부족해요!" : "Not enough Leaves!"}
         </h3>
         <p className="text-text-muted text-sm leading-relaxed whitespace-pre-line">
           {isKo
-            ? "오늘의 무료 사용량을 모두 사용했어요.\nLeaf를 충전하면 계속 이용할 수 있습니다."
-            : "You've used all free uses today.\nGet more leaves to continue."}
+            ? "카드를 복습하고 Leaf를 모아볼까요?\n또는 Leaf를 충전할 수도 있어요."
+            : "Review cards to earn Leaves,\nor top up to continue."}
         </p>
-        <div className="flex gap-3 pt-2">
+        <div className="flex flex-col gap-2 pt-2">
           <button
-            onClick={onClose}
-            className="flex-1 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
+            onClick={() => { onClose(); router.push("/review"); }}
+            className="w-full py-2.5 bg-primary hover:bg-primary-hover text-primary-text rounded-xl text-sm font-medium transition-colors"
           >
-            {isKo ? "닫기" : "Close"}
+            {isKo ? "카드 복습하러 가기" : "Go Review Cards"}
           </button>
           <button
             onClick={() => { onClose(); router.push("/pricing"); }}
-            className="flex-1 py-2.5 bg-primary hover:bg-primary-hover text-primary-text rounded-xl text-sm font-medium transition-colors"
+            className="w-full py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
           >
-            {isKo ? "충전하기" : "Top Up"}
+            {isKo ? "Leaf 충전하기" : "Top Up Leaves"}
           </button>
         </div>
       </div>

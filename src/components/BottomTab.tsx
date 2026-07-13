@@ -5,6 +5,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { playTabClick } from "@/lib/unlockAudio";
 import { useUploadStatus, clearNotesBadge } from "@/lib/uploadStatus";
+import { useLocale } from "@/lib/useLocale";
 
 function getVisitedTabs(): Set<string> {
   try { return new Set(JSON.parse(localStorage.getItem("visited-tabs") || "[]")); } catch { return new Set(); }
@@ -18,16 +19,18 @@ function markTabVisited(href: string) {
 
 export default function BottomTab() {
   const pathname = usePathname();
+  const { locale } = useLocale();
+  const isKo = locale === "ko";
   const { status: uploadStatus, notesBadge } = useUploadStatus();
   const [visited, setVisited] = useState<Set<string>>(new Set());
 
   const tabs = [
-    { href: "/", icon: HomeIcon, label: "홈", match: (p: string) => p === "/", guideLabel: "홈", desc: "Dashboard" },
-    { href: "/add", icon: AddIcon, label: "새 노트", match: (p: string) => p === "/add", guideLabel: "새 노트", desc: "Add Note" },
-    { href: "/review", icon: CardsIcon, label: "카드", match: (p: string) => p === "/review", guideLabel: "복습\n카드", desc: "Review Cards" },
-    { href: "/notes", icon: NotesIcon, label: "노트", match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "노트\n목록", desc: "Note List" },
-    { href: "/nuance", icon: NuanceIcon, label: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "Nuance\nChat", desc: "Nuance Chat" },
-    { href: "/settings", icon: SettingsIcon, label: "설정", match: (p: string) => p === "/settings", guideLabel: "설정", desc: "Settings" },
+    { href: "/", icon: HomeIcon, label: "홈", labelEn: "Home", match: (p: string) => p === "/", guideLabel: "홈", desc: "Dashboard" },
+    { href: "/add", icon: AddIcon, label: "새 표현", labelEn: "Add", match: (p: string) => p === "/add", guideLabel: "새 표현", desc: "Add Expression" },
+    { href: "/review", icon: CardsIcon, label: "복습", labelEn: "Review", match: (p: string) => p === "/review", guideLabel: "오늘의\n복습", desc: "Today's Review" },
+    { href: "/notes", icon: NotesIcon, label: "노트", labelEn: "Notes", match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "학습\n보관함", desc: "My Notes" },
+    { href: "/nuance", icon: NuanceIcon, label: "표현 다듬기", labelEn: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "표현\n다듬기", desc: "Nuance Chat" },
+    { href: "/settings", icon: SettingsIcon, label: "설정", labelEn: "Settings", match: (p: string) => p === "/settings", guideLabel: "설정", desc: "Settings" },
   ];
 
   useEffect(() => {
@@ -45,7 +48,7 @@ export default function BottomTab() {
   return (
     <nav data-guide="bottom-tab" className="sm:hidden fixed bottom-0 left-0 right-0 bg-bg-nav backdrop-blur-sm border-t border-border z-[1003] pb-[env(safe-area-inset-bottom)]">
       <div className="flex items-center justify-around h-16">
-        {tabs.map(({ href, icon: Icon, label, match, guideLabel, desc }) => {
+        {tabs.map(({ href, icon: Icon, label, labelEn, match, guideLabel, desc }) => {
           const active = match(pathname);
           const isNew = !visited.has(href) && !active;
           return (
@@ -70,7 +73,7 @@ export default function BottomTab() {
               <Icon active={active} />
               <span className={`text-[10px] leading-none ${
                 active ? "text-primary font-medium" : isNew ? "text-primary font-medium" : "text-text-muted"
-              }`}>{label}</span>
+              }`}>{isKo ? label : labelEn}</span>
               {href === "/add" && uploadStatus === "uploading" && (
                 <>
                   <span className="absolute top-1 right-1 w-2.5 h-2.5 bg-primary rounded-full animate-ping" />

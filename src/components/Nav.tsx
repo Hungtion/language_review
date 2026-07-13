@@ -34,10 +34,11 @@ export default function Nav() {
     return () => window.removeEventListener("guide-visible", handler);
   }, []);
 
+  const isKo = locale === "ko";
   const pageTitle = pathname === "/add" ? t("addNewNote")
     : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
-    : pathname === "/review" ? t("cardTitle")
-    : pathname === "/nuance" ? "Nuance Chat"
+    : pathname === "/review" ? (isKo ? "오늘의 복습" : "Review")
+    : pathname === "/nuance" ? (isKo ? "표현 다듬기" : "Nuance Chat")
     : pathname === "/settings" ? t("settingsTitle")
     : null;
 
@@ -85,7 +86,7 @@ export default function Nav() {
                 pathname === "/nuance" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
-              Nuance Chat
+              {isKo ? "표현 다듬기" : "Nuance Chat"}
             </Link>
             <Link
               href="/settings"

@@ -2,7 +2,7 @@ const translations = {
   en: {
     // Nav
     add: "Add",
-    cards: "Cards",
+    cards: "Review",
     notes: "Notes",
     logout: "Logout",
 
@@ -116,8 +116,20 @@ const translations = {
     // Home
     recentNotes: "Recent Notes",
     sessions: "sessions",
-    addNote: "Add Note",
-    reviewCards: "Review Cards",
+    addNote: "Add Expression",
+    reviewCards: "Today's Review",
+    emptyHomeTitle: "Welcome to Language LAB!",
+    emptyHomeDesc: "Start your learning journey in 3 steps:",
+    emptyStep1: "Jot down expressions",
+    emptyStep2: "Review with flashcards",
+    emptyStep3: "Polish with Nuance Chat",
+    emptyHomeCta: "Add your first expression",
+    emptyCardsTitle: "No cards to review yet",
+    emptyCardsDesc: "Add notes and flashcards will be created automatically.",
+    emptyCardsCta: "Add Expression",
+    streakDays: "day streak",
+    todayReviewCount: "cards to review",
+    streakBonus: "Streak Bonus!",
 
     // Pricing
     pricingTitle: "Pricing",
@@ -143,8 +155,8 @@ const translations = {
   },
   ko: {
     // Nav
-    add: "새 노트",
-    cards: "카드",
+    add: "새 표현",
+    cards: "복습",
     notes: "노트",
     logout: "로그아웃",
 
@@ -258,8 +270,20 @@ const translations = {
     // Home
     recentNotes: "최근 노트",
     sessions: "세션 기록",
-    addNote: "새 노트 입력",
-    reviewCards: "복습 카드",
+    addNote: "새 표현 추가",
+    reviewCards: "오늘의 복습",
+    emptyHomeTitle: "Language LAB에 오신 걸 환영합니다!",
+    emptyHomeDesc: "3단계로 학습을 시작하세요:",
+    emptyStep1: "표현 메모하기",
+    emptyStep2: "카드로 복습하기",
+    emptyStep3: "뉘앙스 교정받기",
+    emptyHomeCta: "첫 번째 표현 추가하기",
+    emptyCardsTitle: "복습할 카드가 없습니다",
+    emptyCardsDesc: "노트를 추가하면 복습 카드가 자동으로 만들어집니다.",
+    emptyCardsCta: "새 표현 추가",
+    streakDays: "일 연속 학습",
+    todayReviewCount: "장 복습 가능",
+    streakBonus: "연속 학습 보너스!",
 
     // Pricing
     pricingTitle: "구독",

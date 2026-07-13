@@ -268,18 +268,31 @@ function NotesContent() {
 
       <div data-guide="notes-list" className="space-y-3 flex-1" style={{ minHeight: "calc(100vh - 10rem)" }}>
         {loading ? (
-          <div className="text-text-faint text-center py-12">{t("loading")}</div>
+          <div className="space-y-3">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <div key={i} className="h-24 bg-bg-hover/60 rounded-xl animate-pulse" />
+            ))}
+          </div>
         ) : filtered.length === 0 ? (
-          <div className="text-center py-16">
+          <div className="text-center py-12">
             {search.trim() ? (
               <p className="text-text-faint">{t("noSearchResults")}</p>
             ) : (
-              <>
-                <p className="text-text-faint mb-4">{t("noNotes")}</p>
-                <Link href="/add" className="text-primary hover:text-primary">
-                  {t("firstNote")}
+              <div className="bg-bg-card border border-border rounded-2xl p-8 space-y-4 max-w-sm mx-auto">
+                <div className="text-4xl">📝</div>
+                <h3 className="text-base font-bold text-text">{t("noNotes")}</h3>
+                <p className="text-xs text-text-muted">
+                  {locale === "ko"
+                    ? "학습한 표현을 기록하면 복습 카드가 자동으로 만들어집니다."
+                    : "Record expressions and flashcards will be created automatically."}
+                </p>
+                <Link
+                  href="/add"
+                  className="inline-block px-5 py-2.5 bg-primary hover:bg-primary-hover text-primary-text rounded-xl text-sm font-medium transition-colors"
+                >
+                  {t("emptyCardsCta")}
                 </Link>
-              </>
+              </div>
             )}
           </div>
         ) : (

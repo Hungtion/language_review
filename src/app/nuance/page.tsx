@@ -260,6 +260,11 @@ function NuanceContent() {
           if (!dateTabs.includes(todayStr)) {
             setDateTabs((prev) => [todayStr, ...prev]);
           }
+
+          // Record activity for streak
+          import("@/lib/streak").then(({ recordActivity }) => {
+            recordActivity(user.id, "nuance_use");
+          });
         }
       } else {
         setMessages((prev) => [

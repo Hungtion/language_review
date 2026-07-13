@@ -87,6 +87,8 @@ function ReviewContent() {
   const mouseDragging = useRef(false);
   const mouseDown = useRef(false);
   const lastTouchEnd = useRef(0);
+  const reviewedCards = useRef(new Set<number>());
+  const activityRecorded = useRef(false);
 
   useEffect(() => {
     return () => {
@@ -224,10 +226,18 @@ function ReviewContent() {
       stopTts();
       playingRef.current = false;
       setPlaying(false);
+      reviewedCards.current.add(index);
       setIndex((i) => i + 1);
       setFlipped(false);
+      // Record activity every 5 cards reviewed
+      if (user && !activityRecorded.current && reviewedCards.current.size >= 5) {
+        activityRecorded.current = true;
+        import("@/lib/streak").then(({ recordActivity }) => {
+          recordActivity(user.id, "card_review", reviewedCards.current.size);
+        });
+      }
     }
-  }, [index, cards.length]);
+  }, [index, cards.length, user]);
 
   const goPrev = useCallback(() => {
     if (index > 0) {
@@ -674,7 +684,19 @@ function ReviewContent() {
   }
 
   if (loading) {
-    return <div className="text-text-faint text-center py-12">{t("loading")}</div>;
+    return (
+      <div className="fixed inset-0 flex flex-col bg-bg items-center justify-center" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))" }}>
+        <div className="w-full max-w-lg px-4 space-y-4">
+          <div className="flex gap-2">
+            <div className="h-8 w-16 bg-bg-hover/60 rounded-lg animate-pulse" />
+            <div className="h-8 w-16 bg-bg-hover/60 rounded-lg animate-pulse" />
+            <div className="h-8 w-16 bg-bg-hover/60 rounded-lg animate-pulse" />
+          </div>
+          <div className="bg-bg-hover/60 rounded-2xl animate-pulse" style={{ height: "min(50vh, 350px)" }} />
+          <div className="h-10 bg-bg-hover/60 rounded-lg animate-pulse" />
+        </div>
+      </div>
+    );
   }
 
   const card = cards.length > 0 ? cards[index] : null;
@@ -1234,22 +1256,27 @@ function ReviewContent() {
             )}
           </>
         ) : (
-          <>
-            {/* Empty card placeholder — visible to guide overlay */}
-            <div data-guide="review-card" className="w-full max-w-lg" style={{ height: "min(50vh, 350px)" }}>
-              <div className="w-full h-full bg-bg-card border border-border rounded-2xl flex items-center justify-center">
-                <p className="text-text-faint text-sm">{t("noCards")}</p>
+          <div className="w-full max-w-lg flex flex-col items-center justify-center gap-4 py-8">
+            <div data-guide="review-card" className="w-full" style={{ height: "min(40vh, 280px)" }}>
+              <div className="w-full h-full bg-bg-card border border-border rounded-2xl flex flex-col items-center justify-center gap-4 p-6">
+                <div className="text-4xl">🃏</div>
+                <h3 className="text-base font-bold text-text text-center">
+                  {locale === "ko" ? "복습할 카드가 없습니다" : "No cards to review yet"}
+                </h3>
+                <p className="text-xs text-text-muted text-center">
+                  {locale === "ko"
+                    ? "노트를 추가하면 복습 카드가 자동으로 만들어집니다."
+                    : "Add notes and flashcards will be created automatically."}
+                </p>
+                <a
+                  href="/add"
+                  className="px-5 py-2 bg-primary hover:bg-primary-hover text-primary-text rounded-lg text-sm font-medium transition-colors"
+                >
+                  {locale === "ko" ? "새 표현 추가" : "Add Expression"}
+                </a>
               </div>
             </div>
-            <div data-guide="review-ai" className="w-full max-w-lg mt-3">
-              <button
-                disabled
-                className="w-full py-2.5 bg-primary/10 text-primary/40 border border-primary/20 rounded-lg text-sm cursor-not-allowed"
-              >
-                AI Example
-              </button>
-            </div>
-          </>
+          </div>
         )}
       </div>
 

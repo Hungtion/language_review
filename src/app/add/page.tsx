@@ -321,6 +321,10 @@ function AddContent() {
     if (error) {
       alert(t("saveFailed") + error.message);
     } else {
+      // Record activity for streak
+      import("@/lib/streak").then(({ recordActivity }) => {
+        recordActivity(user.id, "note_add");
+      });
       router.push("/notes");
     }
   }
