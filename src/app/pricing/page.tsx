@@ -129,6 +129,9 @@ function PricingContent() {
       <p className="text-xs text-text-faint text-center">
         {isKo ? "네이버페이 · 페이코 · 애플페이 · 카드 · 계좌이체" : "NaverPay · Payco · ApplePay · Card · Bank Transfer"}
       </p>
+      <p className="text-xs text-text-faint text-center">
+        {isKo ? "Leaf는 구매 후 환불이 불가합니다." : "Leaf credits are non-refundable."}
+      </p>
     </div>
   );
 }

@@ -36,9 +36,7 @@ export default function TermsPage() {
         <h2 className="text-base font-semibold text-text">제4조 (Leaf 크레딧 및 결제)</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>Leaf는 AI 기능 사용을 위한 크레딧입니다.</li>
-          <li>Leaf 구매 후 사용하지 않은 Leaf에 대해서는 환불이 가능합니다.</li>
-          <li>이미 사용한 Leaf에 대해서는 환불이 불가합니다.</li>
-          <li>환불 요청은 구매일로부터 7일 이내에 가능하며, 아래 연락처로 요청해 주세요.</li>
+          <li>Leaf는 구매 즉시 계정에 충전되며, 구매 후 환불은 불가합니다.</li>
           <li>결제는 PayApp(NHN한국사이버결제)을 통해 처리됩니다.</li>
         </ul>
       </section>
@@ -107,9 +105,7 @@ export default function TermsPage() {
         <h2 className="text-base font-semibold text-text">Article 4 (Leaf Credits and Payments)</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li>Leaf is a credit system for using AI features.</li>
-          <li>Unused Leaf credits are eligible for a refund.</li>
-          <li>Used Leaf credits are non-refundable.</li>
-          <li>Refund requests must be made within 7 days of purchase by contacting us at the address below.</li>
+          <li>Leaf credits are added to your account immediately upon purchase and are non-refundable.</li>
           <li>Payments are processed through PayApp (NHN KCP).</li>
         </ul>
       </section>
