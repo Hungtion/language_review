@@ -179,9 +179,13 @@ function HomeContent() {
       {/* Header */}
       <div className="pt-6">
         <h1 className="text-2xl font-bold tracking-tight">
-          {isKo
-            ? (langFilter === "japanese" ? "ようこそ!" : "안녕하세요!")
-            : (langFilter === "japanese" ? "ようこそ!" : "Hello!")}
+          {(() => {
+            const name = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
+            const greeting = isKo
+              ? (langFilter === "japanese" ? "ようこそ!" : "안녕하세요!")
+              : (langFilter === "japanese" ? "ようこそ!" : "Hello!");
+            return name ? `${greeting} ${name}` : greeting;
+          })()}
         </h1>
         <div
           className="mt-1 cursor-pointer active:opacity-70 transition-opacity h-[3.5rem] overflow-hidden"
