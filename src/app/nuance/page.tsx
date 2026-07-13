@@ -54,6 +54,7 @@ function NuanceContent() {
   const [swipedPair, setSwipedPair] = useState<number | null>(null);
   const swipeRef = useRef({ startX: 0, startY: 0, swiping: false });
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
   const didScroll = useRef(false);
   const sendingRef = useRef(false);
@@ -151,10 +152,14 @@ function NuanceContent() {
     };
   }, []);
 
-  // Scroll to bottom
+  // Scroll to bottom & activate iOS scroll context
   useEffect(() => {
     if (!initialLoading && !didScroll.current) {
-      messagesEndRef.current?.scrollIntoView();
+      const el = scrollContainerRef.current;
+      if (el) {
+        // Force iOS to recognize scrollable area
+        el.scrollTop = el.scrollHeight;
+      }
       didScroll.current = true;
     }
   }, [initialLoading]);
@@ -406,7 +411,7 @@ function NuanceContent() {
       </div>
 
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch" }}>
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
         {initialLoading && (
           <div className="text-center py-12">
             <p className="text-text-faint text-sm">{t("loadingChat")}</p>
