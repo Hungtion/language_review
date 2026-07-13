@@ -181,9 +181,7 @@ function HomeContent() {
         <h1 className="text-2xl font-bold tracking-tight">
           {(() => {
             const name = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
-            const greeting = isKo
-              ? (langFilter === "japanese" ? "ようこそ!" : "안녕하세요!")
-              : (langFilter === "japanese" ? "ようこそ!" : "Hello!");
+            const greeting = langFilter === "japanese" ? "ようこそ!" : "Hello!";
             return name ? `${greeting} ${name}` : greeting;
           })()}
         </h1>
