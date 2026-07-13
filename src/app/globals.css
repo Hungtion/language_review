@@ -248,6 +248,16 @@ body {
   perspective: 1000px;
 }
 
+@keyframes popup-rise {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(0.9); }
+  40% { opacity: 1; transform: translate(-50%, -80%) scale(1); }
+  100% { opacity: 1; transform: translate(-50%, -100%) scale(1); }
+}
+
+.animate-popup-rise {
+  animation: popup-rise 0.35s ease-out forwards;
+}
+
 @keyframes slide-up {
   from { transform: translateY(100%); }
   to { transform: translateY(0); }

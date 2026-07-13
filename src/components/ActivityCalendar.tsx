@@ -22,12 +22,12 @@ function getLeafLevel(a: DailyActivity): number {
   return 4;
 }
 
-const LEAF_COLORS = [
-  "", // 0
-  "text-green-300/60", // 1
-  "text-green-400/80", // 2
-  "text-green-500/90", // 3
-  "text-green-500", // 4
+const GROWTH_ICONS = [
+  "",   // 0: nothing
+  "🌱", // 1: sprout
+  "🌿", // 2: grass
+  "🌳", // 3: tree
+  "🌲🌳", // 4: forest
 ];
 
 type DayCell = {
@@ -233,15 +233,9 @@ export default function ActivityCalendar({ activities, streak }: Props) {
                     {day.day}
                   </span>
                   {day.level > 0 && day.isCurrentMonth ? (
-                    <svg
-                      viewBox="0 0 24 24"
-                      className={`w-4 h-4 mt-0.5 ${LEAF_COLORS[day.level]}`}
-                      fill="currentColor"
-                    >
-                      <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
-                    </svg>
+                    <span className="text-[11px] leading-none mt-0.5">{GROWTH_ICONS[day.level]}</span>
                   ) : (
-                    <div className="w-4 h-4 mt-0.5" />
+                    <div className="h-[14px] mt-0.5" />
                   )}
                   {/* PC: show activity details inside cell */}
                   {day.activity && day.isCurrentMonth && !day.isFuture && (
@@ -266,14 +260,10 @@ export default function ActivityCalendar({ activities, streak }: Props) {
 
       {/* Legend */}
       <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[9px] text-text-faint">{isKo ? "적음" : "Less"}</span>
+        <div className="flex items-center gap-2">
           {[1, 2, 3, 4].map((level) => (
-            <svg key={level} viewBox="0 0 24 24" className={`w-3 h-3 ${LEAF_COLORS[level]}`} fill="currentColor">
-              <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
-            </svg>
+            <span key={level} className="text-[11px]">{GROWTH_ICONS[level]}</span>
           ))}
-          <span className="text-[9px] text-text-faint">{isKo ? "많음" : "More"}</span>
         </div>
         {monthOffset !== 0 && (
           <button
@@ -289,7 +279,7 @@ export default function ActivityCalendar({ activities, streak }: Props) {
       {selectedDay && (
         <div
           ref={popupRef}
-          className="absolute z-20 animate-fade-in-down"
+          className="absolute z-20 animate-popup-rise"
           style={{
             left: `clamp(90px, ${popupPos.x}px, calc(100% - 90px))`,
             top: `${popupPos.y - 8}px`,
