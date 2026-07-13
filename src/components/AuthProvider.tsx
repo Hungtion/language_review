@@ -70,7 +70,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   }, [user, fetchCredits, fetchStreak]);
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.refreshSession().then(() => supabase.auth.getSession()).then(({ data: { session } }) => {
       setUser(session?.user ?? null);
       if (session?.user) {
         fetchPlan(session.user.id);
