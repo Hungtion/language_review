@@ -21,6 +21,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
+  metadataBase: new URL("https://language-review.vercel.app"),
   title: "Language LAB",
   description: "AI-powered English & Japanese Study Notes",
   manifest: "/manifest.json",

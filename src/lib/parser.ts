@@ -177,9 +177,25 @@ export function parseVocabulary(vocabText: string): VocabEntry[] {
   return entries;
 }
 
+export type SentenceEntry = {
+  front: string;
+  back: string;
+};
+
 export function parseSentences(grammarText: string): string[] {
   return grammarText
     .split('\n')
     .map(l => l.trim())
     .filter(l => l.length > 0 && !l.match(/^[-=]+$/));
+}
+
+export function parseSentencesWithBack(grammarText: string): SentenceEntry[] {
+  return grammarText
+    .split('\n')
+    .map(l => l.trim())
+    .filter(l => l.length > 0 && !l.match(/^[-=]+$/))
+    .map(l => {
+      const parts = l.split('|||');
+      return { front: parts[0].trim(), back: (parts[1] || '').trim() };
+    });
 }

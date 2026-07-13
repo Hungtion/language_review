@@ -67,7 +67,7 @@ function PricingContent() {
           {isKo ? "🌱 Leaf 충전" : "🌱 Top Up"}
         </h1>
         <p className="text-text-muted text-sm">
-          {isKo ? "AI 기능 1회 = Leaf 1장 (매일 무료 5회)" : "1 AI use = 1 leaf (5 free daily)"}
+          {isKo ? "LAB 1회 = Leaf 1장 (매일 무료 3회)" : "1 LAB use = 1 Leaf (3 free daily)"}
         </p>
       </div>
 
@@ -132,6 +132,90 @@ function PricingContent() {
       <p className="text-xs text-text-faint text-center">
         {isKo ? "Leaf는 구매 후 환불이 불가합니다." : "Leaf credits are non-refundable."}
       </p>
+
+      {/* Leaf Policy */}
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-bold text-text">
+          {isKo ? "Leaf 란?" : "What is Leaf?"}
+        </h2>
+
+        <div>
+          <p className="text-xs text-text-muted leading-relaxed">
+            {isKo
+              ? "Leaf는 LAB 기능(Nuance 채팅, LAB Example, 카드 나누기)을 사용할 때 필요한 크레딧입니다. LAB 기능 1회 사용 시 Leaf 1장이 차감됩니다."
+              : "Leaf is a credit used to access LAB features (Nuance chat, LAB Example, Card split). Each LAB use costs 1 Leaf."}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold text-green-500 mb-1">
+            {isKo ? "획득 방법" : "How to Earn"}
+          </h3>
+          <ul className="text-xs text-text-muted space-y-1">
+            <li className="flex justify-between">
+              <span>{isKo ? "카드 복습 5장" : "Review 5 cards"}</span>
+              <span className="text-green-500 font-medium">+1 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>{isKo ? "노트 추가 1개" : "Add 1 note"}</span>
+              <span className="text-green-500 font-medium">+1 Leaf</span>
+            </li>
+          </ul>
+          <p className="text-[10px] text-text-faint mt-1.5">
+            {isKo ? "* 일일 최대 획득 : 5 Leaf" : "* Daily max earn: 5 Leaf"}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold text-blue-400 mb-1">
+            {isKo ? "연속 학습 보너스" : "Study Streak Bonus"}
+          </h3>
+          <ul className="text-xs text-text-muted space-y-1">
+            <li className="flex justify-between">
+              <span>{isKo ? "3일 연속" : "3-day streak"}</span>
+              <span className="text-blue-400 font-medium">+1 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>{isKo ? "7일 연속" : "7-day streak"}</span>
+              <span className="text-blue-400 font-medium">+3 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>{isKo ? "14일 연속" : "14-day streak"}</span>
+              <span className="text-blue-400 font-medium">+5 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>{isKo ? "30일 연속" : "30-day streak"}</span>
+              <span className="text-blue-400 font-medium">+10 Leaf</span>
+            </li>
+          </ul>
+          <p className="text-[10px] text-text-faint mt-1.5">
+            {isKo ? "* 학습 인정 조건 : 카드 복습 5장 / 노트 추가 1개 / Nuance 1회 중 하나 이상" : "* Study criteria: review 5+ cards / add 1+ note / 1+ Nuance chat"}
+          </p>
+        </div>
+
+        <div>
+          <h3 className="text-xs font-semibold text-red-400 mb-1">
+            {isKo ? "차감 기준" : "How It's Spent"}
+          </h3>
+          <ul className="text-xs text-text-muted space-y-1">
+            <li className="flex justify-between">
+              <span>Nuance {isKo ? "채팅" : "chat"}</span>
+              <span className="text-red-400 font-medium">-1 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>LAB Example</span>
+              <span className="text-red-400 font-medium">-1 Leaf</span>
+            </li>
+            <li className="flex justify-between">
+              <span>{isKo ? "카드 나누기" : "Card split"}</span>
+              <span className="text-red-400 font-medium">-1 Leaf</span>
+            </li>
+          </ul>
+          <p className="text-[10px] text-text-faint mt-1.5">
+            {isKo ? "* 일일 무료 3회 제공 (내 Leaf 미차감)" : "* 3 free uses daily (no Leaf deducted)"}
+          </p>
+        </div>
+      </div>
     </div>
   );
 }

@@ -1,5 +1,10 @@
 import { supabase } from "./supabase";
 
+/** Format Date to YYYY-MM-DD in local timezone (not UTC) */
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
+
 export type DailyActivity = {
   activity_date: string;
   cards_reviewed: number;
@@ -10,10 +15,10 @@ export type DailyActivity = {
 };
 
 const STREAK_REWARDS: Record<number, number> = {
-  3: 2,
-  7: 5,
-  14: 8,
-  30: 15,
+  3: 1,
+  7: 3,
+  14: 5,
+  30: 10,
 };
 
 /** Check if a day counts as "studied" */
@@ -27,23 +32,23 @@ export function calculateStreak(activities: DailyActivity[]): number {
 
   const today = new Date();
   today.setHours(0, 0, 0, 0);
-  const todayStr = today.toISOString().split("T")[0];
+  const todayStr = toLocalDateStr(today);
 
   // Check if today or yesterday has activity (allow "today not yet done")
   const firstDate = activities[0]?.activity_date;
   const yesterday = new Date(today);
   yesterday.setDate(yesterday.getDate() - 1);
-  const yesterdayStr = yesterday.toISOString().split("T")[0];
+  const yesterdayStr = toLocalDateStr(yesterday);
 
   if (firstDate !== todayStr && firstDate !== yesterdayStr) return 0;
 
   let streak = 0;
-  const startDate = new Date(firstDate);
+  const startDate = new Date(firstDate + "T00:00:00");
 
   for (let i = 0; i < activities.length; i++) {
     const expected = new Date(startDate);
     expected.setDate(expected.getDate() - i);
-    const expectedStr = expected.toISOString().split("T")[0];
+    const expectedStr = toLocalDateStr(expected);
 
     if (activities[i].activity_date !== expectedStr) break;
     if (!isStudyDay(activities[i])) break;
@@ -72,15 +77,17 @@ export async function recordActivity(
   action: "card_review" | "note_add" | "nuance_use",
   count: number = 1,
 ): Promise<{ streak: number; leafEarned: number; milestone: number | null }> {
-  const today = new Date().toISOString().split("T")[0];
+  const today = toLocalDateStr(new Date());
 
   // Upsert today's activity
-  const { data: existing } = await supabase
+  const { data: existing, error: fetchErr } = await supabase
     .from("daily_activity")
     .select("*")
     .eq("user_id", userId)
     .eq("activity_date", today)
     .maybeSingle();
+
+  if (fetchErr) console.error("[streak] fetch activity error:", fetchErr);
 
   const updates: Record<string, number> = {};
   if (action === "card_review") updates.cards_reviewed = (existing?.cards_reviewed || 0) + count;
@@ -88,15 +95,17 @@ export async function recordActivity(
   if (action === "nuance_use") updates.nuance_used = (existing?.nuance_used || 0) + count;
 
   if (existing) {
-    await supabase
+    const { error: updateErr } = await supabase
       .from("daily_activity")
       .update(updates)
       .eq("user_id", userId)
       .eq("activity_date", today);
+    if (updateErr) console.error("[streak] update error:", updateErr);
   } else {
-    await supabase
+    const { error: insertErr } = await supabase
       .from("daily_activity")
       .insert({ user_id: userId, activity_date: today, ...updates });
+    if (insertErr) console.error("[streak] insert error:", insertErr);
   }
 
   // Get recent activities for streak calculation
@@ -122,47 +131,58 @@ export async function recordActivity(
 
   const streak = calculateStreak(allActivities as DailyActivity[]);
 
-  // Check daily leaf (first qualifying action of the day)
+  const DAILY_LEAF_CAP = 5;
   let leafEarned = 0;
   let milestone: number | null = null;
+  const alreadyEarned = todayData?.leaf_earned || 0;
 
-  if (todayData && !todayData.leaf_earned && isStudyDay(todayData as DailyActivity)) {
-    leafEarned = 1; // Daily attendance leaf
-
-    // Check streak milestone
-    const reward = getStreakReward(streak);
-    if (reward > 0 && !todayData.streak_bonus_claimed) {
-      leafEarned += reward;
-      milestone = streak;
-      await supabase
-        .from("daily_activity")
-        .update({ leaf_earned: leafEarned, streak_bonus_claimed: true })
-        .eq("user_id", userId)
-        .eq("activity_date", today);
-    } else {
-      await supabase
-        .from("daily_activity")
-        .update({ leaf_earned: leafEarned })
-        .eq("user_id", userId)
-        .eq("activity_date", today);
+  if (todayData) {
+    // Activity-based leaf: cards 5장 = +1, note = +1, nuance = 0
+    let activityLeaf = 0;
+    if (action === "card_review") {
+      activityLeaf = 1; // called every 5 cards
+    } else if (action === "note_add") {
+      activityLeaf = count;
     }
 
-    // Add to user_credits balance
-    const { data: credit } = await supabase
-      .from("user_credits")
-      .select("balance")
-      .eq("user_id", userId)
-      .maybeSingle();
+    // Streak milestone bonus (not subject to daily cap)
+    let streakBonus = 0;
+    const reward = getStreakReward(streak);
+    if (reward > 0 && !todayData.streak_bonus_claimed) {
+      streakBonus = reward;
+      milestone = streak;
+    }
 
-    if (credit) {
+    // Cap activity leaf only (streak bonus is separate)
+    const cappedActivity = Math.min(activityLeaf, Math.max(0, DAILY_LEAF_CAP - alreadyEarned));
+    leafEarned = cappedActivity + streakBonus;
+
+    if (leafEarned > 0) {
+      const updatePayload: Record<string, unknown> = { leaf_earned: alreadyEarned + leafEarned };
+      if (milestone) updatePayload.streak_bonus_claimed = true;
       await supabase
+        .from("daily_activity")
+        .update(updatePayload)
+        .eq("user_id", userId)
+        .eq("activity_date", today);
+
+      // Add to user_credits balance
+      const { data: credit } = await supabase
         .from("user_credits")
-        .update({ balance: credit.balance + leafEarned, updated_at: new Date().toISOString() })
-        .eq("user_id", userId);
-    } else {
-      await supabase
-        .from("user_credits")
-        .insert({ user_id: userId, balance: leafEarned });
+        .select("balance")
+        .eq("user_id", userId)
+        .maybeSingle();
+
+      if (credit) {
+        await supabase
+          .from("user_credits")
+          .update({ balance: credit.balance + leafEarned, updated_at: new Date().toISOString() })
+          .eq("user_id", userId);
+      } else {
+        await supabase
+          .from("user_credits")
+          .insert({ user_id: userId, balance: leafEarned });
+      }
     }
   }
 
@@ -176,7 +196,7 @@ export async function getActivityCalendar(
 ): Promise<DailyActivity[]> {
   const since = new Date();
   since.setDate(since.getDate() - days);
-  const sinceStr = since.toISOString().split("T")[0];
+  const sinceStr = toLocalDateStr(since);
 
   const { data } = await supabase
     .from("daily_activity")

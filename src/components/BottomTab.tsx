@@ -29,7 +29,7 @@ export default function BottomTab() {
     { href: "/add", icon: AddIcon, label: "새 표현", labelEn: "Add", match: (p: string) => p === "/add", guideLabel: "새 표현", desc: "Add Expression" },
     { href: "/review", icon: CardsIcon, label: "복습", labelEn: "Review", match: (p: string) => p === "/review", guideLabel: "오늘의\n복습", desc: "Today's Review" },
     { href: "/notes", icon: NotesIcon, label: "노트", labelEn: "Notes", match: (p: string) => p === "/notes" || p.startsWith("/notes/"), guideLabel: "학습\n보관함", desc: "My Notes" },
-    { href: "/nuance", icon: NuanceIcon, label: "표현 다듬기", labelEn: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "표현\n다듬기", desc: "Nuance Chat" },
+    { href: "/nuance", icon: NuanceIcon, label: "Nuance", labelEn: "Nuance", match: (p: string) => p === "/nuance", guideLabel: "Nuance", desc: "Nuance Chat" },
     { href: "/settings", icon: SettingsIcon, label: "설정", labelEn: "Settings", match: (p: string) => p === "/settings", guideLabel: "설정", desc: "Settings" },
   ];
 

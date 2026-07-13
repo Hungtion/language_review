@@ -56,10 +56,10 @@ export default function CelebrationModal({ type, leafEarned, streakDays, onClose
       >
         {type === "streak" ? (
           <>
-            <div className="text-5xl">🔥</div>
+            <div className="text-5xl">💧</div>
             <h3 className="text-xl font-bold text-text">
               {isKo
-                ? `${streakDays}일 연속 학습 달성!`
+                ? `${streakDays}일 연속 출석 달성!`
                 : `${streakDays}-Day Streak!`}
             </h3>
             <p className="text-text-muted text-sm">

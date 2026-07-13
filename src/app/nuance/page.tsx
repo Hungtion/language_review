@@ -27,7 +27,7 @@ const TONE_OPTIONS = [
 ] as const;
 
 function NuanceContent() {
-  const { user, plan } = useAuth();
+  const { user, plan, refreshCredits } = useAuth();
   const router = useRouter();
   const { speak } = useTts();
   const { t, locale } = useLocale();
@@ -74,10 +74,12 @@ function NuanceContent() {
   useEffect(() => {
     if (!user) return;
     async function loadDates() {
+      const langKey = targetLangs[0] || "English";
       const { data } = await supabase
         .from("nuance_chats")
         .select("created_at")
         .eq("user_id", user!.id)
+        .contains("target_langs", [langKey])
         .order("created_at", { ascending: false });
 
       if (data) {
@@ -90,7 +92,7 @@ function NuanceContent() {
       setSelectedDate("today");
     }
     loadDates();
-  }, [user]);
+  }, [user, targetLangs]);
 
   // Load messages for selected date or month
   useEffect(() => {
@@ -116,10 +118,12 @@ function NuanceContent() {
         endRange = `${dateFilter}T23:59:59.999Z`;
       }
 
+      const langKey = targetLangs[0] || "English";
       const { data } = await supabase
         .from("nuance_chats")
         .select("*")
         .eq("user_id", user!.id)
+        .contains("target_langs", [langKey])
         .gte("created_at", startRange)
         .lte("created_at", endRange)
         .order("created_at", { ascending: true });
@@ -137,7 +141,7 @@ function NuanceContent() {
       setInitialLoading(false);
     }
     loadMessages();
-  }, [user, selectedDate, todayStr]);
+  }, [user, selectedDate, todayStr, targetLangs]);
 
   // Lock body scroll
   useEffect(() => {
@@ -263,7 +267,7 @@ function NuanceContent() {
 
           // Record activity for streak
           import("@/lib/streak").then(({ recordActivity }) => {
-            recordActivity(user.id, "nuance_use");
+            recordActivity(user.id, "nuance_use").then(() => refreshCredits());
           });
         }
       } else {
@@ -491,7 +495,7 @@ function NuanceContent() {
                             className="flex-1 cursor-pointer active:opacity-70 transition-opacity"
                             onClick={() => speak(result.translation, result.language === "Japanese" ? "japanese" : "english")}
                           >
-                            <p className="text-lg font-medium text-gray-100 leading-relaxed">
+                            <p className="text-lg font-medium text-text leading-relaxed">
                               {result.translation}
                             </p>
                           </div>
@@ -564,19 +568,20 @@ function NuanceContent() {
           </div>
         )}
 
+        {!initialLoading && plan !== "pro" && (
+          <div className="text-center py-1">
+            <span className="text-[10px] text-text-faint">
+              {locale === "ko"
+                ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}회 남음${aiRemaining <= 0 ? " (내 Leaf 차감)" : ""}`
+                : `Free ${aiRemaining}/${DAILY_LIMIT} remaining${aiRemaining <= 0 ? " (Leaf deducted)" : ""}`}
+            </span>
+          </div>
+        )}
+
         <div ref={messagesEndRef} />
       </div>
 
       {/* Free usage + Date Tabs + Input */}
-      {plan !== "pro" && (
-        <p className="text-center text-xs text-text-faint pt-2 pb-1">
-          {!user
-            ? <>{locale === "ko" ? "무료 체험 " : "Free trial "}<span className={aiRemaining > 0 ? "text-primary" : "text-red-400"}>{aiRemaining}/{GUEST_LIMIT}</span>{t("aiRemaining")}</>
-            : aiRemaining > 0
-              ? <>{t("aiFree")}<span className="text-primary">{aiRemaining}/{DAILY_LIMIT}</span>{t("aiRemaining")}</>
-              : <><span className={userCredits > 0 ? "text-primary" : "text-red-400"}>🍃{userCredits}</span></>}
-        </p>
-      )}
       <div className="pt-3 border-t border-border">
         <div className="flex items-center gap-1 mb-2">
           <div className="flex gap-1 overflow-x-auto flex-1 scrollbar-hide">

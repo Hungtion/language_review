@@ -3,7 +3,7 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
-import { parseVocabulary, parseSentences } from "@/lib/parser";
+import { parseVocabulary, parseSentences, parseSentencesWithBack } from "@/lib/parser";
 import { getGuestNotes } from "@/lib/guestStorage";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
@@ -13,6 +13,8 @@ import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsag
 import { getCredits } from "@/lib/credits";
 import GuideOverlay from "@/components/GuideOverlay";
 import CreditModal from "@/components/CreditModal";
+import CelebrationModal from "@/components/CelebrationModal";
+import PronunciationCheck from "@/components/PronunciationCheck";
 
 type Card = {
   front: string;
@@ -29,7 +31,7 @@ function ReviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
-  const { user, plan } = useAuth();
+  const { user, plan, refreshCredits } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndexRaw] = useState(() => {
     if (typeof window === "undefined") return 0;
@@ -66,6 +68,7 @@ function ReviewContent() {
   const [splitNoResult, setSplitNoResult] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [showCreditModal, setShowCreditModal] = useState(false);
+  const [celebration, setCelebration] = useState<{ leafEarned: number; streakDays: number } | null>(null);
   const [userCredits, setUserCredits] = useState(0);
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
@@ -88,7 +91,7 @@ function ReviewContent() {
   const mouseDown = useRef(false);
   const lastTouchEnd = useRef(0);
   const reviewedCards = useRef(new Set<number>());
-  const activityRecorded = useRef(false);
+  const lastRecordedAt = useRef(0);
 
   useEffect(() => {
     return () => {
@@ -163,11 +166,11 @@ function ReviewContent() {
         }
 
         if (session.sentence_grammar) {
-          const sents = parseSentences(session.sentence_grammar);
+          const sents = parseSentencesWithBack(session.sentence_grammar);
           for (let si = 0; si < sents.length; si++) {
             built.push({
-              front: sents[si],
-              back: "",
+              front: sents[si].front,
+              back: sents[si].back,
               type: "sentence",
               sessionDate: date,
               language: lang,
@@ -230,10 +233,21 @@ function ReviewContent() {
       setIndex((i) => i + 1);
       setFlipped(false);
       // Record activity every 5 cards reviewed
-      if (user && !activityRecorded.current && reviewedCards.current.size >= 5) {
-        activityRecorded.current = true;
+      const size = reviewedCards.current.size;
+      const milestone = Math.floor(size / 5) * 5;
+      if (user && milestone >= 5 && milestone > lastRecordedAt.current) {
+        lastRecordedAt.current = milestone;
         import("@/lib/streak").then(({ recordActivity }) => {
-          recordActivity(user.id, "card_review", reviewedCards.current.size);
+          recordActivity(user.id, "card_review", 5).then((res) => {
+            refreshCredits();
+            if (res.milestone) {
+              setCelebration({ leafEarned: res.leafEarned, streakDays: res.milestone });
+            } else if (res.leafEarned > 0) {
+              import("@/components/Toast").then(({ toast }) => {
+                toast(`🍃 +${res.leafEarned} Leaf`, "success");
+              });
+            }
+          });
         });
       }
     }
@@ -605,7 +619,8 @@ function ReviewContent() {
     touchStartY.current = e.touches[0].clientY;
     longPressTriggered.current = false;
     swiping.current = false;
-    setPressed(true);
+    const inToolbar = (e.target as HTMLElement).closest(".card-toolbar");
+    setPressed(!inToolbar);
     setSwipeX(0);
     setSwipeAnim(null);
     longPressTimer.current = setTimeout(() => {
@@ -663,6 +678,7 @@ function ReviewContent() {
     }
     setSwipeX(0);
     // Quick tap (not a real swipe) → TTS + flip
+    if ((e.target as HTMLElement).closest(".card-toolbar")) return;
     if (Math.abs(dx) <= 50) {
       const c = cards[index];
       if (!c) return;
@@ -705,6 +721,14 @@ function ReviewContent() {
     <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden touch-none sm:pb-0" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="review" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
+      {celebration && (
+        <CelebrationModal
+          type="streak"
+          leafEarned={celebration.leafEarned}
+          streakDays={celebration.streakDays}
+          onClose={() => setCelebration(null)}
+        />
+      )}
       {noteId && (
         <div className="flex items-center justify-between px-4 pt-2 pb-1">
           <span className="text-xs text-primary">
@@ -848,6 +872,7 @@ function ReviewContent() {
               onMouseDown={(e) => {
                 if (e.button !== 0) return;
                 if (Date.now() - lastTouchEnd.current < 500) return;
+                if ((e.target as HTMLElement).closest(".card-toolbar")) return;
                 mouseStartX.current = e.clientX;
                 mouseDown.current = true;
                 mouseDragging.current = false;
@@ -887,6 +912,7 @@ function ReviewContent() {
                 }
                 setSwipeX(0);
                 // click (no drag) → flip
+                if ((e.target as HTMLElement).closest(".card-toolbar")) return;
                 const c = cards[index];
                 if (!c) return;
                 if (c.back) {
@@ -920,8 +946,10 @@ function ReviewContent() {
               <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
                 {/* Front */}
                 <div className="card-front absolute inset-0 bg-bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center">
+                  {/* Top dead zone — prevents flip on top border tap */}
+                  <div className="card-toolbar absolute top-0 left-0 right-0 h-14 z-[5]" />
                   {/* Card toolbar: share, split, delete */}
-                  <div className="absolute top-3 right-3 flex items-center gap-2 z-10">
+                  <div className="card-toolbar absolute top-3 right-3 flex items-center gap-2 z-10">
                     {typeof navigator !== "undefined" && navigator.share && (
                       <button
                         onTouchStart={(e) => e.stopPropagation()}
@@ -942,7 +970,7 @@ function ReviewContent() {
                         onTouchEnd={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); plan !== "pro" ? setSplitAiConfirm(true) : handleSplit(); }}
                         disabled={splitLoading}
-                        title={locale === "ko" ? "문장 나누기" : "Split sentences"}
+                        title={locale === "ko" ? "카드 나누기" : "Split sentences"}
                         className="text-text-faint hover:text-orange-400 transition-colors disabled:opacity-50"
                       >
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="5" width="20" height="14" rx="2"/><line x1="12" y1="1" x2="12" y2="5"/><line x1="12" y1="8" x2="12" y2="11"/><line x1="12" y1="14" x2="12" y2="19"/><line x1="12" y1="22" x2="12" y2="23"/></svg>
@@ -954,9 +982,9 @@ function ReviewContent() {
                         onTouchEnd={(e) => e.stopPropagation()}
                         onClick={(e) => { e.stopPropagation(); setDeleteConfirm(true); }}
                         title={locale === "ko" ? "카드 삭제" : "Delete card"}
-                        className="text-text-faint hover:text-red-400 transition-colors"
+                        className="p-2 -m-1 text-text-faint hover:text-red-400 transition-colors"
                       >
-                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                       </button>
                     )}
                   </div>
@@ -984,6 +1012,15 @@ function ReviewContent() {
                   <p className="text-xl text-center font-medium leading-relaxed">
                     {card.front}
                   </p>
+                  <div
+                    className="card-toolbar absolute bottom-3 left-0 right-0 flex justify-center"
+                    onClick={(e) => e.stopPropagation()}
+                    onTouchStart={(e) => e.stopPropagation()}
+                    onTouchEnd={(e) => e.stopPropagation()}
+                    onMouseDown={(e) => e.stopPropagation()}
+                  >
+                    <PronunciationCheck targetText={card.front} language={card.language} />
+                  </div>
                 </div>
 
                 {/* Back */}
@@ -1013,7 +1050,7 @@ function ReviewContent() {
                         <span className="text-xs text-primary">✓</span>
                       ) : (
                         <button
-                          title={locale === "ko" ? "AI 예문을 노트에 저장합니다" : "Save AI example to notes"}
+                          title={locale === "ko" ? "LAB 예문을 노트에 저장합니다" : "Save LAB example to notes"}
                           onClick={(e) => { e.stopPropagation(); handleSaveAiResult(); }}
                           className="w-6 h-6 flex items-center justify-center rounded-full bg-primary/20 text-primary border border-primary/30 hover:bg-primary/30 transition-colors text-sm"
                         >
@@ -1037,16 +1074,12 @@ function ReviewContent() {
                   onClick={handleAi}
                   className="w-full py-2.5 bg-primary/20 text-primary border border-primary/30 rounded-lg text-sm hover:bg-primary/30 transition-colors"
                 >
-                  🍃 AI Example
-                  {plan !== "pro" && (
-                    <span className="ml-1 text-xs text-primary/60">
-                      · {!user
-                        ? (locale === "ko" ? `무료 ${aiRemaining}/${GUEST_LIMIT}` : `Free ${aiRemaining}/${GUEST_LIMIT}`)
-                        : aiRemaining > 0
-                          ? (locale === "ko" ? `무료 ${aiRemaining}/${DAILY_LIMIT}` : `Free ${aiRemaining}/${DAILY_LIMIT}`)
-                          : (locale === "ko" ? `🍃${userCredits}` : `🍃${userCredits}`)}
-                    </span>
-                  )}
+                  🍃 LAB Example
+                  <span className="block text-[10px] text-text-faint font-normal mt-0.5">
+                    {locale === "ko"
+                      ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}회 남음${aiRemaining <= 0 ? " (내 Leaf 차감)" : ""}`
+                      : `Free ${aiRemaining}/${DAILY_LIMIT} remaining${aiRemaining <= 0 ? " (Leaf deducted)" : ""}`}
+                  </span>
                 </button>
               )}
 
@@ -1058,7 +1091,7 @@ function ReviewContent() {
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { if (!splitLoading) setSplitPreview(null); }}>
                 <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4 touch-auto" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-lg font-semibold text-center">
-                    {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
+                    {locale === "ko" ? "카드 나누기 미리보기" : "Split Preview"}
                   </h3>
                   <div className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-muted">
                     <span className="text-xs text-text-faint block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
@@ -1197,17 +1230,12 @@ function ReviewContent() {
               <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(false)}>
                 <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
                   <h3 className="text-lg font-semibold text-center">
-                    {locale === "ko" ? "문장 나누기" : "Split Sentences"}
+                    {locale === "ko" ? "카드 나누기" : "Split Sentences"}
                   </h3>
                   <p className="text-sm text-text-muted text-center">
                     {locale === "ko"
-                      ? "AI를 이용한 문장 나누기 기능입니다."
-                      : "This feature uses AI to split sentences."}
-                  </p>
-                  <p className="text-xs text-text-faint text-center">
-                    {locale === "ko"
-                      ? aiRemaining > 0 ? `무료 ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`
-                      : aiRemaining > 0 ? `Free ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`}
+                      ? "LAB 카드 나누기 기능입니다."
+                      : "LAB split sentences feature."}
                   </p>
                   <div className="flex gap-3">
                     <button
@@ -1220,7 +1248,7 @@ function ReviewContent() {
                       onClick={() => { setSplitAiConfirm(false); handleSplit(); }}
                       className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
                     >
-                      {locale === "ko" ? "🍃 문장 나누기" : "🍃 Split"}
+                      {locale === "ko" ? "🍃 카드 나누기" : "🍃 Split"}
                     </button>
                   </div>
                 </div>

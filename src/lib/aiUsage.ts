@@ -1,7 +1,7 @@
 import { supabase } from "./supabase";
 import { deductCredit } from "./credits";
 
-const DAILY_FREE_LIMIT = 5;
+const DAILY_FREE_LIMIT = 3;
 
 export async function getAiUsage(userId: string): Promise<{ count: number; remaining: number }> {
   const today = new Date().toISOString().split("T")[0];

@@ -1,17 +1,17 @@
 "use client";
 
-import { useMemo } from "react";
+import { useMemo, useState, useRef, useEffect } from "react";
 import { useLocale } from "@/lib/useLocale";
 import type { DailyActivity } from "@/lib/streak";
+
+function toLocalDateStr(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+}
 
 type Props = {
   activities: DailyActivity[];
   streak: number;
 };
-
-function isStudyDay(a: DailyActivity): boolean {
-  return a.notes_added >= 1 || a.cards_reviewed >= 5 || a.nuance_used >= 1;
-}
 
 function getLeafLevel(a: DailyActivity): number {
   const total = a.cards_reviewed + a.notes_added * 5 + a.nuance_used * 3;
@@ -22,122 +22,316 @@ function getLeafLevel(a: DailyActivity): number {
   return 4;
 }
 
-const LEAF_STYLES = [
-  "", // 0: no activity
-  "text-green-300/50 scale-[0.6]", // 1: seedling
-  "text-green-400/70 scale-[0.75]", // 2: small leaf
-  "text-green-500/85 scale-[0.9]", // 3: medium leaf
-  "text-green-500 scale-100", // 4: full leaf
+const LEAF_COLORS = [
+  "", // 0
+  "text-green-300/60", // 1
+  "text-green-400/80", // 2
+  "text-green-500/90", // 3
+  "text-green-500", // 4
 ];
+
+type DayCell = {
+  date: string;
+  day: number; // day of month
+  level: number;
+  isToday: boolean;
+  isFuture: boolean;
+  isCurrentMonth: boolean;
+  activity?: DailyActivity;
+};
 
 export default function ActivityCalendar({ activities, streak }: Props) {
   const { locale } = useLocale();
   const isKo = locale === "ko";
+  const [selectedDay, setSelectedDay] = useState<DayCell | null>(null);
+  const [popupPos, setPopupPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
+  const popupRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [monthOffset, setMonthOffset] = useState(0); // 0 = current month, -1 = last month
+
+  useEffect(() => {
+    if (!selectedDay) return;
+    const handler = (e: MouseEvent) => {
+      if (popupRef.current && !popupRef.current.contains(e.target as Node)) {
+        setSelectedDay(null);
+      }
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, [selectedDay]);
 
   const { weeks, monthLabel } = useMemo(() => {
+    const now = new Date();
+    const viewMonth = new Date(now.getFullYear(), now.getMonth() + monthOffset, 1);
+    const year = viewMonth.getFullYear();
+    const month = viewMonth.getMonth();
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
+    const todayStr = toLocalDateStr(today);
 
     const activityMap = new Map<string, DailyActivity>();
     for (const a of activities) {
       activityMap.set(a.activity_date, a);
     }
 
-    // Build 12 weeks (84 days) of data
-    const totalDays = 84;
-    const startDate = new Date(today);
-    startDate.setDate(startDate.getDate() - totalDays + 1);
-    // Align to Sunday
-    startDate.setDate(startDate.getDate() - startDate.getDay());
+    // First day of month and last day
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    const startDow = firstDay.getDay(); // 0=Sun
 
-    const weeksArr: { date: string; level: number; isToday: boolean; isFuture: boolean }[][] = [];
-    const current = new Date(startDate);
-    const todayStr = today.toISOString().split("T")[0];
+    const weeksArr: DayCell[][] = [];
+    let currentWeek: DayCell[] = [];
 
-    while (current <= today || weeksArr.length === 0 || weeksArr[weeksArr.length - 1].length < 7) {
-      if (weeksArr.length === 0 || weeksArr[weeksArr.length - 1].length === 7) {
-        weeksArr.push([]);
-      }
-      const dateStr = current.toISOString().split("T")[0];
+    // Fill leading empty days from previous month
+    for (let i = 0; i < startDow; i++) {
+      const d = new Date(year, month, -(startDow - 1 - i));
+      const dateStr = toLocalDateStr(d);
       const activity = activityMap.get(dateStr);
-      const isFuture = current > today;
-      weeksArr[weeksArr.length - 1].push({
+      currentWeek.push({
         date: dateStr,
-        level: activity && isStudyDay(activity) ? getLeafLevel(activity) : 0,
+        day: d.getDate(),
+        level: activity ? getLeafLevel(activity) : 0,
         isToday: dateStr === todayStr,
-        isFuture,
+        isFuture: d > today,
+        isCurrentMonth: false,
+        activity,
       });
-      current.setDate(current.getDate() + 1);
     }
 
-    const month = today.toLocaleDateString(isKo ? "ko-KR" : "en-US", { year: "numeric", month: "long" });
+    // Fill actual month days
+    for (let d = 1; d <= lastDay.getDate(); d++) {
+      const date = new Date(year, month, d);
+      const dateStr = toLocalDateStr(date);
+      const activity = activityMap.get(dateStr);
+      currentWeek.push({
+        date: dateStr,
+        day: d,
+        level: activity ? getLeafLevel(activity) : 0,
+        isToday: dateStr === todayStr,
+        isFuture: date > today,
+        isCurrentMonth: true,
+        activity,
+      });
+      if (currentWeek.length === 7) {
+        weeksArr.push(currentWeek);
+        currentWeek = [];
+      }
+    }
 
-    return { weeks: weeksArr, monthLabel: month };
-  }, [activities, isKo]);
+    // Fill trailing days
+    if (currentWeek.length > 0) {
+      let nextDay = 1;
+      while (currentWeek.length < 7) {
+        const d = new Date(year, month + 1, nextDay);
+        const dateStr = toLocalDateStr(d);
+        const activity = activityMap.get(dateStr);
+        currentWeek.push({
+          date: dateStr,
+          day: nextDay,
+          level: activity ? getLeafLevel(activity) : 0,
+          isToday: dateStr === todayStr,
+          isFuture: d > today,
+          isCurrentMonth: false,
+          activity,
+        });
+        nextDay++;
+      }
+      weeksArr.push(currentWeek);
+    }
 
-  const dayLabels = isKo ? ["일", "월", "화", "수", "목", "금", "토"] : ["S", "M", "T", "W", "T", "F", "S"];
+    const label = viewMonth.toLocaleDateString(isKo ? "ko-KR" : "en-US", { year: "numeric", month: "long" });
+    return { weeks: weeksArr, monthLabel: label };
+  }, [activities, isKo, monthOffset]);
+
+  const dayHeaders = isKo
+    ? ["일", "월", "화", "수", "목", "금", "토"]
+    : ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+
+  const canGoNext = monthOffset < 0;
+
+  function formatDate(dateStr: string) {
+    const d = new Date(dateStr + "T00:00:00");
+    return d.toLocaleDateString(isKo ? "ko-KR" : "en-US", { month: "short", day: "numeric", weekday: "short" });
+  }
 
   return (
-    <div className="bg-bg-card border border-border rounded-xl p-4">
+    <div ref={containerRef} className="bg-bg-card border border-border rounded-xl p-4 relative">
+      {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          {streak > 0 && (
-            <span className="text-sm font-bold text-orange-400">
-              {streak}{isKo ? "일 연속" : "d streak"}
-            </span>
-          )}
+          <button
+            onClick={() => { setMonthOffset((m) => m - 1); setSelectedDay(null); }}
+            className="p-1 rounded hover:bg-bg-hover text-text-muted transition-colors"
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M15 18l-6-6 6-6" /></svg>
+          </button>
+          <span className="text-sm font-semibold text-text min-w-[120px] text-center">{monthLabel}</span>
+          <button
+            onClick={() => { if (canGoNext) { setMonthOffset((m) => m + 1); setSelectedDay(null); } }}
+            className={`p-1 rounded transition-colors ${canGoNext ? "hover:bg-bg-hover text-text-muted" : "text-text-faint/30 cursor-default"}`}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M9 18l6-6-6-6" /></svg>
+          </button>
         </div>
-        <span className="text-xs text-text-faint">{monthLabel}</span>
+        {streak > 0 && (
+          <span className="text-sm font-bold text-blue-400">
+            💧 {streak}{isKo ? "일 연속" : "d streak"}
+          </span>
+        )}
       </div>
 
-      <div className="flex gap-0.5">
-        {/* Day labels */}
-        <div className="flex flex-col gap-0.5 mr-1">
-          {dayLabels.map((d, i) => (
-            <div key={i} className="w-3 h-3 flex items-center justify-center">
-              {i % 2 === 1 && <span className="text-[8px] text-text-faint leading-none">{d}</span>}
-            </div>
-          ))}
-        </div>
+      {/* Day headers */}
+      <div className="grid grid-cols-7 mb-1">
+        {dayHeaders.map((d, i) => (
+          <div key={i} className={`text-center text-[10px] font-medium py-1 ${i === 0 ? "text-red-400/70" : i === 6 ? "text-blue-400/70" : "text-text-faint"}`}>
+            {d}
+          </div>
+        ))}
+      </div>
 
-        {/* Weeks grid */}
+      {/* Calendar grid */}
+      <div className="space-y-0.5">
         {weeks.map((week, wi) => (
-          <div key={wi} className="flex flex-col gap-0.5">
-            {week.map((day) => (
-              <div
-                key={day.date}
-                className={`w-3 h-3 rounded-[2px] flex items-center justify-center transition-all ${
-                  day.isToday ? "ring-1 ring-primary ring-offset-1 ring-offset-bg-card" : ""
-                } ${day.isFuture ? "opacity-20" : ""}`}
-                title={`${day.date}${day.level > 0 ? " ✓" : ""}`}
-              >
-                {day.level > 0 ? (
-                  <svg
-                    viewBox="0 0 24 24"
-                    className={`w-3 h-3 transition-all ${LEAF_STYLES[day.level]}`}
-                    fill="currentColor"
-                  >
-                    <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
-                  </svg>
-                ) : (
-                  <div className={`w-2.5 h-2.5 rounded-[2px] ${day.isFuture ? "bg-transparent" : "bg-bg-hover/40"}`} />
-                )}
-              </div>
-            ))}
+          <div key={wi} className="grid grid-cols-7">
+            {week.map((day) => {
+              const dow = new Date(day.date + "T00:00:00").getDay();
+              return (
+                <button
+                  key={day.date}
+                  type="button"
+                  onClick={(e) => {
+                    if (day.isFuture || !day.isCurrentMonth) return;
+                    if (selectedDay?.date === day.date) { setSelectedDay(null); return; }
+                    const btn = e.currentTarget;
+                    const container = containerRef.current;
+                    if (container) {
+                      const cr = container.getBoundingClientRect();
+                      const br = btn.getBoundingClientRect();
+                      setPopupPos({
+                        x: br.left + br.width / 2 - cr.left,
+                        y: br.top - cr.top,
+                      });
+                    }
+                    setSelectedDay(day);
+                  }}
+                  className={`relative flex flex-col items-center justify-center rounded-lg transition-all aspect-square md:aspect-auto md:py-1.5 ${
+                    !day.isCurrentMonth ? "opacity-30 cursor-default" :
+                    day.isFuture ? "opacity-30 cursor-default" :
+                    "cursor-pointer hover:bg-bg-hover/50"
+                  } ${day.isToday ? "ring-1.5 ring-primary bg-primary/5" : ""} ${
+                    selectedDay?.date === day.date ? "bg-primary/10 ring-1 ring-primary" : ""
+                  }`}
+                >
+                  <span className={`text-[10px] leading-none ${
+                    day.isToday ? "font-bold text-primary" :
+                    !day.isCurrentMonth ? "text-text-faint/50" :
+                    dow === 0 ? "text-red-400/70" :
+                    dow === 6 ? "text-blue-400/70" :
+                    "text-text-faint"
+                  }`}>
+                    {day.day}
+                  </span>
+                  {day.level > 0 && day.isCurrentMonth ? (
+                    <svg
+                      viewBox="0 0 24 24"
+                      className={`w-4 h-4 mt-0.5 ${LEAF_COLORS[day.level]}`}
+                      fill="currentColor"
+                    >
+                      <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
+                    </svg>
+                  ) : (
+                    <div className="w-4 h-4 mt-0.5" />
+                  )}
+                  {/* PC: show activity details inside cell */}
+                  {day.activity && day.isCurrentMonth && !day.isFuture && (
+                    <div className="hidden md:flex flex-col items-center gap-0 mt-0.5">
+                      {day.activity.cards_reviewed > 0 && (
+                        <span className="text-[8px] text-text-faint leading-tight">{isKo ? "카" : "C"}{day.activity.cards_reviewed}</span>
+                      )}
+                      {day.activity.notes_added > 0 && (
+                        <span className="text-[8px] text-text-faint leading-tight">{isKo ? "노" : "N"}{day.activity.notes_added}</span>
+                      )}
+                      {day.activity.leaf_earned > 0 && (
+                        <span className="text-[8px] text-green-500/80 leading-tight font-medium">+{day.activity.leaf_earned}</span>
+                      )}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         ))}
       </div>
 
       {/* Legend */}
-      <div className="flex items-center justify-end gap-2 mt-2">
-        <span className="text-[9px] text-text-faint">{isKo ? "적음" : "Less"}</span>
-        {[1, 2, 3, 4].map((level) => (
-          <svg key={level} viewBox="0 0 24 24" className={`w-2.5 h-2.5 ${LEAF_STYLES[level]}`} fill="currentColor">
-            <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
-          </svg>
-        ))}
-        <span className="text-[9px] text-text-faint">{isKo ? "많음" : "More"}</span>
+      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
+        <div className="flex items-center gap-1.5">
+          <span className="text-[9px] text-text-faint">{isKo ? "적음" : "Less"}</span>
+          {[1, 2, 3, 4].map((level) => (
+            <svg key={level} viewBox="0 0 24 24" className={`w-3 h-3 ${LEAF_COLORS[level]}`} fill="currentColor">
+              <path d="M17 8C8 10 5.9 16.17 3.82 21.34l1.89.66.95-2.3c.48.17.98.3 1.34.3C19 20 22 3 22 3c-1 2-8 2.25-13 3.25S2 11.5 2 13.5s1.75 3.75 1.75 3.75C7 8 17 8 17 8z" />
+            </svg>
+          ))}
+          <span className="text-[9px] text-text-faint">{isKo ? "많음" : "More"}</span>
+        </div>
+        {monthOffset !== 0 && (
+          <button
+            onClick={() => { setMonthOffset(0); setSelectedDay(null); }}
+            className="text-[10px] text-primary hover:underline"
+          >
+            {isKo ? "이번 달" : "This month"}
+          </button>
+        )}
       </div>
+
+      {/* Day detail popup (positioned above clicked date) */}
+      {selectedDay && (
+        <div
+          ref={popupRef}
+          className="absolute z-20 animate-fade-in-down"
+          style={{
+            left: `clamp(90px, ${popupPos.x}px, calc(100% - 90px))`,
+            top: `${popupPos.y - 8}px`,
+            transform: "translate(-50%, -100%)",
+          }}
+        >
+          <div className="bg-bg-nav border border-border rounded-xl shadow-lg p-3 min-w-[170px]">
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-xs font-medium text-text">{formatDate(selectedDay.date)}</span>
+              <button onClick={() => setSelectedDay(null)} className="text-text-faint hover:text-text text-[10px] ml-2">✕</button>
+            </div>
+            {selectedDay.activity ? (
+              <div className="space-y-1">
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">{isKo ? "카드 복습" : "Cards"}</span>
+                  <span className="font-medium text-text">{selectedDay.activity.cards_reviewed}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">{isKo ? "노트 추가" : "Notes"}</span>
+                  <span className="font-medium text-text">{selectedDay.activity.notes_added}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-text-muted">Nuance</span>
+                  <span className="font-medium text-text">{selectedDay.activity.nuance_used}</span>
+                </div>
+                {selectedDay.activity.leaf_earned > 0 && (
+                  <div className="flex justify-between text-xs border-t border-border pt-1 mt-1">
+                    <span className="text-text-muted">Leaf</span>
+                    <span className="font-medium text-green-500">+{selectedDay.activity.leaf_earned}</span>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-xs text-text-faint">{isKo ? "활동 없음" : "No activity"}</div>
+            )}
+          </div>
+          {/* Arrow pointing down to the date */}
+          <div className="flex justify-center">
+            <div className="w-0 h-0 border-l-[6px] border-r-[6px] border-t-[6px] border-l-transparent border-r-transparent border-t-border" />
+          </div>
+        </div>
+      )}
     </div>
   );
 }

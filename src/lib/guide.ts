@@ -100,8 +100,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='review-ai']",
       title: { en: "", ko: "" },
       description: {
-        en: "AI generates a related example sentence.\nTap [+] to save it.",
-        ko: "AI가 관련 예문을 만들어줍니다.\n[+]를 눌러 노트에 저장하세요.",
+        en: "LAB generates a related example sentence.\nTap [+] to save it.",
+        ko: "LAB이 관련 예문을 만들어줍니다.\n[+]를 눌러 노트에 저장하세요.",
       },
       overlay: true,
     },

@@ -603,7 +603,7 @@ function NoteDetailContent() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => { setSplitTarget(null); setSplitPreview(null); }}>
           <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-md max-h-[70vh] overflow-y-auto p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-center">
-              {locale === "ko" ? "문장 나누기 미리보기" : "Split Preview"}
+              {locale === "ko" ? "카드 나누기 미리보기" : "Split Preview"}
             </h3>
             <div className="bg-bg-input/50 rounded-lg p-3 text-sm text-text-muted">
               <span className="text-xs text-text-faint block mb-1">{locale === "ko" ? "원본" : "Original"}</span>
@@ -742,17 +742,15 @@ function NoteDetailContent() {
         <div className="fixed inset-0 bg-black/70 z-50 flex items-center justify-center p-4" onClick={() => setSplitAiConfirm(null)}>
           <div className="bg-bg-card border border-border-light rounded-xl w-full max-w-sm p-5 space-y-4" onClick={(e) => e.stopPropagation()}>
             <h3 className="text-lg font-semibold text-center">
-              {locale === "ko" ? "문장 나누기" : "Split Sentences"}
+              {locale === "ko" ? "카드 나누기" : "Split Sentences"}
             </h3>
             <p className="text-sm text-text-muted text-center">
-              {locale === "ko"
-                ? "AI를 이용한 문장 나누기 기능입니다."
-                : "This feature uses AI to split sentences."}
+              {locale === "ko" ? "LAB 카드 나누기 기능입니다." : "LAB split card feature."}
             </p>
-            <p className="text-xs text-text-faint text-center">
+            <p className="text-[10px] text-text-faint text-center">
               {locale === "ko"
-                ? aiRemaining > 0 ? `무료 ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`
-                : aiRemaining > 0 ? `Free ${aiRemaining}/${user ? DAILY_LIMIT : GUEST_LIMIT}` : `🍃${userCredits}`}
+                ? `일일 무료 ${aiRemaining}/${DAILY_LIMIT}회 남음${aiRemaining <= 0 ? " (내 Leaf 차감)" : ""}`
+                : `Free ${aiRemaining}/${DAILY_LIMIT} remaining${aiRemaining <= 0 ? " (Leaf deducted)" : ""}`}
             </p>
             <div className="flex gap-3">
               <button
@@ -765,7 +763,7 @@ function NoteDetailContent() {
                 onClick={() => { const t = splitAiConfirm; setSplitAiConfirm(null); handleSplitLine(t.field, t.lineIdx, t.text); }}
                 className="flex-1 py-2.5 bg-orange-600 text-white rounded-lg text-sm hover:bg-orange-500 transition-colors"
               >
-                {locale === "ko" ? "🍃 문장 나누기" : "🍃 Split"}
+                {locale === "ko" ? "🍃 카드 나누기" : "🍃 Split"}
               </button>
             </div>
           </div>

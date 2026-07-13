@@ -70,7 +70,7 @@ let activeUpload: UploadJob | null = null;
 function AddContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const { user, plan } = useAuth();
+  const { user, plan, refreshCredits } = useAuth();
   const { t, locale } = useLocale();
   const initialLang = searchParams.get("lang") === "japanese" ? "japanese"
     : (typeof window !== "undefined" && localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
@@ -323,7 +323,14 @@ function AddContent() {
     } else {
       // Record activity for streak
       import("@/lib/streak").then(({ recordActivity }) => {
-        recordActivity(user.id, "note_add");
+        recordActivity(user.id, "note_add").then((res) => {
+          refreshCredits();
+          if (res.leafEarned > 0) {
+            import("@/components/Toast").then(({ toast }) => {
+              toast(`🍃 +${res.leafEarned} Leaf`, "success");
+            });
+          }
+        });
       });
       router.push("/notes");
     }
@@ -413,13 +420,13 @@ function AddContent() {
           {uploading && (
             <div className="absolute inset-0 bg-bg-card/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
               <svg className="w-10 h-10 text-primary animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" /></svg>
-              <div className="w-full max-w-[240px] space-y-2">
+              <div className="w-full max-w-[240px] space-y-2 mx-auto text-center">
                 {[
                   locale === "ko" ? "파일 읽는 중..." : "Reading file...",
-                  locale === "ko" ? "AI 분석 중..." : "AI analyzing...",
+                  locale === "ko" ? "LAB 분석 중..." : "Analyzing...",
                   locale === "ko" ? "저장 중..." : "Saving...",
                 ].map((label, i) => (
-                  <div key={i} className={`flex items-center gap-2 text-xs transition-colors ${
+                  <div key={i} className={`flex items-center justify-center gap-2 text-xs transition-colors ${
                     uploadStep === i + 1 ? "text-primary" : uploadStep > i + 1 ? "text-primary" : "text-text-faint"
                   }`}>
                     <span className="w-4 text-center">

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
@@ -14,9 +14,32 @@ import ActivityCalendar from "@/components/ActivityCalendar";
 import { getActivityCalendar, calculateStreak, type DailyActivity } from "@/lib/streak";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
 
+const FALLBACK_QUOTES = {
+  english: [
+    "The limits of my language mean the limits of my world. — Wittgenstein",
+    "To have another language is to possess a second soul. — Charlemagne",
+    "Mistakes are proof that you are trying.",
+    "A different language is a different vision of life. — Federico Fellini",
+    "One word at a time, one day at a time.",
+  ],
+  japanese: [
+    "千里の道も一歩から。— 老子",
+    "継続は力なり。",
+    "失敗は成功のもと。",
+    "習うより慣れろ。",
+    "一期一会。",
+  ],
+};
+
+function getFallbackQuote(lang: "english" | "japanese"): string {
+  const list = FALLBACK_QUOTES[lang];
+  const day = Math.floor(Date.now() / 86400000);
+  return list[day % list.length];
+}
+
 function HomeContent() {
   const router = useRouter();
-  const { user, loading } = useAuth();
+  const { user, loading, credits } = useAuth();
   const { t, locale } = useLocale();
   const isKo = locale === "ko";
 
@@ -27,67 +50,66 @@ function HomeContent() {
     }
   }, [user, loading, router]);
 
-  const [recent, setRecent] = useState<StudySession[]>([]);
+  const [allNotes, setAllNotes] = useState<StudySession[]>([]);
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
-  const [cardCount, setCardCount] = useState(0);
+  const [cardCounts, setCardCounts] = useState({ all: 0, english: 0, japanese: 0 });
   const [activities, setActivities] = useState<DailyActivity[]>([]);
   const [streak, setStreak] = useState(0);
   const [dataLoading, setDataLoading] = useState(true);
+  const [dailyQuote, setDailyQuote] = useState("");
+  const [dailyTranslation, setDailyTranslation] = useState("");
+  const [langFilter, setLangFilter] = useState<"english" | "japanese">(() => {
+    if (typeof window === "undefined") return "english";
+    return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
+  });
 
   useEffect(() => {
     if (!user) {
       const gn = getGuestNotes();
-      setRecent(gn.slice(0, 5));
+      setAllNotes(gn);
       setCounts({
         english: gn.filter((n) => n.language === "english").length,
         japanese: gn.filter((n) => n.language === "japanese").length,
       });
-      // Count cards from guest notes
-      let cards = 0;
+      let allC = 0, enC = 0, jpC = 0;
       for (const n of gn) {
-        if (n.vocabulary) cards += parseVocabulary(n.vocabulary).length;
-        if (n.sentence_grammar) cards += parseSentences(n.sentence_grammar).length;
+        const v = n.vocabulary ? parseVocabulary(n.vocabulary).length : 0;
+        const s = n.sentence_grammar ? parseSentences(n.sentence_grammar).length : 0;
+        allC += v + s;
+        if (n.language === "english") enC += v + s;
+        else jpC += v + s;
       }
-      setCardCount(cards);
+      setCardCounts({ all: allC, english: enC, japanese: jpC });
       setDataLoading(false);
       return;
     }
     async function load() {
-      const [recentRes, engRes, jpnRes, allNotesRes, activityData] = await Promise.all([
+      const [notesRes, activityData] = await Promise.all([
         supabase
           .from("study_sessions")
           .select("*")
           .eq("user_id", user!.id)
           .order("study_date", { ascending: false })
-          .order("created_at", { ascending: false })
-          .limit(5),
-        supabase
-          .from("study_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user!.id)
-          .eq("language", "english"),
-        supabase
-          .from("study_sessions")
-          .select("*", { count: "exact", head: true })
-          .eq("user_id", user!.id)
-          .eq("language", "japanese"),
-        supabase
-          .from("study_sessions")
-          .select("vocabulary, sentence_grammar")
-          .eq("user_id", user!.id),
+          .order("created_at", { ascending: false }),
         getActivityCalendar(user!.id),
       ]);
 
-      if (recentRes.data) setRecent(recentRes.data);
-      setCounts({ english: engRes.count ?? 0, japanese: jpnRes.count ?? 0 });
+      const notes = notesRes.data || [];
+      setAllNotes(notes);
+      setCounts({
+        english: notes.filter((n) => n.language === "english").length,
+        japanese: notes.filter((n) => n.language === "japanese").length,
+      });
 
-      // Count total cards
-      let cards = 0;
-      for (const n of allNotesRes.data || []) {
-        if (n.vocabulary) cards += parseVocabulary(n.vocabulary).length;
-        if (n.sentence_grammar) cards += parseSentences(n.sentence_grammar).length;
+      let allC = 0, enC = 0, jpC = 0;
+      for (const n of notes) {
+        const v = n.vocabulary ? parseVocabulary(n.vocabulary).length : 0;
+        const s = n.sentence_grammar ? parseSentences(n.sentence_grammar).length : 0;
+        allC += v + s;
+        if (n.language === "english") enC += v + s;
+        else jpC += v + s;
       }
-      setCardCount(cards);
+      setCardCounts({ all: allC, english: enC, japanese: jpC });
 
       setActivities(activityData);
       setStreak(calculateStreak(activityData));
@@ -95,6 +117,53 @@ function HomeContent() {
     }
     load();
   }, [user]);
+
+  const quoteCacheRef = useRef<Record<string, { quote: string; translation: string }>>({});
+
+  useEffect(() => {
+    // Already fetched this session
+    if (quoteCacheRef.current[langFilter]) {
+      const c = quoteCacheRef.current[langFilter];
+      setDailyQuote(c.quote);
+      setDailyTranslation(c.translation);
+      return;
+    }
+
+    let cancelled = false;
+    const today = new Date().toISOString().split("T")[0];
+    const cacheKey = `daily-quote-v2-${langFilter}`;
+    const cached = localStorage.getItem(cacheKey);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached);
+        if (parsed.date === today) {
+          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "" };
+          setDailyQuote(parsed.quote);
+          setDailyTranslation(parsed.translation || "");
+          return;
+        }
+      } catch {}
+    }
+
+    setDailyQuote(getFallbackQuote(langFilter));
+    setDailyTranslation("");
+    fetch(`/api/daily-quote?lang=${langFilter}`)
+      .then((r) => r.json())
+      .then((data) => {
+        if (cancelled) return;
+        const quote = data.quote || getFallbackQuote(langFilter);
+        quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "" };
+        setDailyQuote(quote);
+        setDailyTranslation(data.translation || "");
+        if (data.quote) {
+          localStorage.setItem(cacheKey, JSON.stringify({ date: today, quote: data.quote, translation: data.translation || "" }));
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setDailyQuote(getFallbackQuote(langFilter));
+      });
+    return () => { cancelled = true; };
+  }, [langFilter]);
 
   if (dataLoading) {
     return <SkeletonHome />;
@@ -110,14 +179,48 @@ function HomeContent() {
       {/* Header */}
       <div className="pt-6">
         <h1 className="text-2xl font-bold tracking-tight">
-          {isKo ? "안녕하세요!" : "Hello!"}
-          {streak > 0 && (
-            <span className="ml-2 text-orange-400 text-lg font-bold">
-              🔥 {streak}{isKo ? "일" : "d"}
-            </span>
-          )}
+          {isKo
+            ? (langFilter === "japanese" ? "ようこそ!" : "안녕하세요!")
+            : (langFilter === "japanese" ? "ようこそ!" : "Hello!")}
         </h1>
-        <p className="text-text-muted text-sm mt-1">{t("langLabDesc")}</p>
+        <div
+          className="mt-1 cursor-pointer active:opacity-70 transition-opacity h-[3.5rem] overflow-hidden"
+          style={{ wordBreak: "break-word", overflowWrap: "break-word" }}
+          onClick={async () => {
+            if (!user) return;
+            const quote = dailyQuote || getFallbackQuote(langFilter);
+            const entry = dailyTranslation ? `${quote}|||${dailyTranslation}` : quote;
+            const { data: existing } = await supabase
+              .from("study_sessions")
+              .select("id, sentence_grammar")
+              .eq("user_id", user.id)
+              .eq("title", "Quotes")
+              .eq("language", langFilter)
+              .single();
+            if (existing) {
+              const current = existing.sentence_grammar || "";
+              if (!current.includes(quote)) {
+                await supabase.from("study_sessions").update({
+                  sentence_grammar: current ? current + "\n" + entry : entry,
+                  study_date: new Date().toISOString().split("T")[0],
+                }).eq("id", existing.id);
+              }
+            } else {
+              await supabase.from("study_sessions").insert({
+                user_id: user.id,
+                language: langFilter,
+                study_date: new Date().toISOString().split("T")[0],
+                title: "Quotes",
+                sentence_grammar: entry,
+                raw_input: quote,
+              });
+            }
+            sessionStorage.setItem("review-index", "0");
+            router.push("/review");
+          }}
+        >
+          <span className="text-text-muted text-sm italic">{dailyQuote || "\u00A0"}</span>
+        </div>
       </div>
 
       {isEmpty ? (
@@ -155,71 +258,70 @@ function HomeContent() {
         </div>
       ) : (
         <>
-          {/* Stats */}
+          {/* Language toggle */}
+          <div className="flex gap-1 bg-bg-input rounded-lg p-1">
+            {([
+              { key: "english" as const, label: "English" },
+              { key: "japanese" as const, label: "日本語" },
+            ]).map((tab) => (
+              <button
+                key={tab.key}
+                onClick={() => {
+                  setLangFilter(tab.key);
+                  localStorage.setItem("lang-filter", tab.key);
+                }}
+                className={`flex-1 py-1.5 rounded-md text-sm font-medium transition-colors ${
+                  langFilter === tab.key
+                    ? "bg-bg-card text-primary shadow-sm"
+                    : "text-text-muted"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Stats grid */}
           <div data-guide="stats" className="grid grid-cols-2 gap-3">
             <Link
-              href="/notes?filter=english"
-              className="bg-bg-card border border-border rounded-xl p-4 hover:border-border-light transition-colors text-center"
+              href="/notes"
+              className="bg-bg-card border border-border rounded-xl p-4 text-center hover:border-border-light transition-colors"
             >
-              <div className="text-primary text-xs font-medium">English</div>
-              <div className="text-2xl font-bold mt-0.5">{counts.english}</div>
-              <div className="text-[10px] text-text-faint mt-0.5">{isKo ? "노트" : "notes"}</div>
+              <div className="text-2xl font-bold text-text">{counts[langFilter]}</div>
+              <div className="text-xs text-text-faint mt-0.5">{isKo ? "노트" : "Notes"}</div>
             </Link>
-            <Link
-              href="/notes?filter=japanese"
-              className="bg-bg-card border border-border rounded-xl p-4 hover:border-border-light transition-colors text-center"
-            >
-              <div className="text-primary text-xs font-medium">日本語</div>
-              <div className="text-2xl font-bold mt-0.5">{counts.japanese}</div>
-              <div className="text-[10px] text-text-faint mt-0.5">{isKo ? "노트" : "notes"}</div>
-            </Link>
-          </div>
-
-          {/* Today's status */}
-          <div className="grid grid-cols-2 gap-3">
-            <div className="bg-bg-card border border-border rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{cardCount}</div>
-              <div className="text-xs text-text-faint mt-0.5">{t("todayReviewCount")}</div>
-            </div>
-            <div className="bg-bg-card border border-border rounded-xl p-4 text-center">
-              <div className="text-2xl font-bold text-orange-400">{streak > 0 ? `🔥 ${streak}` : "—"}</div>
-              <div className="text-xs text-text-faint mt-0.5">{isKo ? "연속 학습" : "streak"}</div>
-            </div>
-          </div>
-
-          {/* Activity Calendar */}
-          {user && <ActivityCalendar activities={activities} streak={streak} />}
-
-          {/* Quick Actions */}
-          <div data-guide="quick-actions" className="grid grid-cols-2 gap-3">
             <Link
               href="/review"
-              className="bg-primary hover:bg-primary-hover text-primary-text rounded-xl p-4 text-center transition-colors"
+              className="bg-bg-card border border-border rounded-xl p-4 text-center hover:border-border-light transition-colors"
             >
-              <div className="flex justify-center mb-1">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
-                  <rect x="5" y="4" width="11" height="15" rx="2" fill="currentColor" opacity={0.5} />
-                  <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
-                </svg>
-              </div>
-              <div className="text-sm font-medium">{t("reviewCards")}</div>
+              <div className="text-2xl font-bold text-primary">{cardCounts[langFilter]}</div>
+              <div className="text-xs text-text-faint mt-0.5">{t("todayReviewCount")}</div>
             </Link>
             <Link
               href="/add"
-              className="bg-bg-input hover:bg-bg-hover text-text rounded-xl p-4 text-center transition-colors"
+              className="bg-bg-card border border-border rounded-xl p-4 text-center hover:border-border-light transition-colors"
             >
-              <div className="text-xl mb-1">+</div>
-              <div className="text-sm font-medium">{t("addNote")}</div>
+              <div className="text-2xl font-bold text-text">+</div>
+              <div className="text-xs text-text-faint mt-0.5">{t("addNote")}</div>
+            </Link>
+            <Link
+              href="/pricing"
+              className="bg-bg-card border border-border rounded-xl p-4 text-center hover:border-border-light transition-colors"
+            >
+              <div className="text-2xl font-bold text-green-500">🍃 {credits}</div>
+              <div className="text-xs text-text-faint mt-0.5">Leaf</div>
             </Link>
           </div>
 
           {/* Recent Notes */}
-          {recent.length > 0 && (
+          {allNotes.length > 0 && (
             <div data-guide="recent-notes">
               <h2 className="text-base font-semibold mb-2">{t("recentNotes")}</h2>
               <div className="space-y-2">
-                {recent.map((s) => (
+                {allNotes
+                  .filter((s) => s.language === langFilter)
+                  .slice(0, 3)
+                  .map((s) => (
                   <Link
                     key={s.id}
                     href={`/notes/${s.id}`}
@@ -240,6 +342,9 @@ function HomeContent() {
               </div>
             </div>
           )}
+
+          {/* Activity Calendar */}
+          {user && <ActivityCalendar activities={activities} streak={streak} />}
         </>
       )}
     </div>

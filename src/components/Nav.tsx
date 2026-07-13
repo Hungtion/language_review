@@ -21,7 +21,7 @@ const GUIDE_PAGES: Record<string, string> = {
 export default function Nav() {
   const pathname = usePathname();
   const router = useRouter();
-  const { user, credits } = useAuth();
+  const { user, credits, streak } = useAuth();
   const { t, locale } = useLocale();
 
   const guideKey = GUIDE_PAGES[pathname] || (/^\/notes\/.+/.test(pathname) ? "note-detail" : undefined);
@@ -38,7 +38,7 @@ export default function Nav() {
   const pageTitle = pathname === "/add" ? t("addNewNote")
     : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
     : pathname === "/review" ? (isKo ? "오늘의 복습" : "Review")
-    : pathname === "/nuance" ? (isKo ? "표현 다듬기" : "Nuance Chat")
+    : pathname === "/nuance" ? (isKo ? "Nuance" : "Nuance Chat")
     : pathname === "/settings" ? t("settingsTitle")
     : null;
 
@@ -49,9 +49,11 @@ export default function Nav() {
           <span className="text-primary">Language</span>
           <span className="text-text-muted ml-1 text-sm font-normal">LAB</span>
           {user && !user.is_anonymous ? (
-            <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded font-medium hover:bg-primary/30 transition-colors">
-              <span className="text-sm mr-0.5">{credits === 0 ? "🍃" : credits <= 10 ? "🌱" : credits <= 50 ? "🌿" : "🌳"}</span>{credits}
-            </button>
+            <>
+              <button onClick={(e) => { e.preventDefault(); e.stopPropagation(); router.push("/pricing"); }} className="ml-1.5 text-xs px-1.5 py-0.5 bg-primary/20 text-primary rounded font-medium hover:bg-primary/30 transition-colors">
+                <span className="text-sm mr-0.5">{credits === 0 ? "🍃" : credits <= 10 ? "🌱" : credits <= 50 ? "🌿" : "🌳"}</span>{credits}
+              </button>
+            </>
           ) : null}
         </Link>
         <div className="ml-auto flex items-center gap-1 flex-shrink-0">
@@ -86,7 +88,7 @@ export default function Nav() {
                 pathname === "/nuance" ? "bg-bg-input text-text" : "text-text-muted hover:text-text hover:bg-bg-input/50"
               }`}
             >
-              {isKo ? "표현 다듬기" : "Nuance Chat"}
+              {isKo ? "Nuance" : "Nuance Chat"}
             </Link>
             <Link
               href="/settings"

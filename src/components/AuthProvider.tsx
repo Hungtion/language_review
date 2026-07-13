@@ -2,12 +2,14 @@
 
 import { createContext, useContext, useEffect, useState, useCallback } from "react";
 import { supabase } from "@/lib/supabase";
+import { calculateStreak, getActivityCalendar, type DailyActivity } from "@/lib/streak";
 import type { User } from "@supabase/supabase-js";
 
 type AuthContextType = {
   user: User | null;
   plan: "free" | "pro";
   credits: number;
+  streak: number;
   isAnonymous: boolean;
   loading: boolean;
   signOut: () => Promise<void>;
@@ -18,6 +20,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   plan: "free",
   credits: 0,
+  streak: 0,
   isAnonymous: false,
   loading: true,
   signOut: async () => {},
@@ -32,6 +35,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const [user, setUser] = useState<User | null>(null);
   const [plan, setPlan] = useState<"free" | "pro">("free");
   const [credits, setCredits] = useState(0);
+  const [streak, setStreak] = useState(0);
   const [loading, setLoading] = useState(true);
 
   async function fetchPlan(userId: string) {
@@ -52,9 +56,18 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     setCredits(data?.balance ?? 0);
   }, []);
 
+  const fetchStreak = useCallback(async (userId: string) => {
+    const activities = await getActivityCalendar(userId, 60);
+    const sorted = [...activities].sort((a, b) => b.activity_date.localeCompare(a.activity_date));
+    setStreak(calculateStreak(sorted));
+  }, []);
+
   const refreshCredits = useCallback(async () => {
-    if (user) await fetchCredits(user.id);
-  }, [user, fetchCredits]);
+    if (user) {
+      await fetchCredits(user.id);
+      await fetchStreak(user.id);
+    }
+  }, [user, fetchCredits, fetchStreak]);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -62,6 +75,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (session?.user) {
         fetchPlan(session.user.id);
         fetchCredits(session.user.id);
+        fetchStreak(session.user.id);
       }
       setLoading(false);
     });
@@ -71,9 +85,11 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
       if (session?.user) {
         fetchPlan(session.user.id);
         fetchCredits(session.user.id);
+        fetchStreak(session.user.id);
       } else {
         setPlan("free");
         setCredits(0);
+        setStreak(0);
       }
     });
 
@@ -87,7 +103,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
   const isAnonymous = !!user?.is_anonymous;
 
   return (
-    <AuthContext.Provider value={{ user, plan, credits, isAnonymous, loading, signOut, refreshCredits }}>
+    <AuthContext.Provider value={{ user, plan, credits, streak, isAnonymous, loading, signOut, refreshCredits }}>
       {children}
     </AuthContext.Provider>
   );

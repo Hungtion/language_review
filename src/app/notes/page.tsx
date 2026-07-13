@@ -160,8 +160,12 @@ function NotesContent() {
     setShowBulkDeleteConfirm(false);
   }
 
+  const PINNED_TITLES = ["Quotes", "Nuance", "AI Examples"];
+  const pinnedNotes = sessions.filter((s) => PINNED_TITLES.includes(s.title || ""));
+  const regularSessions = sessions.filter((s) => !PINNED_TITLES.includes(s.title || ""));
+
   const filtered = search.trim()
-    ? sessions.filter((s) => {
+    ? regularSessions.filter((s) => {
         const q = search.toLowerCase();
         return (
           (s.title && s.title.toLowerCase().includes(q)) ||
@@ -171,7 +175,7 @@ function NotesContent() {
           (s.comment && s.comment.toLowerCase().includes(q))
         );
       })
-    : sessions;
+    : regularSessions;
 
   return (
     <div className="space-y-6">
@@ -264,6 +268,31 @@ function NotesContent() {
             <polyline points="9 18 15 12 9 6"/>
           </svg>
         </Link>
+      )}
+
+      {/* Pinned notes */}
+      {pinnedNotes.length > 0 && !search.trim() && !selectMode && (
+        <div className="grid grid-cols-3 gap-2">
+          {PINNED_TITLES.map((title) => {
+            const note = pinnedNotes.find((n) => n.title === title);
+            if (!note) return null;
+            const count = (note.sentence_grammar || "").split("\n").filter((l) => l.trim()).length;
+            const icon = title === "Quotes" ? "📜" : title === "Nuance" ? "🗣️" : "🧪";
+            const label = title === "AI Examples" ? "LAB Example" : title === "Quotes" ? "Daily Quotes" : title;
+            return (
+              <Link
+                key={title}
+                href={`/notes/${note.id}`}
+                onClick={() => { markNoteSeen(note.id); setSeenNotes((prev) => new Set(prev).add(note.id)); }}
+                className="bg-bg-card border border-border rounded-lg px-3 py-2.5 text-center hover:border-border-light transition-colors"
+              >
+                <div className="text-lg">{icon}</div>
+                <div className="text-[11px] font-medium text-text mt-0.5">{label}</div>
+                <div className="text-[10px] text-text-faint">{count}</div>
+              </Link>
+            );
+          })}
+        </div>
       )}
 
       <div data-guide="notes-list" className="space-y-3 flex-1" style={{ minHeight: "calc(100vh - 10rem)" }}>
