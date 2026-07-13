@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
+import { supabase } from "@/lib/supabase";
 import GuideOverlay from "@/components/GuideOverlay";
 
 function SettingsContent() {
@@ -38,6 +39,10 @@ function SettingsContent() {
   const [autoplay, setAutoplay] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
+  const [displayName, setDisplayName] = useState("");
+  const [nameEditing, setNameEditing] = useState(false);
+  const [nameSaving, setNameSaving] = useState(false);
+  const [nameInitialized, setNameInitialized] = useState(false);
   const [engChannel, setEngChannel] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("eng-channel") === "true" : false
   );
@@ -53,6 +58,24 @@ function SettingsContent() {
   const [accent, setAccentState] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("theme-accent") || "" : ""
   );
+
+  useEffect(() => {
+    if (!nameInitialized && user) {
+      setDisplayName(user.user_metadata?.full_name || user.user_metadata?.name || "");
+      setNameInitialized(true);
+    }
+  }, [user, nameInitialized]);
+
+  async function saveDisplayName() {
+    if (!user) return;
+    const trimmed = displayName.trim();
+    if (trimmed.length > 20) return;
+    setNameSaving(true);
+    await supabase.auth.updateUser({ data: { full_name: trimmed } });
+    await supabase.auth.refreshSession();
+    setNameSaving(false);
+    setNameEditing(false);
+  }
 
   useEffect(() => {
     function loadVoices() {
@@ -84,6 +107,71 @@ function SettingsContent() {
   return (
     <div className="space-y-6 max-w-lg mx-auto">
       <GuideOverlay pageKey="settings" />
+
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        {/* My Name */}
+        <div className="flex items-center justify-between">
+          {nameEditing ? (
+            <div className="flex items-center gap-2 flex-1">
+              <input
+                type="text"
+                value={displayName}
+                onChange={(e) => {
+                  const v = e.target.value.replace(/[<>"'&;]/g, "");
+                  if (v.length <= 20) setDisplayName(v);
+                }}
+                placeholder={locale === "ko" ? "내 이름" : "My Name"}
+                maxLength={20}
+                autoFocus
+                className="flex-1 bg-bg-input border border-border rounded-lg px-3 py-1.5 text-sm outline-none focus:border-primary"
+              />
+              <span className="text-[10px] text-text-faint">{displayName.length}/20</span>
+              <button
+                onClick={saveDisplayName}
+                disabled={nameSaving || !displayName.trim()}
+                className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors disabled:opacity-50"
+              >
+                {nameSaving ? "..." : (locale === "ko" ? "저장" : "Save")}
+              </button>
+              <button
+                onClick={() => {
+                  setDisplayName(user?.user_metadata?.full_name || user?.user_metadata?.name || "");
+                  setNameEditing(false);
+                }}
+                className="px-3 py-1.5 text-xs font-medium text-text-muted bg-bg-input border border-border rounded-lg hover:bg-bg-hover transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-text">{displayName || (locale === "ko" ? "미설정" : "Not set")}</span>
+              </div>
+              <button
+                onClick={() => setNameEditing(true)}
+                className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
+              >
+                {locale === "ko" ? "변경" : "Edit"}
+              </button>
+            </>
+          )}
+        </div>
+        {/* Leaf */}
+        <div className="flex items-center justify-between pt-2 border-t border-border">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-text-secondary">🍃 Leaf</span>
+            <span className="text-sm font-semibold text-primary">{credits}</span>
+          </div>
+          <button
+            onClick={() => router.push("/pricing")}
+            className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
+          >
+            {locale === "ko" ? "충전하기" : "Top Up"}
+          </button>
+        </div>
+      </div>
+
       <div data-guide="settings-lang" className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-text-secondary">{t("language")}</h2>
         <div className="flex gap-2">
@@ -386,24 +474,20 @@ function SettingsContent() {
       <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-text-secondary">{t("account")}</h2>
         <div className="flex items-center justify-between">
-          <p className="text-sm text-text-muted">{user?.email}</p>
+          <p className="text-sm text-text-muted flex items-center gap-1.5">
+            {(() => {
+              const provider = user?.app_metadata?.provider;
+              if (provider === "kakao") return <span title="Kakao">💬</span>;
+              if (provider === "google") return <svg width="14" height="14" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 01-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>;
+              return <span>📧</span>;
+            })()}
+            {user?.email}
+          </p>
           <button
             onClick={signOut}
             className="px-4 py-2 text-sm text-red-400 hover:text-red-300 border border-red-500/30 rounded-lg hover:bg-red-500/10 transition-colors"
           >
             {t("logout")}
-          </button>
-        </div>
-        <div className="flex items-center justify-between pt-2 border-t border-border">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-text-secondary">🍃 Leaf</span>
-            <span className="text-sm font-semibold text-primary">{credits}</span>
-          </div>
-          <button
-            onClick={() => router.push("/pricing")}
-            className="px-3 py-1.5 text-xs font-medium text-primary bg-primary/10 border border-primary/30 rounded-lg hover:bg-primary/20 transition-colors"
-          >
-            {locale === "ko" ? "충전하기" : "Top Up"}
           </button>
         </div>
         <div className="pt-2 border-t border-border">

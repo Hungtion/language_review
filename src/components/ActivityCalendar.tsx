@@ -237,20 +237,6 @@ export default function ActivityCalendar({ activities, streak }: Props) {
                   ) : (
                     <div className="h-[14px] mt-0.5" />
                   )}
-                  {/* PC: show activity details inside cell */}
-                  {day.activity && day.isCurrentMonth && !day.isFuture && (
-                    <div className="hidden md:flex flex-col items-center gap-0 mt-0.5">
-                      {day.activity.cards_reviewed > 0 && (
-                        <span className="text-[8px] text-text-faint leading-tight">{isKo ? "카" : "C"}{day.activity.cards_reviewed}</span>
-                      )}
-                      {day.activity.notes_added > 0 && (
-                        <span className="text-[8px] text-text-faint leading-tight">{isKo ? "노" : "N"}{day.activity.notes_added}</span>
-                      )}
-                      {day.activity.leaf_earned > 0 && (
-                        <span className="text-[8px] text-green-500/80 leading-tight font-medium">+{day.activity.leaf_earned}</span>
-                      )}
-                    </div>
-                  )}
                 </button>
               );
             })}

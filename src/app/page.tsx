@@ -182,7 +182,9 @@ function HomeContent() {
           {(() => {
             const name = user?.user_metadata?.full_name || user?.user_metadata?.name || "";
             const greeting = langFilter === "japanese" ? "ようこそ!" : "Hello!";
-            return name ? `${greeting} ${name}` : greeting;
+            return name
+              ? langFilter === "japanese" ? `${greeting} ${name} さま` : `${greeting} ${name}`
+              : greeting;
           })()}
         </h1>
         <div
@@ -196,7 +198,7 @@ function HomeContent() {
               .from("study_sessions")
               .select("id, sentence_grammar")
               .eq("user_id", user.id)
-              .eq("title", "Quotes")
+              .eq("title", "Daily Quotes")
               .eq("language", langFilter)
               .single();
             if (existing) {
@@ -212,12 +214,12 @@ function HomeContent() {
                 user_id: user.id,
                 language: langFilter,
                 study_date: new Date().toISOString().split("T")[0],
-                title: "Quotes",
+                title: "Daily Quotes",
                 sentence_grammar: entry,
                 raw_input: quote,
               });
             }
-            router.push("/review?startIndex=0");
+            router.push(`/review?findCard=${encodeURIComponent(quote)}`);
           }}
         >
           <span className="text-text-muted text-sm italic">{dailyQuote || "\u00A0"}</span>

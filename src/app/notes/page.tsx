@@ -160,7 +160,7 @@ function NotesContent() {
     setShowBulkDeleteConfirm(false);
   }
 
-  const PINNED_TITLES = ["Quotes", "Nuance", "AI Examples"];
+  const PINNED_TITLES = ["Daily Quotes", "Nuance", "LAB Examples"];
   const pinnedNotes = sessions.filter((s) => PINNED_TITLES.includes(s.title || ""));
   const regularSessions = sessions.filter((s) => !PINNED_TITLES.includes(s.title || ""));
 
@@ -277,8 +277,8 @@ function NotesContent() {
             const note = pinnedNotes.find((n) => n.title === title);
             if (!note) return null;
             const count = (note.sentence_grammar || "").split("\n").filter((l) => l.trim()).length;
-            const icon = title === "Quotes" ? "📜" : title === "Nuance" ? "🗣️" : "🧪";
-            const label = title === "AI Examples" ? "LAB Example" : title === "Quotes" ? "Daily Quotes" : title;
+            const icon = title === "Daily Quotes" ? "📜" : title === "Nuance" ? "🗣️" : "🧪";
+            const label = title === "LAB Examples" ? "LAB Example" : title;
             return (
               <Link
                 key={title}
@@ -352,7 +352,7 @@ function NotesContent() {
                   <div className="flex gap-4 text-xs text-text-faint">
                     {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
                     {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
                     {s.comment && <span>💬 {t("comment")}</span>}
                   </div>
                   {s.vocabulary && (
@@ -395,7 +395,7 @@ function NotesContent() {
                   <div className="flex gap-4 text-xs text-text-faint">
                     {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
                     {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
                     {s.comment && <span>💬 {t("comment")}</span>}
                   </div>
 

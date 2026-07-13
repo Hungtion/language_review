@@ -32,7 +32,9 @@ function ReviewContent() {
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
   const startIndexParam = searchParams.get("startIndex");
+  const findCardParam = searchParams.get("findCard");
   const startIndexUsed = useRef(false);
+  const findCardUsed = useRef(false);
   const { user, plan, refreshCredits } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
   const [index, setIndexRaw] = useState(0);
@@ -206,7 +208,11 @@ function ReviewContent() {
       // When un-shuffling, restore position to the card user was viewing
       filterRef.current = filter;
       let startIndex = 0;
-      if (startIndexParam !== null && !startIndexUsed.current) {
+      if (findCardParam && !findCardUsed.current) {
+        const idx = filtered.findIndex((c) => c.front.includes(findCardParam));
+        startIndex = idx >= 0 ? idx : 0;
+        findCardUsed.current = true;
+      } else if (startIndexParam !== null && !startIndexUsed.current) {
         startIndex = parseInt(startIndexParam, 10) || 0;
         startIndexUsed.current = true;
       } else if (noteId) {
@@ -380,12 +386,12 @@ function ReviewContent() {
     const card = cards[index];
     if (!result || !card || !user) return;
 
-    // Find existing "AI Examples" note for same language
+    // Find existing "LAB Examples" note for same language
     const { data: existing } = await supabase
       .from("study_sessions")
       .select("id, sentence_grammar")
       .eq("user_id", user.id)
-      .eq("title", "AI Examples")
+      .eq("title", "LAB Examples")
       .eq("language", card.language)
       .single();
 
@@ -405,7 +411,7 @@ function ReviewContent() {
         user_id: user.id,
         language: card.language,
         study_date: today,
-        title: "AI Examples",
+        title: "LAB Examples",
         sentence_grammar: result,
         raw_input: result,
       }));
@@ -1049,7 +1055,7 @@ function ReviewContent() {
             {/* AI Panel - attached to card */}
             <div data-guide="review-ai" className="w-full max-w-lg mt-3">
               {aiLoading ? (
-                <div className="bg-bg-card border border-primary/30 rounded-lg p-3">
+                <div className="bg-bg-card border border-primary/30 rounded-lg p-3 text-center">
                   <p className="text-primary text-sm animate-pulse">{t("analyzing")}</p>
                 </div>
               ) : aiResults[index] ? (
