@@ -215,8 +215,7 @@ function HomeContent() {
                 raw_input: quote,
               });
             }
-            sessionStorage.setItem("review-index", "0");
-            router.push("/review");
+            router.push("/review?startIndex=0");
           }}
         >
           <span className="text-text-muted text-sm italic">{dailyQuote || "\u00A0"}</span>

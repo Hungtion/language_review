@@ -14,7 +14,7 @@ import { getCredits } from "@/lib/credits";
 import GuideOverlay from "@/components/GuideOverlay";
 import CreditModal from "@/components/CreditModal";
 import CelebrationModal from "@/components/CelebrationModal";
-import PronunciationCheck from "@/components/PronunciationCheck";
+import PronunciationCheck, { type PronResult } from "@/components/PronunciationCheck";
 
 type Card = {
   front: string;
@@ -31,20 +31,21 @@ function ReviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
+  const startIndexParam = searchParams.get("startIndex");
+  const startIndexUsed = useRef(false);
   const { user, plan, refreshCredits } = useAuth();
   const [cards, setCards] = useState<Card[]>([]);
-  const [index, setIndexRaw] = useState(() => {
-    if (typeof window === "undefined") return 0;
-    return parseInt(sessionStorage.getItem("review-index") || "0", 10) || 0;
-  });
+  const [index, setIndexRaw] = useState(0);
+  const filterRef = useRef<string>("");
   const setIndex = useCallback((v: number | ((prev: number) => number)) => {
     setIndexRaw((prev) => {
       const next = typeof v === "function" ? v(prev) : v;
-      sessionStorage.setItem("review-index", String(next));
+      if (filterRef.current) sessionStorage.setItem(`review-index-${filterRef.current}`, String(next));
       return next;
     });
   }, []);
   const [flipped, setFlipped] = useState(false);
+  const [pronResult, setPronResult] = useState<PronResult | null>(null);
   const [filter, setFilter] = useState<"english" | "japanese">(() => {
     if (typeof window === "undefined") return "english";
     return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
@@ -203,8 +204,12 @@ function ReviewContent() {
       setCards(filtered);
 
       // When un-shuffling, restore position to the card user was viewing
+      filterRef.current = filter;
       let startIndex = 0;
-      if (noteId) {
+      if (startIndexParam !== null && !startIndexUsed.current) {
+        startIndex = parseInt(startIndexParam, 10) || 0;
+        startIndexUsed.current = true;
+      } else if (noteId) {
         startIndex = 0;
       } else if (!shuffled && preShuffleCard.current) {
         const ref = preShuffleCard.current;
@@ -212,11 +217,12 @@ function ReviewContent() {
         startIndex = found >= 0 ? found : 0;
         preShuffleCard.current = null;
       } else {
-        const saved = parseInt(sessionStorage.getItem("review-index") || "0", 10) || 0;
+        const saved = parseInt(sessionStorage.getItem(`review-index-${filter}`) || "0", 10) || 0;
         startIndex = saved < filtered.length ? saved : 0;
       }
       setIndex(startIndex);
       setFlipped(false);
+      setPronResult(null);
       setAiResults({});
       setAiSaved({});
       setLoading(false);
@@ -232,6 +238,7 @@ function ReviewContent() {
       reviewedCards.current.add(index);
       setIndex((i) => i + 1);
       setFlipped(false);
+      setPronResult(null);
       // Record activity every 5 cards reviewed
       const size = reviewedCards.current.size;
       const milestone = Math.floor(size / 5) * 5;
@@ -260,6 +267,7 @@ function ReviewContent() {
       setPlaying(false);
       setIndex((i) => i - 1);
       setFlipped(false);
+      setPronResult(null);
     }
   }, [index]);
 
@@ -585,8 +593,7 @@ function ReviewContent() {
         e.preventDefault();
         const c = cards[index];
         if (c?.back) {
-          if (flipped) { speak(c.back, c.language); setFlipped(false); }
-          else { speak(c.front, c.language); setFlipped(true); }
+          if (!flipped) { speak(c.front, c.language); setFlipped(true); }
         } else if (c) { speak(c.front, c.language); }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         if (animating || index >= cards.length - 1) return;
@@ -683,12 +690,7 @@ function ReviewContent() {
       const c = cards[index];
       if (!c) return;
       if (c.back) {
-        if (flipped) {
-          // Back is showing → read front, flip to front
-          speak(c.front, c.language);
-          setFlipped(false);
-        } else {
-          // Front is showing → read front, flip to back
+        if (!flipped) {
           speak(c.front, c.language);
           setFlipped(true);
         }
@@ -916,8 +918,7 @@ function ReviewContent() {
                 const c = cards[index];
                 if (!c) return;
                 if (c.back) {
-                  if (flipped) { speak(c.front, c.language); setFlipped(false); }
-                  else { speak(c.front, c.language); setFlipped(true); }
+                  if (!flipped) { speak(c.front, c.language); setFlipped(true); }
                 } else {
                   speak(c.front, c.language);
                 }
@@ -943,9 +944,8 @@ function ReviewContent() {
                         : pressed ? "scale(0.95)" : "",
               }}
             >
-              <div className={`card-inner relative w-full h-full ${flipped ? "flipped" : ""}`}>
-                {/* Front */}
-                <div className="card-front absolute inset-0 bg-bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center">
+              <div className="relative w-full h-full">
+                <div className="absolute inset-0 bg-bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center">
                   {/* Top dead zone — prevents flip on top border tap */}
                   <div className="card-toolbar absolute top-0 left-0 right-0 h-14 z-[5]" />
                   {/* Card toolbar: share, split, delete */}
@@ -1010,8 +1010,29 @@ function ReviewContent() {
                     <span className="text-xs text-text-faint">{card.sessionDate}</span>
                   </div>
                   <p className="text-xl text-center font-medium leading-relaxed">
-                    {card.front}
+                    {pronResult ? (
+                      pronResult.matches.map((m, i) => (
+                        <span
+                          key={i}
+                          className={`transition-colors ${
+                            m.matched ? "text-green-500" : "text-red-400"
+                          }`}
+                        >
+                          {m.word}{i < pronResult.matches.length - 1 ? " " : ""}
+                        </span>
+                      ))
+                    ) : (
+                      card.front
+                    )}
                   </p>
+                  {/* Back content revealed below front */}
+                  {flipped && card.back && (
+                    <div className="mt-4 pt-4 border-t border-border w-full">
+                      <pre className="text-base text-center whitespace-pre-wrap font-sans leading-relaxed text-primary">
+                        {card.back}
+                      </pre>
+                    </div>
+                  )}
                   <div
                     className="card-toolbar absolute bottom-3 left-0 right-0 flex justify-center"
                     onClick={(e) => e.stopPropagation()}
@@ -1019,15 +1040,8 @@ function ReviewContent() {
                     onTouchEnd={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
-                    <PronunciationCheck targetText={card.front} language={card.language} />
+                    <PronunciationCheck targetText={card.front} language={card.language} onResult={setPronResult} />
                   </div>
-                </div>
-
-                {/* Back */}
-                <div className="card-back absolute inset-0 bg-bg-card border border-primary/30 rounded-2xl p-8 flex flex-col items-center justify-center">
-                  <pre className="text-lg text-center whitespace-pre-wrap font-sans leading-relaxed text-text-secondary">
-                    {card.back}
-                  </pre>
                 </div>
               </div>
             </div>
