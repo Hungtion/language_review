@@ -62,6 +62,7 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
   const [listening, setListening] = useState(false);
   const [result, setResult] = useState<Result | null>(null);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
+  const lastTranscriptRef = useRef<string>("");
 
   useEffect(() => {
     recognitionRef.current?.stop();
@@ -78,6 +79,7 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
 
     setResult(null);
     onResult?.(null);
+    lastTranscriptRef.current = "";
     setListening(true);
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
@@ -85,16 +87,20 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
     recognitionRef.current = recognition;
 
     recognition.lang = language === "japanese" ? "ja-JP" : "en-US";
-    recognition.interimResults = false;
+    recognition.interimResults = true;
     recognition.maxAlternatives = 1;
     recognition.continuous = false;
 
     recognition.onresult = (event: SpeechRecognitionEvent) => {
-      const transcript = event.results[0][0].transcript;
-      const r = computeScore(targetText, transcript);
-      setResult(r);
-      onResult?.(r);
-      setListening(false);
+      const last = event.results[event.results.length - 1];
+      const transcript = last[0].transcript;
+      lastTranscriptRef.current = transcript;
+      if (last.isFinal) {
+        const r = computeScore(targetText, transcript);
+        setResult(r);
+        onResult?.(r);
+        setListening(false);
+      }
     };
 
     recognition.onerror = () => {
@@ -110,8 +116,15 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
 
   const stopListening = useCallback(() => {
     recognitionRef.current?.stop();
+    recognitionRef.current = null;
     setListening(false);
-  }, []);
+    // Evaluate with whatever was captured so far
+    if (lastTranscriptRef.current) {
+      const r = computeScore(targetText, lastTranscriptRef.current);
+      setResult(r);
+      onResult?.(r);
+    }
+  }, [targetText, onResult]);
 
   if (!supported) return null;
 
