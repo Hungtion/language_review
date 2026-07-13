@@ -16,6 +16,18 @@ function SettingsContent() {
   const [feedbackType, setFeedbackType] = useState<"bug" | "feedback" | null>(null);
   const [feedbackMsg, setFeedbackMsg] = useState("");
   const [feedbackSending, setFeedbackSending] = useState(false);
+  const [showEcImport, setShowEcImport] = useState(false);
+  const [ecLoginId, setEcLoginId] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("ec-login-id") || "" : ""
+  );
+  const [ecPassword, setEcPassword] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("ec-password") || "" : ""
+  );
+  const [ecImporting, setEcImporting] = useState(false);
+  const [ecResult, setEcResult] = useState<{ imported: number; total: number; details?: { date: string; teacher: string }[] } | null>(null);
+  const [ecSaveCredentials, setEcSaveCredentials] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("ec-save-credentials") === "true" : false
+  );
   const [voices, setVoices] = useState<SpeechSynthesisVoice[]>([]);
   const [selectedEN, setSelectedEN] = useState(() =>
     typeof window !== "undefined" ? localStorage.getItem("tts-voice-en") || "" : ""
@@ -323,6 +335,19 @@ function SettingsContent() {
             />
           </button>
         </div>
+        {engChannel && (
+          <div className="pt-3 border-t border-border">
+            <button
+              onClick={() => { setShowEcImport(true); setEcResult(null); }}
+              className="w-full py-2.5 rounded-lg text-sm bg-primary/10 text-primary border border-primary/30 hover:bg-primary/20 transition-colors font-medium"
+            >
+              {locale === "ko" ? "English Channel 피드백 가져오기" : "Import English Channel Feedback"}
+            </button>
+            <p className="text-xs text-text-faint mt-2">
+              {locale === "ko" ? "English Channel 수업 피드백을 자동으로 노트에 추가합니다." : "Auto-import lesson feedback as notes."}
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
@@ -553,6 +578,141 @@ function SettingsContent() {
                   : (locale === "ko" ? "보내기" : "Send")}
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {showEcImport && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4" onClick={() => { if (!ecImporting) { setShowEcImport(false); setEcResult(null); } }}>
+          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold text-text text-center">
+              {locale === "ko" ? "English Channel 연동" : "English Channel Import"}
+            </h3>
+
+            {ecResult ? (
+              <div className="space-y-3 text-center">
+                <div className="text-4xl">{ecResult.imported > 0 ? "🎉" : "📭"}</div>
+                <p className="text-sm text-text-secondary">
+                  {ecResult.imported > 0
+                    ? (locale === "ko"
+                      ? `${ecResult.imported}개의 피드백을 가져왔습니다!`
+                      : `Imported ${ecResult.imported} feedbacks!`)
+                    : (locale === "ko"
+                      ? "새로운 피드백이 없습니다."
+                      : "No new feedbacks to import.")}
+                </p>
+                {ecResult.details && ecResult.details.length > 0 && (
+                  <div className="max-h-40 overflow-y-auto text-left">
+                    {ecResult.details.map((d, i) => (
+                      <div key={i} className="text-xs text-text-muted py-1 border-b border-border last:border-0">
+                        {d.date} — {d.teacher}
+                      </div>
+                    ))}
+                  </div>
+                )}
+                <button
+                  onClick={() => { setShowEcImport(false); setEcResult(null); }}
+                  className="px-6 py-2.5 bg-primary hover:bg-primary-hover text-primary-text rounded-xl text-sm font-medium transition-colors"
+                >
+                  {locale === "ko" ? "확인" : "OK"}
+                </button>
+              </div>
+            ) : (
+              <>
+                <p className="text-xs text-text-muted text-center">
+                  {locale === "ko"
+                    ? "English Channel 아이디/비밀번호를 입력하면 수업 피드백을 자동으로 노트에 추가합니다."
+                    : "Enter your English Channel credentials to import lesson feedback."}
+                </p>
+                <div className="space-y-3">
+                  <input
+                    type="text"
+                    placeholder={locale === "ko" ? "아이디 (이메일)" : "Login ID (email)"}
+                    value={ecLoginId}
+                    onChange={(e) => setEcLoginId(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-bg-input border border-border rounded-xl text-sm text-text placeholder:text-text-faint focus:outline-none focus:border-primary"
+                  />
+                  <input
+                    type="password"
+                    placeholder={locale === "ko" ? "비밀번호" : "Password"}
+                    value={ecPassword}
+                    onChange={(e) => setEcPassword(e.target.value)}
+                    className="w-full px-4 py-2.5 bg-bg-input border border-border rounded-xl text-sm text-text placeholder:text-text-faint focus:outline-none focus:border-primary"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={ecSaveCredentials}
+                      onChange={(e) => setEcSaveCredentials(e.target.checked)}
+                      className="w-4 h-4 rounded accent-primary"
+                    />
+                    <span className="text-xs text-text-muted">
+                      {locale === "ko"
+                        ? "로그인 정보 저장 (앱 시작 시 자동 가져오기)"
+                        : "Save credentials (auto-import on app start)"}
+                    </span>
+                  </label>
+                </div>
+                <div className="flex gap-3 justify-center">
+                  <button
+                    onClick={() => { setShowEcImport(false); if (!ecSaveCredentials) { setEcLoginId(""); setEcPassword(""); } }}
+                    className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
+                  >
+                    {locale === "ko" ? "취소" : "Cancel"}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!ecLoginId || !ecPassword || !user) return;
+                      setEcImporting(true);
+                      try {
+                        // Get existing note dates to skip duplicates
+                        const { data: existing } = await (await import("@/lib/supabase")).supabase
+                          .from("study_sessions")
+                          .select("study_date")
+                          .eq("user_id", user.id)
+                          .eq("language", "english");
+                        const existingDates = (existing || []).map((n: { study_date: string }) => n.study_date);
+
+                        const res = await fetch("/api/ec/import", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify({
+                            ecLoginId,
+                            ecPassword,
+                            userId: user.id,
+                            existingDates,
+                          }),
+                        });
+                        const data = await res.json();
+                        if (res.ok) {
+                          setEcResult(data);
+                          if (ecSaveCredentials) {
+                            localStorage.setItem("ec-login-id", ecLoginId);
+                            localStorage.setItem("ec-password", ecPassword);
+                            localStorage.setItem("ec-save-credentials", "true");
+                          } else {
+                            localStorage.removeItem("ec-login-id");
+                            localStorage.removeItem("ec-password");
+                            localStorage.removeItem("ec-save-credentials");
+                          }
+                        } else {
+                          alert(data.error || "Import failed");
+                        }
+                      } catch {
+                        alert(locale === "ko" ? "가져오기 중 오류가 발생했습니다." : "Import failed");
+                      }
+                      setEcImporting(false);
+                    }}
+                    disabled={ecImporting || !ecLoginId || !ecPassword}
+                    className="px-6 py-2.5 bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text rounded-xl text-sm font-medium transition-colors"
+                  >
+                    {ecImporting
+                      ? (locale === "ko" ? "가져오는 중..." : "Importing...")
+                      : (locale === "ko" ? "가져오기" : "Import")}
+                  </button>
+                </div>
+              </>
+            )}
           </div>
         </div>
       )}

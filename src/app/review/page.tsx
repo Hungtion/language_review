@@ -89,6 +89,12 @@ function ReviewContent() {
   const lastTouchEnd = useRef(0);
 
   useEffect(() => {
+    return () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    };
+  }, []);
+
+  useEffect(() => {
     async function load() {
       let data;
       if (!user) {
@@ -810,6 +816,13 @@ function ReviewContent() {
               onTouchStart={handleTouchStart}
               onTouchMove={handleTouchMove}
               onTouchEnd={handleTouchEnd}
+              onTouchCancel={() => {
+                if (longPressTimer.current) { clearTimeout(longPressTimer.current); longPressTimer.current = null; }
+                longPressTriggered.current = false;
+                swiping.current = false;
+                setPressed(false);
+                setSwipeX(0);
+              }}
               onMouseDown={(e) => {
                 if (e.button !== 0) return;
                 if (Date.now() - lastTouchEnd.current < 500) return;

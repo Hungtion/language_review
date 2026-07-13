@@ -138,8 +138,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='notes-list']",
       title: { en: "", ko: "" },
       description: {
-        en: "Tap a note to view details, edit, or delete.",
-        ko: "노트를 탭하면 상세 내용을 보고\n편집/삭제할 수 있어요.",
+        en: "Tap a note to view details.\nLong-press to select multiple notes for bulk delete.",
+        ko: "노트를 탭하면 상세 내용을 볼 수 있어요.\n길게 누르면 여러 노트를 선택해서 삭제할 수 있어요.",
       },
       overlay: true,
     },

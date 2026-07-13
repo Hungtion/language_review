@@ -37,6 +37,7 @@ function NoteDetailContent() {
   const [deleteTarget, setDeleteTarget] = useState<{ field: string; lineIdx: number } | null>(null);
   const [splitAiConfirm, setSplitAiConfirm] = useState<{ field: string; lineIdx: number; text: string } | null>(null);
   const [splitNoResult, setSplitNoResult] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
@@ -107,7 +108,6 @@ function NoteDetailContent() {
   }, [params.id, user]);
 
   async function handleDelete() {
-    if (!confirm(t("confirmDelete"))) return;
     if (!user) {
       deleteGuestNote(params.id as string);
     } else {
@@ -563,12 +563,40 @@ function NoteDetailContent() {
       {/* Delete */}
       <div className="pt-4 pb-8 text-center">
         <button
-          onClick={handleDelete}
+          onClick={() => setShowDeleteConfirm(true)}
           className="text-sm text-red-400/50 hover:text-red-400 transition-colors"
         >
           {t("deleteNote")}
         </button>
       </div>
+
+      {/* Delete Confirm Modal */}
+      {showDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
+            <h3 className="text-lg font-bold text-text">
+              {locale === "ko" ? "노트 삭제" : "Delete Note"}
+            </h3>
+            <p className="text-sm text-text-muted">
+              {t("confirmDelete")}
+            </p>
+            <div className="flex gap-3 justify-center pt-2">
+              <button
+                onClick={() => setShowDeleteConfirm(false)}
+                className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={() => { setShowDeleteConfirm(false); handleDelete(); }}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                {t("delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Split Preview Modal */}
       {(splitTarget && (splitLoading || splitPreview)) && (

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useSearchParams, useRouter } from "next/navigation";
 import { supabase, StudySession } from "@/lib/supabase";
@@ -39,6 +39,18 @@ function NotesContent() {
   const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
   const [seenNotes, setSeenNotes] = useState<Set<string>>(new Set());
+  const [selectMode, setSelectMode] = useState(false);
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [deleting, setDeleting] = useState(false);
+  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
+  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const longPressTriggered = useRef(false);
+
+  useEffect(() => {
+    return () => {
+      if (longPressTimer.current) clearTimeout(longPressTimer.current);
+    };
+  }, []);
 
   useEffect(() => {
     setSeenNotes(getSeenNotes());
@@ -74,6 +86,12 @@ function NotesContent() {
     load();
   }, [filter, user]);
 
+  // Exit select mode when filter changes
+  useEffect(() => {
+    setSelectMode(false);
+    setSelected(new Set());
+  }, [filter]);
+
   const updateUrl = useCallback((f: string, q: string) => {
     const params = new URLSearchParams();
     params.set("filter", f);
@@ -90,6 +108,56 @@ function NotesContent() {
   function handleSearchChange(q: string) {
     setSearch(q);
     updateUrl(filter, q);
+  }
+
+  function toggleSelect(id: string) {
+    setSelected((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
+
+  function handlePointerDown(id: string) {
+    longPressTriggered.current = false;
+    longPressTimer.current = setTimeout(() => {
+      longPressTriggered.current = true;
+      if (!selectMode) {
+        setSelectMode(true);
+        setSelected(new Set([id]));
+      }
+    }, 500);
+  }
+
+  function handlePointerUp() {
+    if (longPressTimer.current) {
+      clearTimeout(longPressTimer.current);
+      longPressTimer.current = null;
+    }
+    // Reset after a tick so the current click is still blocked
+    if (longPressTriggered.current) {
+      setTimeout(() => { longPressTriggered.current = false; }, 0);
+    }
+  }
+
+  async function handleBulkDelete() {
+    setDeleting(true);
+    const ids = [...selected];
+    const { error } = await supabase
+      .from("study_sessions")
+      .delete()
+      .in("id", ids);
+
+    if (error) {
+      alert(error.message);
+    } else {
+      setSessions((prev) => prev.filter((s) => !selected.has(s.id)));
+      setSelected(new Set());
+      setSelectMode(false);
+    }
+    setDeleting(false);
+    setShowBulkDeleteConfirm(false);
   }
 
   const filtered = search.trim()
@@ -144,11 +212,43 @@ function NotesContent() {
         </div>
       </div>
 
-      {!loading && filtered.length > 0 && !search.trim() && (
+      {selectMode ? (
+        <div className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-xl px-4 h-[52px]">
+          <button
+            onClick={() => { setSelectMode(false); setSelected(new Set()); }}
+            className="text-sm text-text-muted hover:text-text transition-colors"
+          >
+            {locale === "ko" ? "취소" : "Cancel"}
+          </button>
+          <span className="text-sm text-text-secondary font-medium">
+            {locale === "ko" ? `${selected.size}개 선택` : `${selected.size} selected`}
+          </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                if (selected.size === filtered.length) setSelected(new Set());
+                else setSelected(new Set(filtered.map((s) => s.id)));
+              }}
+              className="text-sm text-text-muted hover:text-text transition-colors"
+            >
+              {selected.size === filtered.length
+                ? (locale === "ko" ? "해제" : "Deselect")
+                : (locale === "ko" ? "전체" : "All")}
+            </button>
+            <button
+              onClick={() => { if (selected.size > 0) setShowBulkDeleteConfirm(true); }}
+              disabled={selected.size === 0}
+              className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium transition-colors"
+            >
+              {locale === "ko" ? "삭제" : "Delete"}
+            </button>
+          </div>
+        </div>
+      ) : !loading && filtered.length > 0 && !search.trim() && (
         <Link
           data-guide="notes-review"
           href="/review"
-          className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 py-3 hover:bg-primary/20 transition-colors group"
+          className="flex items-center justify-between bg-primary/10 border border-primary/20 rounded-xl px-4 h-[52px] hover:bg-primary/20 transition-colors group"
         >
           <div className="flex items-center gap-3">
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary">
@@ -183,47 +283,124 @@ function NotesContent() {
             )}
           </div>
         ) : (
-          filtered.map((s, i) => (
+          filtered.map((s) => (
             <div key={s.id}>
-              <Link
-                href={`/notes/${s.id}`}
-                onClick={() => { markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id)); }}
-                className="block bg-bg-card border border-border rounded-xl p-5 hover:border-border-light transition-colors group"
-              >
-                <div className="flex items-center gap-3 mb-2">
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                    s.language === "english"
-                      ? "bg-primary/20 text-primary"
-                      : "bg-primary/20 text-primary"
-                  }`}>
-                    {s.language === "english" ? "English" : "日本語"}
-                  </span>
-                  <span className="text-sm text-text-faint">{s.study_date}</span>
-                  {s.title && (
-                    <span className="text-sm text-text-secondary font-medium">{s.title}</span>
-                  )}
-                  {!seenNotes.has(s.id) && (
-                    <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">NEW</span>
+              {selectMode ? (
+                <div
+                  onClick={() => toggleSelect(s.id)}
+                  className={`block bg-bg-card border rounded-xl p-5 transition-colors cursor-pointer ${
+                    selected.has(s.id)
+                      ? "border-red-500/50 bg-red-500/10"
+                      : "border-border hover:border-border-light"
+                  }`}
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      s.language === "english"
+                        ? "bg-primary/20 text-primary"
+                        : "bg-primary/20 text-primary"
+                    }`}>
+                      {s.language === "english" ? "English" : "日本語"}
+                    </span>
+                    <span className="text-sm text-text-faint">{s.study_date}</span>
+                    {s.title && (
+                      <span className="text-sm text-text-secondary font-medium">{s.title}</span>
+                    )}
+                  </div>
+                  <div className="flex gap-4 text-xs text-text-faint">
+                    {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.comment && <span>💬 {t("comment")}</span>}
+                  </div>
+                  {s.vocabulary && (
+                    <p className="text-text-faint text-sm mt-2 truncate">
+                      {s.vocabulary.slice(0, 120)}...
+                    </p>
                   )}
                 </div>
+              ) : (
+                <Link
+                  href={`/notes/${s.id}`}
+                  onClick={(e) => {
+                    if (longPressTriggered.current) { e.preventDefault(); return; }
+                    markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id));
+                  }}
+                  onPointerDown={() => handlePointerDown(s.id)}
+                  onPointerUp={handlePointerUp}
+                  onPointerCancel={handlePointerUp}
+                  onPointerLeave={handlePointerUp}
+                  onContextMenu={(e) => { if (longPressTriggered.current) e.preventDefault(); }}
+                  className="block bg-bg-card border border-border rounded-xl p-5 hover:border-border-light transition-colors group"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+                      s.language === "english"
+                        ? "bg-primary/20 text-primary"
+                        : "bg-primary/20 text-primary"
+                    }`}>
+                      {s.language === "english" ? "English" : "日本語"}
+                    </span>
+                    <span className="text-sm text-text-faint">{s.study_date}</span>
+                    {s.title && (
+                      <span className="text-sm text-text-secondary font-medium">{s.title}</span>
+                    )}
+                    {!seenNotes.has(s.id) && (
+                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">NEW</span>
+                    )}
+                  </div>
 
-                <div className="flex gap-4 text-xs text-text-faint">
-                  {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
-                  {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                  {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
-                  {s.comment && <span>💬 {t("comment")}</span>}
-                </div>
+                  <div className="flex gap-4 text-xs text-text-faint">
+                    {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "AI Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.comment && <span>💬 {t("comment")}</span>}
+                  </div>
 
-                {s.vocabulary && (
-                  <p className="text-text-faint text-sm mt-2 truncate group-hover:text-text-muted">
-                    {s.vocabulary.slice(0, 120)}...
-                  </p>
-                )}
-              </Link>
+                  {s.vocabulary && (
+                    <p className="text-text-faint text-sm mt-2 truncate group-hover:text-text-muted">
+                      {s.vocabulary.slice(0, 120)}...
+                    </p>
+                  )}
+                </Link>
+              )}
             </div>
           ))
         )}
       </div>
+
+      {/* Bulk delete confirm modal */}
+      {showBulkDeleteConfirm && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
+          <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
+            <h3 className="text-lg font-bold text-text">
+              {locale === "ko" ? "노트 삭제" : "Delete Notes"}
+            </h3>
+            <p className="text-sm text-text-muted">
+              {locale === "ko"
+                ? `${selected.size}개의 노트를 삭제하시겠습니까?`
+                : `Delete ${selected.size} notes?`}
+            </p>
+            <div className="flex gap-3 justify-center pt-2">
+              <button
+                onClick={() => setShowBulkDeleteConfirm(false)}
+                className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
+              >
+                {locale === "ko" ? "취소" : "Cancel"}
+              </button>
+              <button
+                onClick={handleBulkDelete}
+                disabled={deleting}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+              >
+                {deleting
+                  ? (locale === "ko" ? "삭제 중..." : "Deleting...")
+                  : (locale === "ko" ? "삭제" : "Delete")}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
