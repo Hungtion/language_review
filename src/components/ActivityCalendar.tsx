@@ -258,22 +258,16 @@ export default function ActivityCalendar({ activities, streak }: Props) {
         ))}
       </div>
 
-      {/* Legend */}
-      <div className="flex items-center justify-between mt-3 pt-2 border-t border-border/50">
-        <div className="flex items-center gap-2">
-          {[1, 2, 3, 4].map((level) => (
-            <span key={level} className="text-[11px]">{GROWTH_ICONS[level]}</span>
-          ))}
-        </div>
-        {monthOffset !== 0 && (
+      {monthOffset !== 0 && (
+        <div className="flex justify-end mt-3 pt-2 border-t border-border/50">
           <button
             onClick={() => { setMonthOffset(0); setSelectedDay(null); }}
             className="text-[10px] text-primary hover:underline"
           >
             {isKo ? "이번 달" : "This month"}
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Day detail popup (positioned above clicked date) */}
       {selectedDay && (
