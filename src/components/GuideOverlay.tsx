@@ -174,11 +174,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
         {annotations.map((a, i) => {
           if (a.step.tabLabels || a.step.noHighlight) return null;
           const hlTop = a.rect.top - 4;
-          const hlMaxBottom = vh - 130;
-          const hlRawHeight = a.rect.height + 8;
-          const hlHeight = hlTop < hlMaxBottom && hlTop + hlRawHeight > hlMaxBottom
-            ? hlMaxBottom - hlTop
-            : hlRawHeight;
+          const hlHeight = a.rect.height + 8;
           return (
             <div
               key={`hl-${i}`}
