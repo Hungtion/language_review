@@ -13,6 +13,7 @@ import { SkeletonHome } from "@/components/Skeleton";
 import ActivityCalendar from "@/components/ActivityCalendar";
 import { getActivityCalendar, calculateStreak, type DailyActivity } from "@/lib/streak";
 import { parseVocabulary, parseSentences } from "@/lib/parser";
+import Onboarding from "@/components/Onboarding";
 
 const FALLBACK_QUOTES = {
   english: [
@@ -49,6 +50,11 @@ function HomeContent() {
       router.replace("/login");
     }
   }, [user, loading, router]);
+
+  const [showOnboarding, setShowOnboarding] = useState(() => {
+    if (typeof window === "undefined") return false;
+    return !localStorage.getItem("onboarding-done");
+  });
 
   const [allNotes, setAllNotes] = useState<StudySession[]>([]);
   const [counts, setCounts] = useState({ english: 0, japanese: 0 });
@@ -192,6 +198,10 @@ function HomeContent() {
 
   const totalNotes = counts.english + counts.japanese;
   const isEmpty = totalNotes === 0;
+
+  if (showOnboarding && user) {
+    return <Onboarding onDone={() => setShowOnboarding(false)} />;
+  }
 
   return (
     <div className="space-y-6">
