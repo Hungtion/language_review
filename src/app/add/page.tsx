@@ -93,6 +93,11 @@ function AddContent() {
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [hasNotes, setHasNotes] = useState(true);
 
+  useEffect(() => {
+    document.body.style.overflow = "hidden";
+    return () => { document.body.style.overflow = ""; };
+  }, []);
+
   // On mount: if upload was running while away, attach to it
   useEffect(() => {
     if (!activeUpload) return;
@@ -347,7 +352,7 @@ function AddContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)" }}>
+    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <div className="space-y-4">
       <GuideOverlay pageKey="add" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
