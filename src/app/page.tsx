@@ -149,7 +149,6 @@ function HomeContent() {
 
   useEffect(() => {
     if (!quotePeriod) return;
-    // Use in-memory cache only if same period
     const mem = quoteCacheRef.current[langFilter];
     if (mem && mem.period === quotePeriod) {
       setDailyQuote(mem.quote);
@@ -158,20 +157,6 @@ function HomeContent() {
     }
 
     let cancelled = false;
-    const cacheKey = `daily-quote-v3-${langFilter}`;
-    const cached = localStorage.getItem(cacheKey);
-    if (cached) {
-      try {
-        const parsed = JSON.parse(cached);
-        if (parsed.date === quotePeriod) {
-          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "", period: quotePeriod };
-          setDailyQuote(parsed.quote);
-          setDailyTranslation(parsed.translation || "");
-          return;
-        }
-      } catch {}
-    }
-
     setDailyQuote(getFallbackQuote(langFilter));
     setDailyTranslation("");
     fetch(`/api/daily-quote?lang=${langFilter}`)
@@ -182,9 +167,6 @@ function HomeContent() {
         quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "", period: quotePeriod };
         setDailyQuote(quote);
         setDailyTranslation(data.translation || "");
-        if (data.quote) {
-          localStorage.setItem(cacheKey, JSON.stringify({ date: quotePeriod, quote: data.quote, translation: data.translation || "" }));
-        }
       })
       .catch(() => {
         if (!cancelled) setDailyQuote(getFallbackQuote(langFilter));
