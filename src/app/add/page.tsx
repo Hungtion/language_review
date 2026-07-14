@@ -347,7 +347,8 @@ function AddContent() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col" style={{ minHeight: "calc(100vh - 7rem)" }}>
+      <div className="space-y-4">
       <GuideOverlay pageKey="add" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
       {/* Title, Date & Language */}
@@ -449,8 +450,9 @@ function AddContent() {
         />
       )}
 
+      </div>
       {/* Raw Input */}
-      <div data-guide="add-textarea">
+      <div data-guide="add-textarea" className="flex-1 flex flex-col mt-4">
         <div className="flex gap-2 mb-2 flex-wrap items-center">
           <span className="text-xs text-text-faint">{locale === "ko" ? "예제:" : "Examples:"}</span>
           {TEMPLATES[language].map((tmpl, i) => (
@@ -467,7 +469,7 @@ function AddContent() {
             </button>
           ))}
         </div>
-        <div className="relative">
+        <div className="relative flex-1 flex flex-col">
           <textarea
             value={rawInput}
             onChange={(e) => {
@@ -486,8 +488,8 @@ function AddContent() {
               }
             }}
             placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
-            rows={16}
-            className="w-full bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
+            rows={6}
+            className="w-full flex-1 min-h-[120px] bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
           />
           {uploading && (
             <div className="absolute inset-0 bg-bg-card/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
@@ -519,8 +521,8 @@ function AddContent() {
         </p>
       </div>
 
-      {/* Actions */}
-      <div className="flex gap-3 items-center">
+      {/* Actions - sticky bottom */}
+      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] bg-bg pt-3 pb-2 flex gap-3 items-center z-10">
         {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}
