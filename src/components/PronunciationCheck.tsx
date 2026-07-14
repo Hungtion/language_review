@@ -171,11 +171,6 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
           </button>
         )}
 
-        {result && (
-          <span className={`text-lg font-bold ${getScoreColor(result.score)}`}>
-            {result.score}% <span className="text-xs font-normal">{getScoreLabel(result.score, isKo)}</span>
-          </span>
-        )}
       </div>
     </div>
   );

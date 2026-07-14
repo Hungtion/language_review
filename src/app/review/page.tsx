@@ -964,7 +964,13 @@ function ReviewContent() {
               <div className="relative w-full h-full">
                 <div className="absolute inset-0 bg-bg-card border border-border rounded-2xl p-8 flex flex-col items-center justify-center">
                   {/* Top dead zone — prevents flip on top border tap */}
-                  <div className="card-toolbar absolute top-0 left-0 right-0 h-14 z-[5]" />
+                  <div className="card-toolbar absolute top-0 left-0 right-0 h-14 z-[5] flex items-center justify-center">
+                    {pronResult && (
+                      <span className={`text-lg font-bold ${pronResult.score >= 80 ? "text-green-500" : pronResult.score >= 50 ? "text-yellow-500" : "text-red-400"}`}>
+                        {pronResult.score}% <span className="text-xs font-normal">{pronResult.score >= 90 ? (isKo ? "완벽해요!" : "Perfect!") : pronResult.score >= 70 ? (isKo ? "잘했어요!" : "Great!") : pronResult.score >= 50 ? (isKo ? "괜찮아요" : "Good try") : (isKo ? "다시 해볼까요?" : "Try again")}</span>
+                      </span>
+                    )}
+                  </div>
                   {/* Card toolbar: share, split, delete */}
                   <div className="card-toolbar absolute top-3 right-3 flex items-center gap-2 z-10">
                     {typeof navigator !== "undefined" && navigator.share && (
@@ -1042,6 +1048,12 @@ function ReviewContent() {
                       card.front
                     )}
                   </p>
+                  {pronResult && pronResult.transcript && (
+                    <div className="mt-2 text-center">
+                      <span className="text-[10px] text-text-faint">{isKo ? "내 발음" : "My speech"}</span>
+                      <p className="text-sm text-red-400 italic">{pronResult.transcript}</p>
+                    </div>
+                  )}
                   {/* Back content revealed below front */}
                   {flipped && card.back && (
                     <div className="mt-4 pt-4 border-t border-border w-full">
