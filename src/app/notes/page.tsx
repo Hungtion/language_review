@@ -39,18 +39,12 @@ function NotesContent() {
   const [search, setSearch] = useState(initialSearch);
   const [loading, setLoading] = useState(true);
   const [seenNotes, setSeenNotes] = useState<Set<string>>(new Set());
-  const [selectMode, setSelectMode] = useState(false);
-  const [selected, setSelected] = useState<Set<string>>(new Set());
-  const [deleting, setDeleting] = useState(false);
-  const [showBulkDeleteConfirm, setShowBulkDeleteConfirm] = useState(false);
-  const longPressTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const longPressTriggered = useRef(false);
-
-  useEffect(() => {
-    return () => {
-      if (longPressTimer.current) clearTimeout(longPressTimer.current);
-    };
-  }, []);
+  const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const swipeStartX = useRef(0);
+  const swipeCurrentX = useRef(0);
+  const swipingId = useRef<string | null>(null);
+  const swipeElMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     setSeenNotes(getSeenNotes());
@@ -86,10 +80,8 @@ function NotesContent() {
     load();
   }, [filter, user]);
 
-  // Exit select mode when filter changes
   useEffect(() => {
-    setSelectMode(false);
-    setSelected(new Set());
+    setSwipedId(null);
   }, [filter]);
 
   const updateUrl = useCallback((f: string, q: string) => {
@@ -110,54 +102,53 @@ function NotesContent() {
     updateUrl(filter, q);
   }
 
-  function toggleSelect(id: string) {
-    setSelected((prev) => {
-      const next = new Set(prev);
-      if (next.has(id)) next.delete(id);
-      else next.add(id);
-      return next;
-    });
+  function handleTouchStart(id: string, e: React.TouchEvent) {
+    swipeStartX.current = e.touches[0].clientX;
+    swipeCurrentX.current = e.touches[0].clientX;
+    swipingId.current = id;
+    // Close other swiped items
+    if (swipedId && swipedId !== id) setSwipedId(null);
   }
 
-  function handlePointerDown(id: string) {
-    longPressTriggered.current = false;
-    longPressTimer.current = setTimeout(() => {
-      longPressTriggered.current = true;
-      if (!selectMode) {
-        setSelectMode(true);
-        setSelected(new Set([id]));
+  function handleTouchMove(id: string, e: React.TouchEvent) {
+    if (swipingId.current !== id) return;
+    swipeCurrentX.current = e.touches[0].clientX;
+    const dx = swipeStartX.current - swipeCurrentX.current;
+    const el = swipeElMap.current.get(id);
+    if (el) {
+      const offset = Math.max(0, Math.min(dx, 80));
+      el.style.transform = `translateX(-${offset}px)`;
+      el.style.transition = "none";
+    }
+  }
+
+  function handleTouchEnd(id: string) {
+    if (swipingId.current !== id) return;
+    const dx = swipeStartX.current - swipeCurrentX.current;
+    const el = swipeElMap.current.get(id);
+    if (el) {
+      el.style.transition = "transform 0.2s ease";
+      if (dx > 60) {
+        el.style.transform = "translateX(-72px)";
+        setSwipedId(id);
+      } else {
+        el.style.transform = "translateX(0)";
+        if (swipedId === id) setSwipedId(null);
       }
-    }, 500);
+    }
+    swipingId.current = null;
   }
 
-  function handlePointerUp() {
-    if (longPressTimer.current) {
-      clearTimeout(longPressTimer.current);
-      longPressTimer.current = null;
-    }
-    // Reset after a tick so the current click is still blocked
-    if (longPressTriggered.current) {
-      setTimeout(() => { longPressTriggered.current = false; }, 0);
-    }
-  }
-
-  async function handleBulkDelete() {
-    setDeleting(true);
-    const ids = [...selected];
+  async function handleSwipeDelete(id: string) {
     const { error } = await supabase
       .from("study_sessions")
       .delete()
-      .in("id", ids);
-
-    if (error) {
-      alert(error.message);
-    } else {
-      setSessions((prev) => prev.filter((s) => !selected.has(s.id)));
-      setSelected(new Set());
-      setSelectMode(false);
+      .eq("id", id);
+    if (!error) {
+      setSessions((prev) => prev.filter((s) => s.id !== id));
+      setSwipedId(null);
+      setDeleteConfirmId(null);
     }
-    setDeleting(false);
-    setShowBulkDeleteConfirm(false);
   }
 
   const PINNED_TITLES = ["Daily Quotes", "Nuance", "LAB Examples"];
@@ -216,39 +207,7 @@ function NotesContent() {
         </div>
       </div>
 
-      {selectMode ? (
-        <div className="flex items-center justify-between bg-red-500/10 border border-red-500/20 rounded-xl px-4 h-[52px]">
-          <button
-            onClick={() => { setSelectMode(false); setSelected(new Set()); }}
-            className="text-sm text-text-muted hover:text-text transition-colors"
-          >
-            {locale === "ko" ? "취소" : "Cancel"}
-          </button>
-          <span className="text-sm text-text-secondary font-medium">
-            {locale === "ko" ? `${selected.size}개 선택` : `${selected.size} selected`}
-          </span>
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => {
-                if (selected.size === filtered.length) setSelected(new Set());
-                else setSelected(new Set(filtered.map((s) => s.id)));
-              }}
-              className="text-sm text-text-muted hover:text-text transition-colors"
-            >
-              {selected.size === filtered.length
-                ? (locale === "ko" ? "해제" : "Deselect")
-                : (locale === "ko" ? "전체" : "All")}
-            </button>
-            <button
-              onClick={() => { if (selected.size > 0) setShowBulkDeleteConfirm(true); }}
-              disabled={selected.size === 0}
-              className="text-sm px-3 py-1.5 rounded-lg bg-red-600 hover:bg-red-500 disabled:opacity-40 text-white font-medium transition-colors"
-            >
-              {locale === "ko" ? "삭제" : "Delete"}
-            </button>
-          </div>
-        </div>
-      ) : !loading && filtered.length > 0 && !search.trim() && (
+      {!loading && filtered.length > 0 && !search.trim() && (
         <Link
           data-guide="notes-review"
           href="/review"
@@ -271,7 +230,7 @@ function NotesContent() {
       )}
 
       {/* Pinned notes */}
-      {pinnedNotes.length > 0 && !search.trim() && !selectMode && (
+      {pinnedNotes.length > 0 && !search.trim() && (
         <div className="grid grid-cols-3 gap-2">
           {PINNED_TITLES.map((title) => {
             const note = pinnedNotes.find((n) => n.title === title);
@@ -326,53 +285,30 @@ function NotesContent() {
           </div>
         ) : (
           filtered.map((s) => (
-            <div key={s.id}>
-              {selectMode ? (
-                <div
-                  onClick={() => toggleSelect(s.id)}
-                  className={`block bg-bg-card border rounded-xl p-5 transition-colors cursor-pointer ${
-                    selected.has(s.id)
-                      ? "border-red-500/50 bg-red-500/10"
-                      : "border-border hover:border-border-light"
-                  }`}
+            <div key={s.id} className="relative overflow-hidden rounded-xl">
+              {/* Delete button behind */}
+              <div className="absolute right-0 top-0 bottom-0 w-[72px] flex items-center justify-center bg-red-600 rounded-r-xl">
+                <button
+                  onClick={() => setDeleteConfirmId(s.id)}
+                  className="text-white text-xs font-medium"
                 >
-                  <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      s.language === "english"
-                        ? "bg-primary/20 text-primary"
-                        : "bg-primary/20 text-primary"
-                    }`}>
-                      {s.language === "english" ? "English" : "日本語"}
-                    </span>
-                    <span className="text-sm text-text-faint">{s.study_date}</span>
-                    {s.title && (
-                      <span className="text-sm text-text-secondary font-medium">{s.title}</span>
-                    )}
-                  </div>
-                  <div className="flex gap-4 text-xs text-text-faint">
-                    {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.comment && <span>💬 {t("comment")}</span>}
-                  </div>
-                  {s.vocabulary && (
-                    <p className="text-text-faint text-sm mt-2 truncate">
-                      {s.vocabulary.slice(0, 120)}...
-                    </p>
-                  )}
-                </div>
-              ) : (
+                  {locale === "ko" ? "삭제" : "Delete"}
+                </button>
+              </div>
+              {/* Swipeable card */}
+              <div
+                ref={(el) => { if (el) swipeElMap.current.set(s.id, el); }}
+                onTouchStart={(e) => handleTouchStart(s.id, e)}
+                onTouchMove={(e) => handleTouchMove(s.id, e)}
+                onTouchEnd={() => handleTouchEnd(s.id)}
+                style={{ transform: swipedId === s.id ? "translateX(-72px)" : "translateX(0)", transition: "transform 0.2s ease" }}
+              >
                 <Link
                   href={`/notes/${s.id}`}
                   onClick={(e) => {
-                    if (longPressTriggered.current) { e.preventDefault(); return; }
+                    if (swipedId === s.id) { e.preventDefault(); setSwipedId(null); const el = swipeElMap.current.get(s.id); if (el) { el.style.transition = "transform 0.2s ease"; el.style.transform = "translateX(0)"; } return; }
                     markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id));
                   }}
-                  onPointerDown={() => handlePointerDown(s.id)}
-                  onPointerUp={handlePointerUp}
-                  onPointerCancel={handlePointerUp}
-                  onPointerLeave={handlePointerUp}
-                  onContextMenu={(e) => { if (longPressTriggered.current) e.preventDefault(); }}
                   className="block bg-bg-card border border-border rounded-xl p-5 hover:border-border-light transition-colors group"
                 >
                   <div className="flex items-center gap-3 mb-2">
@@ -405,39 +341,34 @@ function NotesContent() {
                     </p>
                   )}
                 </Link>
-              )}
+              </div>
             </div>
           ))
         )}
       </div>
 
-      {/* Bulk delete confirm modal */}
-      {showBulkDeleteConfirm && (
+      {/* Delete confirm modal */}
+      {deleteConfirmId && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4">
           <div className="bg-bg-card border border-border-light rounded-2xl p-6 max-w-sm w-full space-y-4 text-center">
             <h3 className="text-lg font-bold text-text">
-              {locale === "ko" ? "노트 삭제" : "Delete Notes"}
+              {locale === "ko" ? "노트 삭제" : "Delete Note"}
             </h3>
             <p className="text-sm text-text-muted">
-              {locale === "ko"
-                ? `${selected.size}개의 노트를 삭제하시겠습니까?`
-                : `Delete ${selected.size} notes?`}
+              {locale === "ko" ? "이 노트를 삭제하시겠습니까?" : "Delete this note?"}
             </p>
             <div className="flex gap-3 justify-center pt-2">
               <button
-                onClick={() => setShowBulkDeleteConfirm(false)}
+                onClick={() => { setDeleteConfirmId(null); setSwipedId(null); const el = swipeElMap.current.get(deleteConfirmId); if (el) { el.style.transition = "transform 0.2s ease"; el.style.transform = "translateX(0)"; } }}
                 className="px-6 py-2.5 bg-bg-input hover:bg-bg-hover text-text-secondary rounded-xl text-sm transition-colors"
               >
                 {locale === "ko" ? "취소" : "Cancel"}
               </button>
               <button
-                onClick={handleBulkDelete}
-                disabled={deleting}
-                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 text-white rounded-xl text-sm font-medium transition-colors"
+                onClick={() => handleSwipeDelete(deleteConfirmId)}
+                className="px-6 py-2.5 bg-red-600 hover:bg-red-500 text-white rounded-xl text-sm font-medium transition-colors"
               >
-                {deleting
-                  ? (locale === "ko" ? "삭제 중..." : "Deleting...")
-                  : (locale === "ko" ? "삭제" : "Delete")}
+                {locale === "ko" ? "삭제" : "Delete"}
               </button>
             </div>
           </div>
