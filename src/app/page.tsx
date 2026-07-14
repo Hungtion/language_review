@@ -158,7 +158,7 @@ function HomeContent() {
     }
 
     let cancelled = false;
-    const cacheKey = `daily-quote-v2-${langFilter}`;
+    const cacheKey = `daily-quote-v3-${langFilter}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
