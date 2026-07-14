@@ -118,26 +118,34 @@ function HomeContent() {
     load();
   }, [user]);
 
-  const quoteCacheRef = useRef<Record<string, { quote: string; translation: string }>>({});
+  const quoteCacheRef = useRef<Record<string, { quote: string; translation: string; date: string }>>({});
+
+  function getKstPeriod() {
+    const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+    const date = kst.toISOString().split("T")[0];
+    const hour = kst.getUTCHours();
+    const period = hour >= 8 && hour < 20 ? "AM" : "PM";
+    return `${date}-${period}`;
+  }
 
   useEffect(() => {
-    // Already fetched this session
-    if (quoteCacheRef.current[langFilter]) {
-      const c = quoteCacheRef.current[langFilter];
-      setDailyQuote(c.quote);
-      setDailyTranslation(c.translation);
+    const today = getKstPeriod();
+    // Use in-memory cache only if same period
+    const mem = quoteCacheRef.current[langFilter];
+    if (mem && mem.date === today) {
+      setDailyQuote(mem.quote);
+      setDailyTranslation(mem.translation);
       return;
     }
 
     let cancelled = false;
-    const today = new Date().toISOString().split("T")[0];
     const cacheKey = `daily-quote-v2-${langFilter}`;
     const cached = localStorage.getItem(cacheKey);
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
         if (parsed.date === today) {
-          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "" };
+          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "", date: today };
           setDailyQuote(parsed.quote);
           setDailyTranslation(parsed.translation || "");
           return;
@@ -152,7 +160,7 @@ function HomeContent() {
       .then((data) => {
         if (cancelled) return;
         const quote = data.quote || getFallbackQuote(langFilter);
-        quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "" };
+        quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "", date: today };
         setDailyQuote(quote);
         setDailyTranslation(data.translation || "");
         if (data.quote) {

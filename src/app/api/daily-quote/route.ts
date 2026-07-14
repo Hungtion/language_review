@@ -2,12 +2,21 @@ import { NextRequest, NextResponse } from "next/server";
 
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
-// In-memory cache: one quote per language per day
-const cache: Record<string, { date: string; quote: string; translation: string }> = {};
+// In-memory cache: one quote per language per period (AM/PM KST)
+const cache: Record<string, { period: string; quote: string; translation: string }> = {};
+
+function getKstPeriod(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const date = kst.toISOString().split("T")[0];
+  const hour = kst.getUTCHours();
+  // 08:00~19:59 = AM, 20:00~07:59 = PM
+  const period = hour >= 8 && hour < 20 ? "AM" : "PM";
+  return `${date}-${period}`;
+}
 
 async function generateQuote(lang: "english" | "japanese"): Promise<{ quote: string; translation: string }> {
-  const today = new Date().toISOString().split("T")[0];
-  const key = `${lang}-${today}`;
+  const period = getKstPeriod();
+  const key = `${lang}-${period}`;
 
   if (cache[key]) return { quote: cache[key].quote, translation: cache[key].translation };
 
@@ -43,9 +52,9 @@ No quotes, no labels, no explanation.`;
   const translation = (lines[1] || "").replace(/^[""\u201C]|[""\u201D]$/g, "");
 
   if (quote) {
-    cache[key] = { date: today, quote, translation };
+    cache[key] = { period, quote, translation };
     for (const k of Object.keys(cache)) {
-      if (!k.endsWith(today)) delete cache[k];
+      if (cache[k].period !== period) delete cache[k];
     }
   }
 

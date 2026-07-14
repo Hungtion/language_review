@@ -8,6 +8,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
+import { toast } from "@/components/Toast";
 
 import { getGuestNotes } from "@/lib/guestStorage";
 
@@ -20,9 +21,18 @@ function getSeenNotes(): Set<string> {
 function markNoteSeen(id: string) {
   const seen = getSeenNotes();
   seen.add(id);
-  // Keep only last 500 to avoid bloat
   const arr = [...seen].slice(-500);
   localStorage.setItem("seen-notes", JSON.stringify(arr));
+}
+
+function getPinnedNotes(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem("pinned-notes") || "[]"));
+  } catch { return new Set(); }
+}
+
+function savePinnedNotes(pinned: Set<string>) {
+  localStorage.setItem("pinned-notes", JSON.stringify([...pinned]));
 }
 
 function NotesContent() {
@@ -40,7 +50,9 @@ function NotesContent() {
   const [loading, setLoading] = useState(true);
   const [seenNotes, setSeenNotes] = useState<Set<string>>(new Set());
   const [swipedId, setSwipedId] = useState<string | null>(null);
+  const [swipeDir, setSwipeDir] = useState<"left" | "right" | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [pinnedNoteIds, setPinnedNoteIds] = useState<Set<string>>(new Set());
   const swipeStartX = useRef(0);
   const swipeCurrentX = useRef(0);
   const swipingId = useRef<string | null>(null);
@@ -48,6 +60,7 @@ function NotesContent() {
 
   useEffect(() => {
     setSeenNotes(getSeenNotes());
+    setPinnedNoteIds(getPinnedNotes());
   }, []);
 
   useEffect(() => {
@@ -102,41 +115,86 @@ function NotesContent() {
     updateUrl(filter, q);
   }
 
+  function resetSwipe(id: string) {
+    const el = swipeElMap.current.get(id);
+    if (el) { el.style.transition = "transform 0.2s ease"; el.style.transform = "translateX(0)"; }
+    setSwipedId(null);
+    setSwipeDir(null);
+  }
+
+  const swipeBaseOffset = useRef(0);
+
   function handleTouchStart(id: string, e: React.TouchEvent) {
     swipeStartX.current = e.touches[0].clientX;
     swipeCurrentX.current = e.touches[0].clientX;
     swipingId.current = id;
-    // Close other swiped items
-    if (swipedId && swipedId !== id) setSwipedId(null);
+    // Remember current offset so reverse swipe works from open state
+    if (swipedId === id && swipeDir === "left") swipeBaseOffset.current = -72;
+    else if (swipedId === id && swipeDir === "right") swipeBaseOffset.current = 72;
+    else swipeBaseOffset.current = 0;
+    if (swipedId && swipedId !== id) resetSwipe(swipedId);
   }
 
   function handleTouchMove(id: string, e: React.TouchEvent) {
     if (swipingId.current !== id) return;
     swipeCurrentX.current = e.touches[0].clientX;
-    const dx = swipeStartX.current - swipeCurrentX.current;
+    const rawDx = swipeStartX.current - swipeCurrentX.current;
+    const totalOffset = swipeBaseOffset.current - rawDx; // positive = right, negative = left
+    const clamped = Math.max(-80, Math.min(80, totalOffset));
     const el = swipeElMap.current.get(id);
     if (el) {
-      const offset = Math.max(0, Math.min(dx, 80));
-      el.style.transform = `translateX(-${offset}px)`;
+      el.style.transform = `translateX(${clamped}px)`;
       el.style.transition = "none";
+      if (clamped < -20) setSwipeDir("left");
+      else if (clamped > 20) setSwipeDir("right");
     }
   }
 
   function handleTouchEnd(id: string) {
     if (swipingId.current !== id) return;
-    const dx = swipeStartX.current - swipeCurrentX.current;
+    const rawDx = swipeStartX.current - swipeCurrentX.current;
+    const totalOffset = swipeBaseOffset.current - rawDx;
     const el = swipeElMap.current.get(id);
     if (el) {
       el.style.transition = "transform 0.2s ease";
-      if (dx > 60) {
+      if (totalOffset < -50) {
+        // Settle left → delete
         el.style.transform = "translateX(-72px)";
         setSwipedId(id);
+        setSwipeDir("left");
+      } else if (totalOffset > 50) {
+        // Settle right → pin
+        el.style.transform = "translateX(72px)";
+        setSwipedId(id);
+        setSwipeDir("right");
       } else {
+        // Back to center
         el.style.transform = "translateX(0)";
-        if (swipedId === id) setSwipedId(null);
+        setSwipedId(null);
+        setSwipeDir(null);
       }
     }
     swipingId.current = null;
+  }
+
+  function togglePin(id: string) {
+    setPinnedNoteIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) {
+        next.delete(id);
+      } else {
+        // Count pinned notes in current language filter
+        const pinnedInLang = filtered.filter((s) => next.has(s.id)).length;
+        if (pinnedInLang >= 3) {
+          toast(locale === "ko" ? "고정은 언어별 최대 3개까지 가능합니다" : "You can pin up to 3 notes per language", "info");
+          return prev;
+        }
+        next.add(id);
+      }
+      savePinnedNotes(next);
+      return next;
+    });
+    resetSwipe(id);
   }
 
   async function handleSwipeDelete(id: string) {
@@ -147,6 +205,7 @@ function NotesContent() {
     if (!error) {
       setSessions((prev) => prev.filter((s) => s.id !== id));
       setSwipedId(null);
+      setSwipeDir(null);
       setDeleteConfirmId(null);
     }
   }
@@ -155,7 +214,7 @@ function NotesContent() {
   const pinnedNotes = sessions.filter((s) => PINNED_TITLES.includes(s.title || ""));
   const regularSessions = sessions.filter((s) => !PINNED_TITLES.includes(s.title || ""));
 
-  const filtered = search.trim()
+  const filteredUnsorted = search.trim()
     ? regularSessions.filter((s) => {
         const q = search.toLowerCase();
         return (
@@ -167,6 +226,12 @@ function NotesContent() {
         );
       })
     : regularSessions;
+
+  // Pinned notes first, then rest in original order
+  const filtered = [
+    ...filteredUnsorted.filter((s) => pinnedNoteIds.has(s.id)),
+    ...filteredUnsorted.filter((s) => !pinnedNoteIds.has(s.id)),
+  ];
 
   return (
     <div className="space-y-6">
@@ -285,38 +350,63 @@ function NotesContent() {
           </div>
         ) : (
           filtered.map((s) => (
-            <div key={s.id} className="relative overflow-hidden rounded-xl">
-              {/* Delete button behind */}
-              <div className="absolute right-0 top-0 bottom-0 w-[72px] flex items-center justify-center bg-red-600 rounded-r-xl">
-                <button
-                  onClick={() => setDeleteConfirmId(s.id)}
-                  className="text-white text-xs font-medium"
-                >
-                  {locale === "ko" ? "삭제" : "Delete"}
-                </button>
-              </div>
-              {/* Swipeable card */}
-              <div
-                ref={(el) => { if (el) swipeElMap.current.set(s.id, el); }}
-                onTouchStart={(e) => handleTouchStart(s.id, e)}
-                onTouchMove={(e) => handleTouchMove(s.id, e)}
-                onTouchEnd={() => handleTouchEnd(s.id)}
-                style={{ transform: swipedId === s.id ? "translateX(-72px)" : "translateX(0)", transition: "transform 0.2s ease" }}
+            <div key={s.id}>
+              <Link
+                href={`/notes/${s.id}`}
+                onClick={(e) => {
+                  if (swipedId === s.id) { e.preventDefault(); resetSwipe(s.id); return; }
+                  markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id));
+                }}
+                className="relative block bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light transition-colors group"
               >
-                <Link
-                  href={`/notes/${s.id}`}
-                  onClick={(e) => {
-                    if (swipedId === s.id) { e.preventDefault(); setSwipedId(null); const el = swipeElMap.current.get(s.id); if (el) { el.style.transition = "transform 0.2s ease"; el.style.transform = "translateX(0)"; } return; }
-                    markNoteSeen(s.id); setSeenNotes((prev) => new Set(prev).add(s.id));
+                {/* Right action: delete (red bg + trash icon) */}
+                <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-600"
+                  style={{ width: swipedId === s.id && swipeDir === "left" ? 72 : 0, transition: "width 0.2s ease" }}
+                >
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(s.id); }}
+                    className="text-white p-2"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </div>
+                {/* Left action: pin (yellow bg + pin icon) */}
+                <div className="absolute left-0 top-0 bottom-0 flex items-center justify-center bg-yellow-500"
+                  style={{ width: swipedId === s.id && swipeDir === "right" ? 72 : 0, transition: "width 0.2s ease" }}
+                >
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePin(s.id); }}
+                    className="text-white p-2"
+                  >
+                    {pinnedNoteIds.has(s.id) ? (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="2" y1="2" x2="22" y2="22" />
+                        <path d="M12 17v5" /><path d="M9 9v1.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V5a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                      </svg>
+                    ) : (
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 17v5" /><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v5.76z" />
+                      </svg>
+                    )}
+                  </button>
+                </div>
+                {/* Slideable content */}
+                <div
+                  ref={(el) => { if (el) swipeElMap.current.set(s.id, el); }}
+                  onTouchStart={(e) => handleTouchStart(s.id, e)}
+                  onTouchMove={(e) => handleTouchMove(s.id, e)}
+                  onTouchEnd={() => handleTouchEnd(s.id)}
+                  className="relative p-5 bg-bg-card"
+                  style={{
+                    transform: swipedId === s.id ? (swipeDir === "left" ? "translateX(-72px)" : "translateX(72px)") : "translateX(0)",
+                    transition: "transform 0.2s ease",
                   }}
-                  className="block bg-bg-card border border-border rounded-xl p-5 hover:border-border-light transition-colors group"
                 >
                   <div className="flex items-center gap-3 mb-2">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
-                      s.language === "english"
-                        ? "bg-primary/20 text-primary"
-                        : "bg-primary/20 text-primary"
-                    }`}>
+                    {pinnedNoteIds.has(s.id) && (
+                      <span className="text-[10px]">📌</span>
+                    )}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-medium bg-primary/20 text-primary`}>
                       {s.language === "english" ? "English" : "日本語"}
                     </span>
                     <span className="text-sm text-text-faint">{s.study_date}</span>
@@ -327,21 +417,45 @@ function NotesContent() {
                       <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-primary/20 text-primary font-medium">NEW</span>
                     )}
                   </div>
-
                   <div className="flex gap-4 text-xs text-text-faint">
                     {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
                     {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
                     {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
                     {s.comment && <span>💬 {t("comment")}</span>}
                   </div>
-
                   {s.vocabulary && (
                     <p className="text-text-faint text-sm mt-2 truncate group-hover:text-text-muted">
                       {s.vocabulary.slice(0, 120)}...
                     </p>
                   )}
-                </Link>
-              </div>
+                </div>
+                {/* PC: hover action buttons */}
+                <div className="absolute top-3 right-3 hidden sm:group-hover:flex items-center gap-1">
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePin(s.id); }}
+                    className="p-1.5 text-text-faint hover:text-yellow-500 transition-colors"
+                    title={pinnedNoteIds.has(s.id) ? (locale === "ko" ? "고정 해제" : "Unpin") : (locale === "ko" ? "고정" : "Pin")}
+                  >
+                    {pinnedNoteIds.has(s.id) ? (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <line x1="2" y1="2" x2="22" y2="22" />
+                        <path d="M12 17v5" /><path d="M9 9v1.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V5a2 2 0 00-2-2h-2a2 2 0 00-2 2" />
+                      </svg>
+                    ) : (
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M12 17v5" /><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v5.76z" />
+                      </svg>
+                    )}
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(s.id); }}
+                    className="p-1.5 text-text-faint hover:text-red-400 transition-colors"
+                    title={locale === "ko" ? "삭제" : "Delete"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+                  </button>
+                </div>
+              </Link>
             </div>
           ))
         )}
