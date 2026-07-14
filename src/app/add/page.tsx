@@ -352,7 +352,7 @@ function AddContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden touch-none px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <div className="space-y-4">
       <GuideOverlay pageKey="add" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
@@ -497,7 +497,7 @@ function AddContent() {
             }}
             placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
             rows={6}
-            className="w-full flex-1 min-h-[120px] max-h-[300px] bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
+            className="w-full flex-1 min-h-[120px] max-h-[300px] touch-auto bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
           />
           {uploading && (
             <div className="absolute inset-0 bg-bg-card/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
