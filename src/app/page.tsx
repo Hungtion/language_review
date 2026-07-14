@@ -17,14 +17,14 @@ import Onboarding from "@/components/Onboarding";
 
 const FALLBACK_QUOTES = {
   english: [
-    "The limits of my language mean the limits of my world. — Wittgenstein",
-    "To have another language is to possess a second soul. — Charlemagne",
+    "The limits of my language mean the limits of my world.",
     "Mistakes are proof that you are trying.",
-    "A different language is a different vision of life. — Federico Fellini",
     "One word at a time, one day at a time.",
+    "Every new language opens a new door.",
+    "Small steps every day lead to big results.",
   ],
   japanese: [
-    "千里の道も一歩から。— 老子",
+    "千里の道も一歩から。",
     "継続は力なり。",
     "失敗は成功のもと。",
     "習うより慣れろ。",
@@ -118,7 +118,7 @@ function HomeContent() {
       setCardCounts({ all: allC, english: enC, japanese: jpC });
 
       setActivities(activityData);
-      setStreak(calculateStreak(activityData));
+      setStreak(calculateStreak([...activityData].reverse()));
       setDataLoading(false);
     }
     load();

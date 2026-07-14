@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 
+export const dynamic = "force-dynamic";
+
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 // In-memory cache: one quote per language per period (AM/PM KST)
@@ -21,14 +23,14 @@ async function generateQuote(lang: "english" | "japanese"): Promise<{ quote: str
   if (cache[key]) return { quote: cache[key].quote, translation: cache[key].translation };
 
   const prompt = lang === "japanese"
-    ? `言語学習に関する名言を1つ書いてください。必ず完全な文にしてください。20文字以上40文字以内。
+    ? `短い名言を1つ作ってください。テーマはランダムに選んでください：新しいことを学ぶ、習慣を作る、恐れを克服する、旅を楽しむ、好奇心、忍耐、自己成長。人物名は不要。ありきたりな表現は避けてください。20文字以上40文字以内。
 出力形式(2行のみ):
 名言
 韓国語翻訳
 引用符や説明は不要。`
-    : `Write one complete motivational sentence about language learning. Must be a full sentence with subject and verb. 8 to 15 words.
+    : `Write one short, creative motivational sentence. Pick ONE random topic: learning new things, building habits, overcoming fear, enjoying the journey, curiosity, patience, or self-improvement. Be unique and avoid clichés like "embrace the challenge" or "consistent habits". No person name. 8 to 15 words.
 Output format (2 lines only):
-The quote
+The sentence
 Korean translation
 No quotes, no labels, no explanation.`;
 
@@ -66,8 +68,12 @@ export async function GET(req: NextRequest) {
 
   try {
     const result = await generateQuote(lang);
-    return NextResponse.json(result);
+    return NextResponse.json(result, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
   } catch {
-    return NextResponse.json({ quote: "", translation: "" });
+    return NextResponse.json({ quote: "", translation: "" }, {
+      headers: { "Cache-Control": "no-store, max-age=0" },
+    });
   }
 }

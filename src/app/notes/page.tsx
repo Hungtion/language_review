@@ -11,6 +11,7 @@ import GuideOverlay from "@/components/GuideOverlay";
 import { toast } from "@/components/Toast";
 
 import { getGuestNotes } from "@/lib/guestStorage";
+import { parseVocabulary, parseSentences } from "@/lib/parser";
 
 function getSeenNotes(): Set<string> {
   try {
@@ -57,6 +58,8 @@ function NotesContent() {
   const swipeCurrentX = useRef(0);
   const swipingId = useRef<string | null>(null);
   const swipeElMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const swipeActionMap = useRef<Map<string, HTMLDivElement>>(new Map());
+  const swipePinMap = useRef<Map<string, HTMLDivElement>>(new Map());
 
   useEffect(() => {
     setSeenNotes(getSeenNotes());
@@ -115,9 +118,31 @@ function NotesContent() {
     updateUrl(filter, q);
   }
 
+  async function handleShare(id: string) {
+    const note = sessions.find((s) => s.id === id);
+    if (!note) return;
+    if (!note.shared) {
+      await supabase.from("study_sessions").update({ shared: true }).eq("id", id);
+      setSessions((prev) => prev.map((s) => s.id === id ? { ...s, shared: true } : s));
+    }
+    const url = `${window.location.origin}/share/${id}`;
+    if (navigator.share) {
+      navigator.share({ title: note.title || "Shared Note", url }).catch(() => {});
+    } else {
+      await navigator.clipboard.writeText(url);
+      toast(locale === "ko" ? "공유 링크가 복사되었습니다!" : "Share link copied!", "success");
+    }
+    resetSwipe(id);
+  }
+
   function resetSwipe(id: string) {
     const el = swipeElMap.current.get(id);
-    if (el) { el.style.transition = "transform 0.2s ease"; el.style.transform = "translateX(0)"; }
+    const actionEl = swipeActionMap.current.get(id);
+    const pinEl = swipePinMap.current.get(id);
+    const t = "all 0.2s ease";
+    if (el) { el.style.transition = t; el.style.transform = "translateX(0)"; }
+    if (actionEl) { actionEl.style.transition = t; actionEl.style.width = "0px"; }
+    if (pinEl) { pinEl.style.transition = t; pinEl.style.width = "0px"; }
     setSwipedId(null);
     setSwipeDir(null);
   }
@@ -129,7 +154,7 @@ function NotesContent() {
     swipeCurrentX.current = e.touches[0].clientX;
     swipingId.current = id;
     // Remember current offset so reverse swipe works from open state
-    if (swipedId === id && swipeDir === "left") swipeBaseOffset.current = -72;
+    if (swipedId === id && swipeDir === "left") swipeBaseOffset.current = -144;
     else if (swipedId === id && swipeDir === "right") swipeBaseOffset.current = 72;
     else swipeBaseOffset.current = 0;
     if (swipedId && swipedId !== id) resetSwipe(swipedId);
@@ -140,13 +165,23 @@ function NotesContent() {
     swipeCurrentX.current = e.touches[0].clientX;
     const rawDx = swipeStartX.current - swipeCurrentX.current;
     const totalOffset = swipeBaseOffset.current - rawDx; // positive = right, negative = left
-    const clamped = Math.max(-80, Math.min(80, totalOffset));
+    const clamped = Math.max(-150, Math.min(80, totalOffset));
     const el = swipeElMap.current.get(id);
+    const actionEl = swipeActionMap.current.get(id);
+    const pinEl = swipePinMap.current.get(id);
     if (el) {
       el.style.transform = `translateX(${clamped}px)`;
       el.style.transition = "none";
       if (clamped < -20) setSwipeDir("left");
       else if (clamped > 20) setSwipeDir("right");
+    }
+    if (actionEl) {
+      actionEl.style.width = `${Math.max(0, -clamped)}px`;
+      actionEl.style.transition = "none";
+    }
+    if (pinEl) {
+      pinEl.style.width = `${Math.max(0, clamped)}px`;
+      pinEl.style.transition = "none";
     }
   }
 
@@ -155,21 +190,29 @@ function NotesContent() {
     const rawDx = swipeStartX.current - swipeCurrentX.current;
     const totalOffset = swipeBaseOffset.current - rawDx;
     const el = swipeElMap.current.get(id);
+    const actionEl = swipeActionMap.current.get(id);
+    const pinEl = swipePinMap.current.get(id);
+    const t = "all 0.2s ease";
     if (el) {
-      el.style.transition = "transform 0.2s ease";
+      el.style.transition = t;
+      if (actionEl) actionEl.style.transition = t;
+      if (pinEl) pinEl.style.transition = t;
       if (totalOffset < -50) {
-        // Settle left → delete
-        el.style.transform = "translateX(-72px)";
+        el.style.transform = "translateX(-144px)";
+        if (actionEl) actionEl.style.width = "144px";
+        if (pinEl) pinEl.style.width = "0px";
         setSwipedId(id);
         setSwipeDir("left");
       } else if (totalOffset > 50) {
-        // Settle right → pin
         el.style.transform = "translateX(72px)";
+        if (pinEl) pinEl.style.width = "72px";
+        if (actionEl) actionEl.style.width = "0px";
         setSwipedId(id);
         setSwipeDir("right");
       } else {
-        // Back to center
         el.style.transform = "translateX(0)";
+        if (actionEl) actionEl.style.width = "0px";
+        if (pinEl) pinEl.style.width = "0px";
         setSwipedId(null);
         setSwipeDir(null);
       }
@@ -296,7 +339,7 @@ function NotesContent() {
 
       {/* Pinned notes */}
       {pinnedNotes.length > 0 && !search.trim() && (
-        <div className="grid grid-cols-3 gap-2">
+        <div data-guide="notes-pinned" className="grid grid-cols-3 gap-2">
           {PINNED_TITLES.map((title) => {
             const note = pinnedNotes.find((n) => n.title === title);
             if (!note) return null;
@@ -359,20 +402,30 @@ function NotesContent() {
                 }}
                 className="relative block bg-bg-card border border-border rounded-xl overflow-hidden hover:border-border-light transition-colors group"
               >
-                {/* Right action: delete (red bg + trash icon) */}
-                <div className="absolute right-0 top-0 bottom-0 flex items-center justify-center bg-red-600"
-                  style={{ width: swipedId === s.id && swipeDir === "left" ? 72 : 0, transition: "width 0.2s ease" }}
+                {/* Right action: share + delete (iOS-style unfold) */}
+                <div
+                  ref={(el) => { if (el) swipeActionMap.current.set(s.id, el); }}
+                  className="absolute right-0 top-0 bottom-0 flex overflow-hidden"
+                  style={{ width: 0 }}
                 >
                   <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShare(s.id); }}
+                    className="flex-1 flex items-center justify-center text-white bg-blue-500 h-full min-w-0"
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+                  </button>
+                  <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(s.id); }}
-                    className="text-white p-2"
+                    className="flex-1 flex items-center justify-center text-white bg-red-600 h-full min-w-0"
                   >
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
                   </button>
                 </div>
-                {/* Left action: pin (yellow bg + pin icon) */}
-                <div className="absolute left-0 top-0 bottom-0 flex items-center justify-center bg-yellow-500"
-                  style={{ width: swipedId === s.id && swipeDir === "right" ? 72 : 0, transition: "width 0.2s ease" }}
+                {/* Left action: pin (iOS-style unfold) */}
+                <div
+                  ref={(el) => { if (el) swipePinMap.current.set(s.id, el); }}
+                  className="absolute left-0 top-0 bottom-0 flex items-center justify-center bg-yellow-500 overflow-hidden"
+                  style={{ width: 0 }}
                 >
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); togglePin(s.id); }}
@@ -398,7 +451,7 @@ function NotesContent() {
                   onTouchEnd={() => handleTouchEnd(s.id)}
                   className="relative p-5 bg-bg-card"
                   style={{
-                    transform: swipedId === s.id ? (swipeDir === "left" ? "translateX(-72px)" : "translateX(72px)") : "translateX(0)",
+                    transform: swipedId === s.id ? (swipeDir === "left" ? "translateX(-144px)" : "translateX(72px)") : "translateX(0)",
                     transition: "transform 0.2s ease",
                   }}
                 >
@@ -409,7 +462,7 @@ function NotesContent() {
                     <span className={`text-xs px-2 py-0.5 rounded-full font-medium bg-primary/20 text-primary`}>
                       {s.language === "english" ? "English" : "日本語"}
                     </span>
-                    <span className="text-sm text-text-faint">{s.study_date}</span>
+                    <span className="text-sm text-text-faint">{s.study_date?.slice(2).replace(/-/g, ".")}</span>
                     {s.title && (
                       <span className="text-sm text-text-secondary font-medium">{s.title}</span>
                     )}
@@ -419,15 +472,10 @@ function NotesContent() {
                   </div>
                   <div className="flex gap-4 text-xs text-text-faint">
                     {s.stress_pronunciation && <span>🔊 {t("pronunciation")} ({s.stress_pronunciation.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.vocabulary && <span>📖 {t("vocabulary")} ({s.vocabulary.split("\n").filter(l => l.trim()).length})</span>}
-                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({s.sentence_grammar.split("\n").filter(l => l.trim()).length})</span>}
+                    {s.vocabulary && <span>📖 {t("vocabulary")} ({parseVocabulary(s.vocabulary).length})</span>}
+                    {s.sentence_grammar && s.title !== "Nuance" && s.title !== "LAB Examples" && <span>✏️ {t("grammar")} ({parseSentences(s.sentence_grammar).length})</span>}
                     {s.comment && <span>💬 {t("comment")}</span>}
                   </div>
-                  {s.vocabulary && (
-                    <p className="text-text-faint text-sm mt-2 truncate group-hover:text-text-muted">
-                      {s.vocabulary.slice(0, 120)}...
-                    </p>
-                  )}
                 </div>
                 {/* PC: hover action buttons */}
                 <div className="absolute top-3 right-3 hidden sm:group-hover:flex items-center gap-1">
@@ -446,6 +494,13 @@ function NotesContent() {
                         <path d="M12 17v5" /><path d="M9 10.76a2 2 0 01-1.11 1.79l-1.78.9A2 2 0 005 15.24V17h14v-1.76a2 2 0 00-1.11-1.79l-1.78-.9A2 2 0 0115 10.76V5a2 2 0 00-2-2h-2a2 2 0 00-2 2v5.76z" />
                       </svg>
                     )}
+                  </button>
+                  <button
+                    onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleShare(s.id); }}
+                    className="p-1.5 text-text-faint hover:text-blue-400 transition-colors"
+                    title={locale === "ko" ? "공유하기" : "Share"}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
                   </button>
                   <button
                     onClick={(e) => { e.preventDefault(); e.stopPropagation(); setDeleteConfirmId(s.id); }}

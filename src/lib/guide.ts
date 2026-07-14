@@ -16,17 +16,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='stats']",
       title: { en: "", ko: "" },
       description: {
-        en: "See your note counts at a glance.\nTap to jump to that language's notes.",
-        ko: "학습 노트 현황을 한눈에 볼 수 있어요.\n탭하면 해당 언어 노트로 이동합니다.",
-      },
-      overlay: true,
-    },
-    {
-      selector: "[data-guide='quick-actions']",
-      title: { en: "", ko: "" },
-      description: {
-        en: "Add new study notes\nor review with flashcards.",
-        ko: "새 노트를 입력하거나,\n카드로 복습할 수 있어요.",
+        en: "See your stats at a glance.\nTap to jump to Notes, Review, Add, or Leaf.",
+        ko: "학습 현황을 한눈에 볼 수 있어요.\n탭하면 노트, 복습, 추가, Leaf로 이동합니다.",
       },
       overlay: true,
     },
@@ -34,8 +25,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='recent-notes']",
       title: { en: "", ko: "" },
       description: {
-        en: "Your recent study notes appear here.\nTap to view details.",
-        ko: "최근 학습 노트가 여기에 표시돼요.\n탭하면 상세 내용을 볼 수 있어요.",
+        en: "Your recent study notes appear here.\nTap to view details.\nTap the daily quote to save it as a card.",
+        ko: "최근 학습 노트가 여기에 표시돼요.\n탭하면 상세 내용을 볼 수 있어요.\n오늘의 명언을 탭하면 카드로 저장됩니다.",
       },
       overlay: true,
       position: "top",
@@ -90,8 +81,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='review-card']",
       title: { en: "", ko: "" },
       description: {
-        en: "Swipe left/right to navigate cards.\nTap to hear pronunciation.",
-        ko: "좌우 스와이프로 카드를 넘기세요.\n탭하면 발음을 읽어줍니다.",
+        en: "Swipe left/right to navigate cards.\nTap to hear pronunciation.\n{icon:mic} to check your pronunciation.",
+        ko: "좌우 스와이프로 카드를 넘기세요.\n탭하면 발음을 읽어줍니다.\n{icon:mic} 으로 내 발음을 체크해 보세요.",
       },
       overlay: true,
       position: "top",
@@ -135,11 +126,20 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       overlay: true,
     },
     {
+      selector: "[data-guide='notes-pinned']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Nuance Chat, LAB Examples, and Daily Quotes\nare always pinned here for quick access.",
+        ko: "Nuance Chat, LAB Examples, Daily Quotes가\n항상 여기에 고정되어 바로 접근할 수 있어요.",
+      },
+      overlay: true,
+    },
+    {
       selector: "[data-guide='notes-list']",
       title: { en: "", ko: "" },
       description: {
-        en: "Tap a note to view details.\nLong-press to select multiple notes for bulk delete.",
-        ko: "노트를 탭하면 상세 내용을 볼 수 있어요.\n길게 누르면 여러 노트를 선택해서 삭제할 수 있어요.",
+        en: "Tap a note to view details.\nSwipe left to delete, right to pin.\nPinned notes stay at the top.",
+        ko: "노트를 탭하면 상세 내용을 볼 수 있어요.\n왼쪽 스와이프로 삭제, 오른쪽으로 고정.\n고정된 노트는 항상 맨 위에 표시됩니다.",
       },
       overlay: true,
     },

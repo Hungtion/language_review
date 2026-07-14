@@ -820,28 +820,6 @@ function ReviewContent() {
         </div>
 
         <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
-          {isEngChannel && (
-            <>
-              <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
-                {(["all", "vocab", "sentence"] as const).map((ct) => (
-                  <button
-                    key={ct}
-                    onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
-                    className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                      cardType === ct
-                        ? "bg-bg-hover text-text"
-                        : "text-text-muted hover:text-text"
-                    }`}
-                  >
-                    {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
-                  </button>
-                ))}
-              </div>
-
-              <div className="w-px h-5 bg-bg-hover shrink-0" />
-            </>
-          )}
-
           <div data-guide="review-filter-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
             {(["english", "japanese"] as const).map((f) => (
               <button
@@ -863,6 +841,21 @@ function ReviewContent() {
 
       {/* Card + AI */}
       <div className="flex-1 px-4 flex flex-col items-center justify-center">
+        <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1 mb-3">
+          {(["all", "vocab", "sentence"] as const).map((ct) => (
+            <button
+              key={ct}
+              onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                cardType === ct
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
+              }`}
+            >
+              {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
+            </button>
+          ))}
+        </div>
         {card ? (
           <>
             <div className="relative w-full max-w-lg">
@@ -1337,12 +1330,14 @@ function ReviewContent() {
             )}
           </>
         ) : (
-          <div className="w-full max-w-lg flex flex-col items-center justify-center gap-4 py-8">
-            <div data-guide="review-card" className="w-full" style={{ height: "min(40vh, 280px)" }}>
+          <div className="w-full max-w-lg">
+            <div data-guide="review-card" className="w-full" style={{ height: "min(50vh, 350px)" }}>
               <div className="w-full h-full bg-bg-card border border-border rounded-2xl flex flex-col items-center justify-center gap-4 p-6">
                 <div className="text-4xl">🃏</div>
                 <h3 className="text-base font-bold text-text text-center">
-                  {locale === "ko" ? "복습할 카드가 없습니다" : "No cards to review yet"}
+                  {cardType !== "all"
+                    ? (locale === "ko" ? `${cardType === "vocab" ? "어휘" : "문장"} 카드가 없습니다` : `No ${cardType === "vocab" ? "vocabulary" : "sentence"} cards`)
+                    : (locale === "ko" ? "복습할 카드가 없습니다" : "No cards to review yet")}
                 </h3>
                 <p className="text-xs text-text-muted text-center">
                   {locale === "ko"
@@ -1356,6 +1351,10 @@ function ReviewContent() {
                   {locale === "ko" ? "새 표현 추가" : "Add Expression"}
                 </a>
               </div>
+            </div>
+            {/* Placeholder for LAB Expression area */}
+            <div className="w-full max-w-lg mt-3 py-2.5 text-sm invisible">
+              &nbsp;<span className="block text-[10px] mt-0.5">&nbsp;</span>
             </div>
           </div>
         )}

@@ -356,7 +356,7 @@ function NoteDetailContent() {
               <path d="M8 2h10a2 2 0 012 2v14" />
             </svg>
           </Link>
-          {user && (
+          {user && (<>
           <button
             onClick={async () => {
               if (!session.shared) {
@@ -378,7 +378,14 @@ function NoteDetailContent() {
               <path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8"/><polyline points="16 6 12 2 8 6"/><line x1="12" y1="2" x2="12" y2="15"/>
             </svg>
           </button>
-        )}
+          <button
+            onClick={() => setShowDeleteConfirm(true)}
+            title={locale === "ko" ? "삭제" : "Delete"}
+            className="p-2 rounded-lg text-text-faint hover:text-red-400 transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/></svg>
+          </button>
+          </>)}
         </div>
       </div>
 

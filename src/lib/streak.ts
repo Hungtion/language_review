@@ -23,7 +23,7 @@ const STREAK_REWARDS: Record<number, number> = {
 
 /** Check if a day counts as "studied" */
 function isStudyDay(a: DailyActivity): boolean {
-  return a.notes_added >= 1 || a.cards_reviewed >= 5 || a.nuance_used >= 1;
+  return a.notes_added >= 1 || a.cards_reviewed >= 1 || a.nuance_used >= 1;
 }
 
 /** Calculate streak from activity records (sorted DESC by date) */

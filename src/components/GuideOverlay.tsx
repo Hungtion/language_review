@@ -36,7 +36,7 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
 
   // Listen for Nav help button
   useEffect(() => {
-    const handler = () => setVisible(true);
+    const handler = () => setVisible((v) => !v);
     window.addEventListener("show-guide", handler);
     return () => window.removeEventListener("show-guide", handler);
   }, []);
@@ -362,6 +362,11 @@ const GUIDE_ICONS: Record<string, React.ReactNode> = {
   delete: (
     <svg className="inline-block align-middle mx-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
       <polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6m3 0V4a2 2 0 012-2h4a2 2 0 012 2v2"/>
+    </svg>
+  ),
+  mic: (
+    <svg className="inline-block align-middle mx-0.5" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 1a3 3 0 00-3 3v8a3 3 0 006 0V4a3 3 0 00-3-3z"/><path d="M19 10v2a7 7 0 01-14 0v-2"/>
     </svg>
   ),
 };

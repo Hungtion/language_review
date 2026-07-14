@@ -8,6 +8,7 @@ import RequireAuth from "@/components/RequireAuth";
 import { useAuth } from "@/components/AuthProvider";
 import { useLocale } from "@/lib/useLocale";
 import GuideOverlay from "@/components/GuideOverlay";
+import TemplateModal from "@/components/TemplateModal";
 import { getAiUsage, DAILY_LIMIT, GUEST_LIMIT, getGuestUsage, incrementGuestUsage, useAiCredit } from "@/lib/aiUsage";
 import { getCredits } from "@/lib/credits";
 import CreditModal from "@/components/CreditModal";
@@ -89,6 +90,8 @@ function AddContent() {
   const [uploadStep, setUploadStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
+  const [showTemplateModal, setShowTemplateModal] = useState(false);
+  const [hasNotes, setHasNotes] = useState(true);
 
   // On mount: if upload was running while away, attach to it
   useEffect(() => {
@@ -112,6 +115,13 @@ function AddContent() {
     getAiUsage(user.id).then(({ remaining }) => setAiRemaining(remaining));
     getCredits(user.id).then((c) => setUserCredits(c));
   }, [user]);
+
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("study_sessions").select("id", { count: "exact", head: true }).eq("user_id", user.id).eq("language", language).then(({ count }) => {
+      setHasNotes((count ?? 0) > 0);
+    });
+  }, [user, language]);
 
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
@@ -376,6 +386,68 @@ function AddContent() {
           ))}
         </div>
       </div>
+
+      {/* Template Button */}
+      <button
+        onClick={() => setShowTemplateModal(true)}
+        className={`w-full py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 ${
+          hasNotes
+            ? "bg-bg-card border border-border text-text-secondary hover:border-primary/50 hover:text-primary"
+            : "bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20"
+        }`}
+      >
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+        {locale === "ko" ? "내 목표에 맞는 노트 추가하기" : "Add notes for your goal"}
+      </button>
+
+      {showTemplateModal && (
+        <TemplateModal
+          language={language}
+          onClose={() => setShowTemplateModal(false)}
+          onAdd={async (template) => {
+            setShowTemplateModal(false);
+            setSaving(true);
+            const insertData = {
+              language: template.language as "english" | "japanese",
+              study_date: studyDate,
+              title: `${locale === "ko" ? template.descKo : template.descEn} (${template.sub})`,
+              stress_pronunciation: null,
+              vocabulary: template.vocabulary || null,
+              sentence_grammar: template.sentence_grammar || null,
+              comment: null,
+              raw_input: "",
+            };
+
+            if (!user) {
+              addGuestNote(insertData as any);
+              setSaving(false);
+              router.push("/notes");
+              return;
+            }
+
+            const { error } = await supabase.from("study_sessions").insert({
+              ...insertData,
+              user_id: user.id,
+            });
+            setSaving(false);
+            if (error) {
+              alert(t("saveFailed") + error.message);
+            } else {
+              import("@/lib/streak").then(({ recordActivity }) => {
+                recordActivity(user.id, "note_add").then((res) => {
+                  refreshCredits();
+                  if (res.leafEarned > 0) {
+                    import("@/components/Toast").then(({ toast }) => {
+                      toast(`+${res.leafEarned} Leaf`, "success");
+                    });
+                  }
+                });
+              });
+              router.push("/notes");
+            }
+          }}
+        />
+      )}
 
       {/* Raw Input */}
       <div data-guide="add-textarea">
