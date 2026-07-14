@@ -347,7 +347,7 @@ function AddContent() {
   }
 
   return (
-    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom))" }}>
+    <div className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)" }}>
       <div className="space-y-4">
       <GuideOverlay pageKey="add" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
@@ -525,7 +525,7 @@ function AddContent() {
       </div>
 
       {/* Actions - fixed bottom above tab bar */}
-      <div className="fixed left-0 right-0 bg-bg px-4 pt-3 pb-2 flex gap-3 items-center z-10" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)" }}>
+      <div className="flex gap-3 items-center pt-3 pb-2 mt-auto">
         {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}
