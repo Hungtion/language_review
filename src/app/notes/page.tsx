@@ -55,8 +55,10 @@ function NotesContent() {
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [pinnedNoteIds, setPinnedNoteIds] = useState<Set<string>>(new Set());
   const swipeStartX = useRef(0);
+  const swipeStartY = useRef(0);
   const swipeCurrentX = useRef(0);
   const swipingId = useRef<string | null>(null);
+  const swipeAxis = useRef<"none" | "horizontal" | "vertical">("none");
   const swipeElMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const swipeActionMap = useRef<Map<string, HTMLDivElement>>(new Map());
   const swipePinMap = useRef<Map<string, HTMLDivElement>>(new Map());
@@ -151,8 +153,10 @@ function NotesContent() {
 
   function handleTouchStart(id: string, e: React.TouchEvent) {
     swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
     swipeCurrentX.current = e.touches[0].clientX;
     swipingId.current = id;
+    swipeAxis.current = "none";
     // Remember current offset so reverse swipe works from open state
     if (swipedId === id && swipeDir === "left") swipeBaseOffset.current = -144;
     else if (swipedId === id && swipeDir === "right") swipeBaseOffset.current = 72;
@@ -160,11 +164,22 @@ function NotesContent() {
     if (swipedId && swipedId !== id) resetSwipe(swipedId);
   }
 
-  function handleTouchMove(id: string, e: React.TouchEvent) {
+  function handleTouchMoveNative(id: string, e: TouchEvent) {
     if (swipingId.current !== id) return;
-    swipeCurrentX.current = e.touches[0].clientX;
+    const cx = e.touches[0].clientX;
+    const cy = e.touches[0].clientY;
+    // Determine axis on first significant movement
+    if (swipeAxis.current === "none") {
+      const dx = Math.abs(cx - swipeStartX.current);
+      const dy = Math.abs(cy - swipeStartY.current);
+      if (dx < 5 && dy < 5) return;
+      swipeAxis.current = dx >= dy ? "horizontal" : "vertical";
+    }
+    if (swipeAxis.current === "vertical") return;
+    e.preventDefault(); // lock vertical scroll during horizontal swipe
+    swipeCurrentX.current = cx;
     const rawDx = swipeStartX.current - swipeCurrentX.current;
-    const totalOffset = swipeBaseOffset.current - rawDx; // positive = right, negative = left
+    const totalOffset = swipeBaseOffset.current - rawDx;
     const clamped = Math.max(-150, Math.min(80, totalOffset));
     const el = swipeElMap.current.get(id);
     const actionEl = swipeActionMap.current.get(id);
@@ -445,10 +460,14 @@ function NotesContent() {
                 </div>
                 {/* Slideable content */}
                 <div
-                  ref={(el) => { if (el) swipeElMap.current.set(s.id, el); }}
-                  onTouchStart={(e) => handleTouchStart(s.id, e)}
-                  onTouchMove={(e) => handleTouchMove(s.id, e)}
-                  onTouchEnd={() => handleTouchEnd(s.id)}
+                  ref={(el) => {
+                    if (!el) return;
+                    swipeElMap.current.set(s.id, el);
+                    // Native non-passive listener for preventDefault
+                    el.ontouchstart = (e) => handleTouchStart(s.id, e as unknown as React.TouchEvent);
+                    el.ontouchmove = (e) => handleTouchMoveNative(s.id, e);
+                    el.ontouchend = () => handleTouchEnd(s.id);
+                  }}
                   className="relative p-5 bg-bg-card"
                   style={{
                     transform: swipedId === s.id ? (swipeDir === "left" ? "translateX(-144px)" : "translateX(72px)") : "translateX(0)",
