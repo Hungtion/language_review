@@ -967,7 +967,7 @@ function ReviewContent() {
                   <div className="card-toolbar absolute top-0 left-0 right-0 h-14 z-[5] flex items-center justify-center">
                     {pronResult && (
                       <span className={`text-lg font-bold ${pronResult.score >= 80 ? "text-green-500" : pronResult.score >= 50 ? "text-yellow-500" : "text-red-400"}`}>
-                        {pronResult.score}% <span className="text-xs font-normal">{pronResult.score >= 90 ? (isKo ? "완벽해요!" : "Perfect!") : pronResult.score >= 70 ? (isKo ? "잘했어요!" : "Great!") : pronResult.score >= 50 ? (isKo ? "괜찮아요" : "Good try") : (isKo ? "다시 해볼까요?" : "Try again")}</span>
+                        {pronResult.score}% <span className="text-xs font-normal">{pronResult.score >= 90 ? (locale === "ko" ? "완벽해요!" : "Perfect!") : pronResult.score >= 70 ? (locale === "ko" ? "잘했어요!" : "Great!") : pronResult.score >= 50 ? (locale === "ko" ? "괜찮아요" : "Good try") : (locale === "ko" ? "다시 해볼까요?" : "Try again")}</span>
                       </span>
                     )}
                   </div>
@@ -1050,7 +1050,7 @@ function ReviewContent() {
                   </p>
                   {pronResult && pronResult.transcript && (
                     <div className="mt-2 text-center">
-                      <span className="text-[10px] text-text-faint">{isKo ? "내 발음" : "My speech"}</span>
+                      <span className="text-[10px] text-text-faint">{locale === "ko" ? "내 발음" : "My speech"}</span>
                       <p className="text-sm text-red-400 italic">{pronResult.transcript}</p>
                     </div>
                   )}
