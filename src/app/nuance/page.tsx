@@ -370,7 +370,7 @@ function NuanceContent() {
   }
 
   return (
-    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-bg overflow-hidden px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
+    <div data-guide="nuance-screen" className="fixed inset-0 flex flex-col bg-bg overflow-hidden touch-none px-4 pt-3 pb-4" style={{ top: "calc(3.5rem + env(safe-area-inset-top))", paddingBottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)", overscrollBehavior: "none" }}>
       <GuideOverlay pageKey="nuance" />
       {showCreditModal && <CreditModal onClose={() => setShowCreditModal(false)} />}
 
@@ -411,7 +411,7 @@ function NuanceContent() {
       </div>
 
       {/* Messages */}
-      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
+      <div ref={scrollContainerRef} className="flex-1 overflow-y-auto touch-auto space-y-4 pb-3" style={{ WebkitOverflowScrolling: "touch", overscrollBehavior: "contain" }}>
         {initialLoading && (
           <div className="text-center py-12">
             <p className="text-text-faint text-sm">{t("loadingChat")}</p>
@@ -627,7 +627,7 @@ function NuanceContent() {
             onBlur={() => window.scrollTo(0, 0)}
             placeholder={t("enterSentence")}
             rows={1}
-            className="flex-1 bg-bg-card border border-border rounded-xl px-4 py-3 text-sm resize-none focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+            className="flex-1 bg-bg-card border border-border rounded-xl px-4 py-3 text-sm resize-none touch-auto focus:border-primary focus:ring-1 focus:ring-primary outline-none"
           />
           <button
             onClick={() => handleSend()}
