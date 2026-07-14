@@ -492,7 +492,7 @@ function AddContent() {
             }}
             placeholder={language === "english" && isEngChannel ? t("pasteFormatEN") : t("pasteContent")}
             rows={6}
-            className="w-full h-[300px] bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
+            className="w-full flex-1 min-h-[120px] max-h-[300px] bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-y"
           />
           {uploading && (
             <div className="absolute inset-0 bg-bg-card/80 backdrop-blur-sm rounded-xl flex flex-col items-center justify-center gap-4 px-6">
