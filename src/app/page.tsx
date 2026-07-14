@@ -118,7 +118,8 @@ function HomeContent() {
     load();
   }, [user]);
 
-  const quoteCacheRef = useRef<Record<string, { quote: string; translation: string; date: string }>>({});
+  const quoteCacheRef = useRef<Record<string, { quote: string; translation: string; period: string }>>({});
+  const [quotePeriod, setQuotePeriod] = useState("");
 
   function getKstPeriod() {
     const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
@@ -128,11 +129,23 @@ function HomeContent() {
     return `${date}-${period}`;
   }
 
+  // Re-check period when PWA comes back to foreground
   useEffect(() => {
-    const today = getKstPeriod();
+    setQuotePeriod(getKstPeriod());
+    function onVisibility() {
+      if (document.visibilityState === "visible") {
+        setQuotePeriod(getKstPeriod());
+      }
+    }
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => document.removeEventListener("visibilitychange", onVisibility);
+  }, []);
+
+  useEffect(() => {
+    if (!quotePeriod) return;
     // Use in-memory cache only if same period
     const mem = quoteCacheRef.current[langFilter];
-    if (mem && mem.date === today) {
+    if (mem && mem.period === quotePeriod) {
       setDailyQuote(mem.quote);
       setDailyTranslation(mem.translation);
       return;
@@ -144,8 +157,8 @@ function HomeContent() {
     if (cached) {
       try {
         const parsed = JSON.parse(cached);
-        if (parsed.date === today) {
-          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "", date: today };
+        if (parsed.date === quotePeriod) {
+          quoteCacheRef.current[langFilter] = { quote: parsed.quote, translation: parsed.translation || "", period: quotePeriod };
           setDailyQuote(parsed.quote);
           setDailyTranslation(parsed.translation || "");
           return;
@@ -160,18 +173,18 @@ function HomeContent() {
       .then((data) => {
         if (cancelled) return;
         const quote = data.quote || getFallbackQuote(langFilter);
-        quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "", date: today };
+        quoteCacheRef.current[langFilter] = { quote, translation: data.translation || "", period: quotePeriod };
         setDailyQuote(quote);
         setDailyTranslation(data.translation || "");
         if (data.quote) {
-          localStorage.setItem(cacheKey, JSON.stringify({ date: today, quote: data.quote, translation: data.translation || "" }));
+          localStorage.setItem(cacheKey, JSON.stringify({ date: quotePeriod, quote: data.quote, translation: data.translation || "" }));
         }
       })
       .catch(() => {
         if (!cancelled) setDailyQuote(getFallbackQuote(langFilter));
       });
     return () => { cancelled = true; };
-  }, [langFilter]);
+  }, [langFilter, quotePeriod]);
 
   if (dataLoading) {
     return <SkeletonHome />;
