@@ -37,9 +37,10 @@ export default function Nav() {
   const isKo = locale === "ko";
   const pageTitle = pathname === "/add" ? t("addNewNote")
     : pathname === "/notes" || pathname.startsWith("/notes/") ? t("notesTitle")
-    : pathname === "/review" ? (isKo ? "오늘의 복습" : "Review")
+    : pathname === "/review" ? (isKo ? "복습" : "Review")
     : pathname === "/nuance" ? (isKo ? "Nuance" : "Nuance Chat")
     : pathname === "/settings" ? t("settingsTitle")
+    : pathname === "/" ? (isKo ? "모아보기" : "Overview")
     : null;
 
   return (

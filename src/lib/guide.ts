@@ -40,11 +40,20 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       tabLabels: true,
     },
     {
+      selector: "[data-guide='add-template']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Pick a study template by level.\nOPIc / JLPT vocab and sentences included.",
+        ko: "레벨별 학습 템플릿을 선택할 수 있어요.\nOPIc / JLPT 어휘와 문장이 포함되어 있습니다.",
+      },
+      overlay: true,
+    },
+    {
       selector: "[data-guide='add-textarea']",
       title: { en: "", ko: "" },
       description: {
-        en: "Enter or paste your study content here.",
-        ko: "학습 내용을 여기에 입력하거나\n붙여넣기 하세요.",
+        en: "Enter or paste your study content.\nEach line becomes a review card.",
+        ko: "학습 내용을 입력하거나 붙여넣기 하세요.\n각 줄이 복습 카드로 자동 생성됩니다.",
       },
       overlay: true,
     },
@@ -52,10 +61,10 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='add-actions']",
       title: { en: "", ko: "" },
       description: {
-        en: "Save to auto-create notes and review cards.",
-        ko: "노트와 복습 카드가 자동으로 생성됩니다.",
+        en: "Notes and review cards will be created.",
+        ko: "노트와 복습카드가 생성됩니다.",
       },
-      position: "right",
+      position: "top",
     },
   ],
   review: [
@@ -78,14 +87,30 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       tabLabels: true,
     },
     {
+      selector: "[data-guide='review-autoplay']",
+      title: { en: "", ko: "" },
+      description: { en: "", ko: "" },
+      tabLabels: true,
+    },
+    {
       selector: "[data-guide='review-card']",
       title: { en: "", ko: "" },
       description: {
-        en: "Swipe left/right to navigate cards.\nTap to hear pronunciation.\n{icon:mic} to check your pronunciation.",
-        ko: "좌우 스와이프로 카드를 넘기세요.\n탭하면 발음을 읽어줍니다.\n{icon:mic} 으로 내 발음을 체크해 보세요.",
+        en: "Swipe left/right to navigate cards.\nTap to hear pronunciation.",
+        ko: "좌우 스와이프로 카드를 넘기세요.\n탭하면 발음을 읽어줍니다.",
       },
       overlay: true,
       position: "top",
+    },
+    {
+      selector: "[data-guide='review-mic']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "{icon:mic} to check your pronunciation.",
+        ko: "{icon:mic} 으로 내 발음을 체크해 보세요.",
+      },
+      overlay: true,
+      noHighlight: true,
     },
     {
       selector: "[data-guide='review-ai']",
@@ -130,7 +155,7 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       title: { en: "", ko: "" },
       description: {
         en: "Nuance Chat, LAB Examples, and Daily Quotes\nare always pinned here for quick access.",
-        ko: "Nuance Chat, LAB Examples, Daily Quotes가\n항상 여기에 고정되어 바로 접근할 수 있어요.",
+        ko: "Nuance Chat, LAB Examples, Daily Quotes가\n항상 여기에 고정되어 바로 볼 수 있어요.",
       },
       overlay: true,
     },
@@ -138,8 +163,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='notes-list']",
       title: { en: "", ko: "" },
       description: {
-        en: "Tap a note to view details.\nSwipe left to delete, right to pin.\nPinned notes stay at the top.",
-        ko: "노트를 탭하면 상세 내용을 볼 수 있어요.\n왼쪽 스와이프로 삭제, 오른쪽으로 고정.\n고정된 노트는 항상 맨 위에 표시됩니다.",
+        en: "Tap a note to view details.\nSwipe left to share or delete, right to pin.\nPinned notes stay at the top.",
+        ko: "노트를 탭하면 상세 내용을 볼 수 있어요.\n왼쪽 스와이프로 공유/삭제, 오른쪽으로 고정.\n고정된 노트는 항상 맨 위에 표시됩니다.",
       },
       overlay: true,
     },
@@ -177,8 +202,8 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       selector: "[data-guide='note-header']",
       title: { en: "", ko: "" },
       description: {
-        en: "{row:{icon:card}|Review as flashcards}\n{row:{icon:share}|Share this note}",
-        ko: "{row:{icon:card}|카드로 복습하기}\n{row:{icon:share}|노트 공유하기}",
+        en: "{row:{icon:card}|Review as flashcards}\n{row:{icon:share}|Share this note}\n{row:{icon:delete}|Delete this note}",
+        ko: "{row:{icon:card}|노트 복습하기}\n{row:{icon:share}|노트 공유하기}\n{row:{icon:delete}|노트 삭제하기}",
       },
       overlay: true,
     },
@@ -194,6 +219,15 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
     },
   ],
   settings: [
+    {
+      selector: "[data-guide='settings-profile']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "My Info",
+        ko: "내 정보",
+      },
+      overlay: true,
+    },
     {
       selector: "[data-guide='settings-lang']",
       title: { en: "", ko: "" },
@@ -218,6 +252,15 @@ export const GUIDE_STEPS: Record<string, GuideStep[]> = {
       description: {
         en: "Choose your preferred TTS voice for each language.",
         ko: "언어별 음성(TTS)을 선택할 수 있어요.",
+      },
+      overlay: true,
+    },
+    {
+      selector: "[data-guide='settings-account']",
+      title: { en: "", ko: "" },
+      description: {
+        en: "Login Info",
+        ko: "로그인정보",
       },
       overlay: true,
     },

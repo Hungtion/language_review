@@ -155,7 +155,7 @@ const translations = {
   },
   ko: {
     // Nav
-    add: "새 표현",
+    add: "새 노트",
     cards: "복습",
     notes: "노트",
     logout: "로그아웃",
@@ -258,8 +258,8 @@ const translations = {
     englishUS: "영어 (US)",
     japanese: "일본어",
     default: "기본 음성",
-    autoPlay: "자동 재생",
-    autoPlayDesc: "카드 넘길 때 자동 재생",
+    autoPlay: "발음 바로 듣기",
+    autoPlayDesc: "카드 넘길 때 TTS 자동 재생",
     language: "언어",
     iosVoiceGuide: "iOS: 설정 > 손쉬운 사용 > 음성 콘텐츠 > 음성",
     account: "계정 정보",
@@ -270,7 +270,7 @@ const translations = {
     // Home
     recentNotes: "최근 노트",
     sessions: "세션 기록",
-    addNote: "새 표현 추가",
+    addNote: "새 노트 추가",
     reviewCards: "오늘의 복습",
     emptyHomeTitle: "Language LAB에 오신 걸 환영합니다!",
     emptyHomeDesc: "3단계로 학습을 시작하세요:",
@@ -280,7 +280,7 @@ const translations = {
     emptyHomeCta: "첫 번째 표현 추가하기",
     emptyCardsTitle: "복습할 카드가 없습니다",
     emptyCardsDesc: "노트를 추가하면 복습 카드가 자동으로 만들어집니다.",
-    emptyCardsCta: "새 표현 추가",
+    emptyCardsCta: "새 노트 추가",
     streakDays: "일 연속 출석",
     todayReviewCount: "복습 카드",
     streakBonus: "출석 보너스!",

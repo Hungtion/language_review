@@ -146,6 +146,16 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
               return (
                 <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
               );
+            } else if (pos === "top") {
+              // Arrow from label left-center down to element center-top
+              const btnCX = a.rect.left + a.rect.width / 2;
+              const btnTop = a.rect.top;
+              const textX = label.x - 8;
+              const textY = label.y + label.h / 2;
+              const d = `M ${textX} ${textY} Q ${btnCX} ${textY}, ${btnCX} ${btnTop}`;
+              return (
+                <path key={i} d={d} fill="none" stroke="rgba(251,191,36,0.7)" strokeWidth="2" strokeDasharray="5 4" strokeLinecap="round" markerEnd="url(#guide-chevron)" />
+              );
             } else {
               const startPtX = a.rect.left + 20;
               const startPtY = a.rect.top + a.rect.height + 4;
@@ -163,15 +173,21 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
         {/* Target element highlight */}
         {annotations.map((a, i) => {
           if (a.step.tabLabels || a.step.noHighlight) return null;
+          const hlTop = a.rect.top - 4;
+          const hlMaxBottom = vh - 130;
+          const hlRawHeight = a.rect.height + 8;
+          const hlHeight = hlTop < hlMaxBottom && hlTop + hlRawHeight > hlMaxBottom
+            ? hlMaxBottom - hlTop
+            : hlRawHeight;
           return (
             <div
               key={`hl-${i}`}
               className="fixed z-[1000] rounded-lg pointer-events-none"
               style={{
-                top: a.rect.top - 4,
+                top: hlTop,
                 left: a.rect.left - 4,
                 width: a.rect.width + 8,
-                height: a.rect.height + 8,
+                height: hlHeight,
                 border: "1.5px solid rgba(165,180,252,0.35)",
                 boxShadow: "0 0 12px rgba(99,102,241,0.15)",
               }}
@@ -204,8 +220,8 @@ export default function GuideOverlay({ pageKey }: { pageKey: string }) {
                   className="fixed z-[1002] pointer-events-none text-center flex items-center justify-center"
                   style={{
                     top: tabRect.top,
-                    left: tabRect.left - 8,
-                    width: tabRect.width + 16,
+                    left: tabRect.left + tabRect.width / 2,
+                    transform: "translateX(-50%)",
                     height: tabRect.height,
                     fontFamily: "var(--font-gaegu), cursive",
                   }}
@@ -318,8 +334,8 @@ function getLabelPos(
     y = rect.top - labelH;
     return { x, y, w: labelW, h: labelH };
   } else if (pos === "top") {
-    x = a.step.noArrow ? Math.max(16, rect.right - labelW) : Math.max(16, Math.min(rect.left, vw - labelW - 16));
-    y = rect.top - labelH - (a.step.noArrow ? 0 : gap);
+    x = Math.max(16, rect.left + rect.width);
+    y = rect.top - labelH - gap;
   } else if (pos === "center") {
     x = Math.max(16, rect.left + (rect.width - labelW) / 2);
     y = rect.top + Math.min(rect.height, vh * 0.5) / 2 - labelH / 2;

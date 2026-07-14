@@ -763,29 +763,51 @@ function ReviewContent() {
         </div>
       )}
       {/* Filters */}
-      <div className="flex items-center justify-between px-4 pt-3 pb-3">
-        <div data-guide="review-filters-right" className="flex gap-4 items-center shrink-0">
-          <button
-            title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
-            data-guide-tab={`자동\n재생`} data-guide-tab-en={`Auto\nPlay`}
-            onClick={() => {
-              const next = !autoplay;
-              setAutoplay(next);
-              localStorage.setItem("tts-autoplay", String(next));
-            }}
-            className={`w-10 h-6 rounded-full transition-colors relative shrink-0 ${
-              autoplay ? "bg-primary" : "bg-bg-hover"
+      <div className="relative flex items-center justify-end px-4 pt-3 pb-3">
+        <div data-guide="review-autoplay" className="absolute left-1/2 -translate-x-1/2">
+        <button
+          data-guide-tab="발음 바로 듣기" data-guide-tab-en={"Auto\nPronounce"}
+          title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
+          onClick={() => {
+            const next = !autoplay;
+            setAutoplay(next);
+            localStorage.setItem("tts-autoplay", String(next));
+          }}
+          className={`w-14 h-6 rounded-full transition-colors relative shrink-0 ${
+            autoplay ? "bg-primary" : "bg-bg-hover"
+          }`}
+        >
+          <span
+            className={`absolute top-0.5 left-0.5 w-6 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
+              autoplay ? "translate-x-7 bg-white text-primary" : "translate-x-0 bg-gray-500 text-text-secondary"
             }`}
           >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
-                autoplay ? "translate-x-4 bg-white text-primary" : "translate-x-0 bg-gray-500 text-text-secondary"
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="4"/><path d="M9 13c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/><path d="M16 8.5a2.5 2.5 0 010 3"/><path d="M19 7a5 5 0 010 6"/></svg>
+          </span>
+        </button>
+        </div>
+
+        <div data-guide="review-filter-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
+          {(["english", "japanese"] as const).map((f) => (
+            <button
+              key={f}
+              title={f === "english" ? (locale === "ko" ? "영어 카드 보기" : "Show English cards") : (locale === "ko" ? "일본어 카드 보기" : "Show Japanese cards")}
+              onClick={() => { sessionStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                filter === f
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
               }`}
             >
-              A
-            </span>
-          </button>
+              {f === "english" ? "🇺🇸" : "🇯🇵"}
+            </button>
+          ))}
+        </div>
+      </div>
 
+      {/* Card + AI */}
+      <div className="flex-1 px-4 flex flex-col items-center justify-center">
+        <div data-guide="review-filters-right" className="flex items-center justify-between mb-3 w-full max-w-lg">
           <button
             title={locale === "ko" ? "카드 순서를 무작위로 섞습니다" : "Shuffle card order randomly"}
             data-guide-tab="셔플" data-guide-tab-en="Shuffle"
@@ -802,12 +824,28 @@ function ReviewContent() {
                 : "bg-bg-card text-text-muted hover:text-text"
             }`}
           >
-            🔀
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="12" height="16" rx="1.5" transform="rotate(-8 7 12)"/><rect x="11" y="4" width="12" height="16" rx="1.5" transform="rotate(8 17 12)"/><path d="M8 20l4-3m0 0l4 3m-4-3v-4" /></svg>
           </button>
+
+          <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1">
+            {(["all", "vocab", "sentence"] as const).map((ct) => (
+              <button
+                key={ct}
+                onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
+                className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                  cardType === ct
+                    ? "bg-bg-hover text-text"
+                    : "text-text-muted hover:text-text"
+                }`}
+              >
+                {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
+              </button>
+            ))}
+          </div>
 
           <button
             title={locale === "ko" ? "연속 재생" : "Auto play all"}
-            data-guide-tab="자동 넘김" data-guide-tab-en="Auto Play"
+            data-guide-tab="연속 학습" data-guide-tab-en={"Continuous\nMode"}
             onClick={togglePlay}
             className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
               playing
@@ -815,46 +853,8 @@ function ReviewContent() {
                 : "bg-bg-card text-text-muted hover:text-text"
             }`}
           >
-            {playing ? "⏸" : "▶️"}
+            {playing ? <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16" rx="1"/><rect x="14" y="4" width="4" height="16" rx="1"/></svg> : <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="3" width="13" height="18" rx="1.5"/><rect x="8" y="3" width="13" height="18" rx="1.5"/><path d="M18 9l3 3-3 3"/></svg>}
           </button>
-        </div>
-
-        <div className="flex gap-2 items-center overflow-x-auto scrollbar-hide flex-nowrap">
-          <div data-guide="review-filter-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
-            {(["english", "japanese"] as const).map((f) => (
-              <button
-                key={f}
-                title={f === "english" ? (locale === "ko" ? "영어 카드 보기" : "Show English cards") : (locale === "ko" ? "일본어 카드 보기" : "Show Japanese cards")}
-                onClick={() => { sessionStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
-                className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                  filter === f
-                    ? "bg-bg-hover text-text"
-                    : "text-text-muted hover:text-text"
-                }`}
-              >
-                {f === "english" ? "🇺🇸" : "🇯🇵"}
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      {/* Card + AI */}
-      <div className="flex-1 px-4 flex flex-col items-center justify-center">
-        <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1 mb-3">
-          {(["all", "vocab", "sentence"] as const).map((ct) => (
-            <button
-              key={ct}
-              onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
-              className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                cardType === ct
-                  ? "bg-bg-hover text-text"
-                  : "text-text-muted hover:text-text"
-              }`}
-            >
-              {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
-            </button>
-          ))}
         </div>
         {card ? (
           <>
@@ -1066,6 +1066,7 @@ function ReviewContent() {
                     </div>
                   )}
                   <div
+                    data-guide="review-mic"
                     className="card-toolbar absolute bottom-3 left-0 right-0 flex justify-center"
                     onClick={(e) => e.stopPropagation()}
                     onTouchStart={(e) => e.stopPropagation()}

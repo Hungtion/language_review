@@ -388,7 +388,8 @@ function AddContent() {
         </div>
       </div>
 
-      {/* Template Button */}
+      {/* Template Button + Examples */}
+      <div data-guide="add-template" className="space-y-2">
       <button
         onClick={() => setShowTemplateModal(true)}
         className={`w-full py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 ${
@@ -400,6 +401,23 @@ function AddContent() {
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
         {locale === "ko" ? "내 목표에 맞는 노트 추가하기" : "Add notes for your goal"}
       </button>
+      <div className="flex gap-2 flex-wrap items-center">
+        <span className="text-xs text-text-faint">{locale === "ko" ? "예제:" : "Examples:"}</span>
+        {TEMPLATES[language].map((tmpl, i) => (
+          <button
+            key={i}
+            onClick={() => setRawInput(rawInput === tmpl.text ? "" : tmpl.text)}
+            className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${
+              rawInput === tmpl.text
+                ? "border-primary text-primary bg-primary/10"
+                : "text-text-faint border-border hover:border-primary/50 hover:text-primary"
+            }`}
+          >
+            {locale === "ko" ? tmpl.label.ko : tmpl.label.en}
+          </button>
+        ))}
+      </div>
+      </div>
 
       {showTemplateModal && (
         <TemplateModal
@@ -452,25 +470,10 @@ function AddContent() {
 
       </div>
       {/* Raw Input */}
-      <div data-guide="add-textarea" className="flex-1 flex flex-col mt-4">
-        <div className="flex gap-2 mb-2 flex-wrap items-center">
-          <span className="text-xs text-text-faint">{locale === "ko" ? "예제:" : "Examples:"}</span>
-          {TEMPLATES[language].map((tmpl, i) => (
-            <button
-              key={i}
-              onClick={() => setRawInput(rawInput === tmpl.text ? "" : tmpl.text)}
-              className={`text-xs border px-3 py-1.5 rounded-lg transition-colors ${
-                rawInput === tmpl.text
-                  ? "border-primary text-primary bg-primary/10"
-                  : "text-text-faint border-border hover:border-primary/50 hover:text-primary"
-              }`}
-            >
-              {locale === "ko" ? tmpl.label.ko : tmpl.label.en}
-            </button>
-          ))}
-        </div>
+      <div className="flex-1 flex flex-col mt-4">
         <div className="relative flex-1 flex flex-col">
           <textarea
+            data-guide="add-textarea"
             value={rawInput}
             onChange={(e) => {
               const val = e.target.value;
@@ -521,8 +524,8 @@ function AddContent() {
         </p>
       </div>
 
-      {/* Actions - sticky bottom */}
-      <div className="sticky bottom-[calc(3.5rem+env(safe-area-inset-bottom))] bg-bg pt-3 pb-2 flex gap-3 items-center z-10">
+      {/* Actions - fixed bottom above tab bar */}
+      <div className="fixed left-0 right-0 bg-bg px-4 pt-3 pb-2 flex gap-3 items-center z-10" style={{ bottom: "calc(3.5rem + env(safe-area-inset-bottom) + 1rem)" }}>
         {language === "english" && isEngChannel && (
           <button
             onClick={handlePreview}

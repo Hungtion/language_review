@@ -108,7 +108,7 @@ function SettingsContent() {
     <div className="space-y-6 max-w-lg mx-auto">
       <GuideOverlay pageKey="settings" />
 
-      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+      <div data-guide="settings-profile" className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
         {/* My Name */}
         <div className="flex items-center justify-between">
           {nameEditing ? (
@@ -402,6 +402,39 @@ function SettingsContent() {
       </div>
 
       <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+        <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "카드 나눌 때 기존 카드 삭제" : "Delete original when splitting"}</h2>
+        <div className="flex items-center justify-between">
+          <span className="text-sm text-text-muted">
+            {splitAuto === "keep"
+              ? (locale === "ko" ? "기존 카드를 유지합니다" : "Keep original card")
+              : (locale === "ko" ? "나뉘어진 카드로 대체합니다" : "Replace with split cards")}
+          </span>
+          <button
+            onClick={() => {
+              if (splitAuto === "keep") {
+                // 켜기: split-auto 제거 → 다음에 다시 물어봄
+                localStorage.removeItem("split-auto");
+                setSplitAuto(null);
+              } else {
+                // 끄기: keep 저장 → 안 물어봄, 기존 카드 유지
+                localStorage.setItem("split-auto", "keep");
+                setSplitAuto("keep");
+              }
+            }}
+            className={`w-12 h-6 rounded-full transition-colors relative ${
+              splitAuto !== "keep" ? "bg-primary" : "bg-bg-hover"
+            }`}
+          >
+            <span
+              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
+                splitAuto !== "keep" ? "translate-x-[24px]" : "translate-x-0"
+              }`}
+            />
+          </button>
+        </div>
+      </div>
+
+      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-text-secondary">{t("engChannel")}</h2>
         <div className="flex items-center justify-between">
           <span className="text-sm text-text-muted">{t("engChannelDesc")}</span>
@@ -437,40 +470,7 @@ function SettingsContent() {
         )}
       </div>
 
-      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
-        <h2 className="text-sm font-medium text-text-secondary">{locale === "ko" ? "카드 나눌 때 기존 카드 삭제" : "Delete original when splitting"}</h2>
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-text-muted">
-            {splitAuto === "keep"
-              ? (locale === "ko" ? "기존 카드를 유지합니다" : "Keep original card")
-              : (locale === "ko" ? "나뉘어진 카드로 대체합니다" : "Replace with split cards")}
-          </span>
-          <button
-            onClick={() => {
-              if (splitAuto === "keep") {
-                // 켜기: split-auto 제거 → 다음에 다시 물어봄
-                localStorage.removeItem("split-auto");
-                setSplitAuto(null);
-              } else {
-                // 끄기: keep 저장 → 안 물어봄, 기존 카드 유지
-                localStorage.setItem("split-auto", "keep");
-                setSplitAuto("keep");
-              }
-            }}
-            className={`w-12 h-6 rounded-full transition-colors relative ${
-              splitAuto !== "keep" ? "bg-primary" : "bg-bg-hover"
-            }`}
-          >
-            <span
-              className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full transition-transform ${
-                splitAuto !== "keep" ? "translate-x-[24px]" : "translate-x-0"
-              }`}
-            />
-          </button>
-        </div>
-      </div>
-
-      <div className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
+      <div data-guide="settings-account" className="bg-bg-card border border-border rounded-xl p-5 space-y-4">
         <h2 className="text-sm font-medium text-text-secondary">{t("account")}</h2>
         <div className="flex items-center justify-between">
           <p className="text-sm text-text-muted flex items-center gap-1.5">
@@ -731,8 +731,8 @@ function SettingsContent() {
                     />
                     <span className="text-xs text-text-muted">
                       {locale === "ko"
-                        ? "로그인 정보 저장 (앱 시작 시 자동 가져오기)"
-                        : "Save credentials (auto-import on app start)"}
+                        ? "로그인 정보 저장"
+                        : "Save credentials"}
                     </span>
                   </label>
                 </div>
