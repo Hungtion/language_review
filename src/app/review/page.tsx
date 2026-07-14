@@ -48,6 +48,7 @@ function ReviewContent() {
   }, []);
   const [flipped, setFlipped] = useState(false);
   const [pronResult, setPronResult] = useState<PronResult | null>(null);
+  const [pronListening, setPronListening] = useState(false);
   const [filter, setFilter] = useState<"english" | "japanese">(() => {
     if (typeof window === "undefined") return "english";
     return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
@@ -1051,11 +1052,20 @@ function ReviewContent() {
                   {pronResult && pronResult.transcript && (
                     <div className="mt-2 text-center">
                       <span className="text-[10px] text-text-faint">{locale === "ko" ? "내 발음" : "My speech"}</span>
-                      <p className="text-sm text-red-400 italic">{pronResult.transcript}</p>
+                      <p className="text-sm italic">
+                        {(() => {
+                          const targetWords = new Set(card.front.replace(/\([^)]*\)/g, "").split(/\s+/).filter(Boolean).map(w => w.toLowerCase().replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g, "")));
+                          return pronResult.transcript.split(" ").map((w, i) => {
+                            const norm = w.toLowerCase().replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g, "");
+                            const matched = targetWords.has(norm);
+                            return <span key={i} className={matched ? "text-text-muted" : "text-red-400"}>{w}{" "}</span>;
+                          });
+                        })()}
+                      </p>
                     </div>
                   )}
-                  {/* Back content revealed below front */}
-                  {flipped && card.back && (
+                  {/* Back content revealed below front (hidden during pronunciation check) */}
+                  {flipped && card.back && !pronResult && !pronListening && (
                     <div className="mt-4 pt-4 border-t border-border w-full">
                       <pre className="text-base text-center whitespace-pre-wrap font-sans leading-relaxed text-primary">
                         {card.back}
@@ -1069,7 +1079,7 @@ function ReviewContent() {
                     onTouchEnd={(e) => e.stopPropagation()}
                     onMouseDown={(e) => e.stopPropagation()}
                   >
-                    <PronunciationCheck targetText={card.front} language={card.language} onResult={setPronResult} />
+                    <PronunciationCheck targetText={card.front} language={card.language} onResult={setPronResult} onListeningChange={setPronListening} />
                   </div>
                 </div>
               </div>

@@ -13,33 +13,32 @@ type Props = {
   targetText: string;
   language: "english" | "japanese";
   onResult?: (result: PronResult | null) => void;
+  onListeningChange?: (listening: boolean) => void;
 };
 
 type Result = PronResult;
 
-function normalize(text: string): string {
-  return text
-    .toLowerCase()
-    .replace(/[^\w\s\u3000-\u9fff\uff00-\uffef]/g, "")
-    .replace(/\s+/g, " ")
-    .trim();
+function stripParens(text: string): string {
+  return text.replace(/\([^)]*\)/g, "").replace(/\s+/g, " ").trim();
+}
+
+function normalizeWord(word: string): string {
+  return word.toLowerCase().replace(/[^\w\u3000-\u9fff\uff00-\uffef]/g, "");
 }
 
 function computeScore(target: string, spoken: string): Result {
-  const targetNorm = normalize(target);
-  const spokenNorm = normalize(spoken);
-
-  const targetWords = targetNorm.split(" ").filter(Boolean);
-  const spokenWords = new Set(spokenNorm.split(" ").filter(Boolean));
+  const cleaned = stripParens(target);
+  const originalWords = cleaned.split(" ").filter(Boolean);
+  const spokenWords = new Set(spoken.split(" ").filter(Boolean).map(normalizeWord));
 
   let matched = 0;
-  const matches = targetWords.map((word) => {
-    const isMatch = spokenWords.has(word);
+  const matches = originalWords.map((word) => {
+    const isMatch = spokenWords.has(normalizeWord(word));
     if (isMatch) matched++;
     return { word, matched: isMatch };
   });
 
-  const score = targetWords.length > 0 ? Math.round((matched / targetWords.length) * 100) : 0;
+  const score = originalWords.length > 0 ? Math.round((matched / originalWords.length) * 100) : 0;
   return { transcript: spoken, score, matches };
 }
 
@@ -56,7 +55,7 @@ function getScoreLabel(score: number, isKo: boolean): string {
   return isKo ? "다시 해볼까요?" : "Try again";
 }
 
-export default function PronunciationCheck({ targetText, language, onResult }: Props) {
+export default function PronunciationCheck({ targetText, language, onResult, onListeningChange }: Props) {
   const { locale } = useLocale();
   const isKo = locale === "ko";
   const [listening, setListening] = useState(false);
@@ -69,6 +68,7 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
     recognitionRef.current = null;
     setResult(null);
     setListening(false);
+    onListeningChange?.(false);
     onResult?.(null);
   }, [targetText]);
 
@@ -81,6 +81,7 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
     onResult?.(null);
     lastTranscriptRef.current = "";
     setListening(true);
+    onListeningChange?.(true);
 
     const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
@@ -100,15 +101,18 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
         setResult(r);
         onResult?.(r);
         setListening(false);
+        onListeningChange?.(false);
       }
     };
 
     recognition.onerror = () => {
       setListening(false);
+      onListeningChange?.(false);
     };
 
     recognition.onend = () => {
       setListening(false);
+      onListeningChange?.(false);
     };
 
     recognition.start();
@@ -118,13 +122,14 @@ export default function PronunciationCheck({ targetText, language, onResult }: P
     recognitionRef.current?.stop();
     recognitionRef.current = null;
     setListening(false);
+    onListeningChange?.(false);
     // Evaluate with whatever was captured so far
     if (lastTranscriptRef.current) {
       const r = computeScore(targetText, lastTranscriptRef.current);
       setResult(r);
       onResult?.(r);
     }
-  }, [targetText, onResult]);
+  }, [targetText, onResult, onListeningChange]);
 
   if (!supported) return null;
 
