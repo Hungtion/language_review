@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 
-export const revalidate = 43200; // 12시간마다 ISR 갱신
-
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 
 const PROMPT_EN = `Task: Write ONE short, creative motivational sentence.
@@ -34,8 +32,17 @@ const PROMPT_JP = `Task: Write ONE short, creative motivational sentence in Japa
 * DO NOT use quotation marks.
 * DO NOT add any explanations or greetings.`;
 
+function getServerKstPeriod(): string {
+  const kst = new Date(Date.now() + 9 * 60 * 60 * 1000);
+  const date = kst.toISOString().split("T")[0];
+  const hour = kst.getUTCHours();
+  const period = hour >= 8 && hour < 20 ? "AM" : "PM";
+  return `${date}-${period}`;
+}
+
 async function generateQuote(lang: "english" | "japanese"): Promise<{ quote: string; translation: string }> {
-  const prompt = lang === "japanese" ? PROMPT_JP : PROMPT_EN;
+  const currentPeriod = getServerKstPeriod();
+  const prompt = (lang === "japanese" ? PROMPT_JP : PROMPT_EN) + `\n\n[System Note: Seed Period - ${currentPeriod}]`;
 
   const res = await fetch(
     `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${GEMINI_API_KEY}`,
@@ -46,6 +53,7 @@ async function generateQuote(lang: "english" | "japanese"): Promise<{ quote: str
         contents: [{ parts: [{ text: prompt }] }],
         generationConfig: { temperature: 1.0, maxOutputTokens: 1024, thinkingConfig: { thinkingBudget: 0 } },
       }),
+      cache: "force-cache",
     }
   );
 
