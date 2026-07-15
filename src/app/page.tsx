@@ -79,11 +79,13 @@ function HomeContent() {
       });
       let allC = 0, enC = 0, jpC = 0;
       for (const n of gn) {
+        const p = n.stress_pronunciation ? parseSentences(n.stress_pronunciation).length : 0;
         const v = n.vocabulary ? parseVocabulary(n.vocabulary).length : 0;
         const s = n.sentence_grammar ? parseSentences(n.sentence_grammar).length : 0;
-        allC += v + s;
-        if (n.language === "english") enC += v + s;
-        else jpC += v + s;
+        const t = p + v + s;
+        allC += t;
+        if (n.language === "english") enC += t;
+        else if (n.language === "japanese") jpC += t;
       }
       setCardCounts({ all: allC, english: enC, japanese: jpC });
       setDataLoading(false);
@@ -109,11 +111,13 @@ function HomeContent() {
 
       let allC = 0, enC = 0, jpC = 0;
       for (const n of notes) {
+        const p = n.stress_pronunciation ? parseSentences(n.stress_pronunciation).length : 0;
         const v = n.vocabulary ? parseVocabulary(n.vocabulary).length : 0;
         const s = n.sentence_grammar ? parseSentences(n.sentence_grammar).length : 0;
-        allC += v + s;
-        if (n.language === "english") enC += v + s;
-        else jpC += v + s;
+        const t = p + v + s;
+        allC += t;
+        if (n.language === "english") enC += t;
+        else if (n.language === "japanese") jpC += t;
       }
       setCardCounts({ all: allC, english: enC, japanese: jpC });
 
