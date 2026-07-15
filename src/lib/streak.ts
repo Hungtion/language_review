@@ -154,7 +154,10 @@ export async function recordActivity(
     }
 
     // Cap activity leaf only (streak bonus is separate)
-    const cappedActivity = Math.min(activityLeaf, Math.max(0, DAILY_LEAF_CAP - alreadyEarned));
+    // Subtract any previously claimed streak bonus from alreadyEarned for cap calculation
+    const prevStreakBonus = todayData.streak_bonus_claimed ? (getStreakReward(streak) || 0) : 0;
+    const activityEarned = Math.max(0, alreadyEarned - prevStreakBonus);
+    const cappedActivity = Math.min(activityLeaf, Math.max(0, DAILY_LEAF_CAP - activityEarned));
     leafEarned = cappedActivity + streakBonus;
 
     if (leafEarned > 0) {
