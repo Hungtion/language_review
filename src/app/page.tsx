@@ -157,7 +157,7 @@ function HomeContent() {
     }
 
     let cancelled = false;
-    setDailyQuote(getFallbackQuote(langFilter));
+    setDailyQuote("");
     setDailyTranslation("");
     fetch(`/api/daily-quote?lang=${langFilter}`)
       .then((r) => r.json())
