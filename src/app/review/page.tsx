@@ -607,6 +607,7 @@ function ReviewContent() {
         const c = cards[index];
         if (c?.back) {
           if (!flipped) { speak(c.front, c.language); setFlipped(true); }
+          else { speak(c.front, c.language); }
         } else if (c) { speak(c.front, c.language); }
       } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         if (animating || index >= cards.length - 1) return;
@@ -711,6 +712,8 @@ function ReviewContent() {
         if (!flipped) {
           speak(c.front, c.language);
           setFlipped(true);
+        } else {
+          speak(c.front, c.language);
         }
       } else {
         // No back → just read front
