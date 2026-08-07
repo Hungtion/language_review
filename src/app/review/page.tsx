@@ -329,7 +329,7 @@ function ReviewContent() {
     } else if (autoplay && !playing) {
       const timer = setTimeout(() => {
         speak(cards[index].front, cards[index].language);
-      }, 1000);
+      }, 500);
       return () => clearTimeout(timer);
     }
   }, [index, loading]);
