@@ -327,7 +327,10 @@ function ReviewContent() {
         }, 800);
       });
     } else if (autoplay && !playing) {
-      speak(cards[index].front, cards[index].language);
+      const timer = setTimeout(() => {
+        speak(cards[index].front, cards[index].language);
+      }, 1000);
+      return () => clearTimeout(timer);
     }
   }, [index, loading]);
 
