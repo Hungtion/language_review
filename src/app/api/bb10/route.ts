@@ -3,6 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
 
+const CORS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type",
+};
+
+export async function OPTIONS() {
+  return new NextResponse(null, { status: 204, headers: CORS });
+}
+
 export async function POST(req: NextRequest) {
   try {
     const { action, email, password, refresh_token, access_token, query } = await req.json();
@@ -20,7 +30,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
-      return NextResponse.json(data, { status: res.status });
+      return NextResponse.json(data, { status: res.status, headers: CORS });
     }
 
     // Refresh token
@@ -31,7 +41,7 @@ export async function POST(req: NextRequest) {
         body: JSON.stringify({ refresh_token }),
       });
       const data = await res.json();
-      return NextResponse.json(data, { status: res.status });
+      return NextResponse.json(data, { status: res.status, headers: CORS });
     }
 
     // DB query (read-only)
@@ -42,11 +52,11 @@ export async function POST(req: NextRequest) {
         headers,
       });
       const data = await res.json();
-      return NextResponse.json(data, { status: res.status });
+      return NextResponse.json(data, { status: res.status, headers: CORS });
     }
 
-    return NextResponse.json({ error: "Invalid action" }, { status: 400 });
+    return NextResponse.json({ error: "Invalid action" }, { status: 400, headers: CORS });
   } catch (e) {
-    return NextResponse.json({ error: String(e) }, { status: 500 });
+    return NextResponse.json({ error: String(e) }, { status: 500, headers: CORS });
   }
 }
