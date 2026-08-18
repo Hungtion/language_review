@@ -1,0 +1,814 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>Language LAB</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, Helvetica, Arial, sans-serif;
+  background: #0a0f1a;
+  color: #e2e8f0;
+  font-size: 14px;
+  overflow: hidden;
+  height: 100vh;
+  width: 100vw;
+}
+a { color: #818cf8; text-decoration: none; }
+
+/* ===== LOGIN ===== */
+#login-screen {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100vh;
+  padding: 20px;
+}
+#login-screen h1 { font-size: 22px; margin-bottom: 6px; }
+#login-screen p { color: #94a3b8; font-size: 12px; margin-bottom: 24px; }
+#login-screen input {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  color: #e2e8f0;
+  font-size: 14px;
+  -webkit-appearance: none;
+}
+#login-screen button {
+  width: 100%;
+  max-width: 280px;
+  padding: 10px;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  margin-top: 4px;
+}
+#login-error {
+  color: #f87171;
+  font-size: 12px;
+  margin-top: 8px;
+  text-align: center;
+}
+
+/* ===== APP SHELL ===== */
+#app-screen { display: none; height: 100vh; flex-direction: column; }
+
+/* Nav */
+#nav {
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-shrink: 0;
+}
+#nav-title { font-size: 16px; font-weight: 700; }
+#nav-user { font-size: 11px; color: #94a3b8; }
+#nav button {
+  background: none;
+  border: 1px solid #334155;
+  color: #94a3b8;
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 11px;
+}
+
+/* Tabs */
+#tabs {
+  display: flex;
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  flex-shrink: 0;
+}
+.tab-btn {
+  flex: 1;
+  padding: 8px 0;
+  text-align: center;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  font-size: 13px;
+  font-weight: 500;
+  border-bottom: 2px solid transparent;
+}
+.tab-btn.active {
+  color: #818cf8;
+  border-bottom-color: #818cf8;
+}
+
+/* Content */
+#content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Filter bar */
+#filter-bar {
+  padding: 8px 16px;
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+}
+.filter-btn {
+  padding: 4px 14px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  color: #94a3b8;
+  font-size: 12px;
+}
+.filter-btn.active {
+  background: #6366f1;
+  border-color: #6366f1;
+  color: #fff;
+}
+
+/* ===== NOTES LIST ===== */
+.note-item {
+  padding: 12px 16px;
+  border-bottom: 1px solid #1e293b;
+}
+.note-item:active { background: #1e293b; }
+.note-title { font-size: 14px; font-weight: 600; }
+.note-date { font-size: 11px; color: #64748b; margin-top: 2px; }
+.note-count { font-size: 11px; color: #818cf8; margin-top: 2px; }
+
+/* ===== REVIEW CARDS ===== */
+#card-area {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  position: relative;
+  overflow: hidden;
+}
+#card {
+  width: 100%;
+  max-width: 400px;
+  min-height: 180px;
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 12px;
+  padding: 24px 20px;
+  text-align: center;
+  position: relative;
+}
+#card-front {
+  font-size: 16px;
+  line-height: 1.6;
+  word-break: break-word;
+}
+#card-back {
+  display: none;
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px solid #334155;
+  font-size: 14px;
+  color: #94a3b8;
+  line-height: 1.5;
+  word-break: break-word;
+}
+#card-type {
+  position: absolute;
+  top: 8px;
+  left: 12px;
+  font-size: 10px;
+  color: #64748b;
+  text-transform: uppercase;
+}
+#card-progress {
+  text-align: center;
+  padding: 10px;
+  font-size: 12px;
+  color: #64748b;
+  flex-shrink: 0;
+}
+#card-progress-bar {
+  width: 100%;
+  max-width: 400px;
+  height: 3px;
+  background: #1e293b;
+  border-radius: 2px;
+  margin: 6px auto 0;
+  overflow: hidden;
+}
+#card-progress-fill {
+  height: 100%;
+  background: #6366f1;
+  border-radius: 2px;
+  width: 0%;
+}
+#card-hint {
+  text-align: center;
+  font-size: 11px;
+  color: #475569;
+  padding: 4px;
+  flex-shrink: 0;
+}
+
+/* ===== NOTE DETAIL ===== */
+#detail-screen { display: none; height: 100vh; flex-direction: column; }
+#detail-nav {
+  background: #0f172a;
+  border-bottom: 1px solid #1e293b;
+  padding: 10px 16px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-shrink: 0;
+}
+#detail-nav button {
+  background: none;
+  border: none;
+  color: #818cf8;
+  font-size: 14px;
+}
+#detail-title { font-size: 15px; font-weight: 600; flex: 1; }
+#detail-content {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 16px;
+}
+.section-card {
+  background: #1e293b;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  padding: 14px;
+  margin-bottom: 12px;
+}
+.section-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: #818cf8;
+  text-transform: uppercase;
+  margin-bottom: 8px;
+}
+.section-line {
+  font-size: 13px;
+  line-height: 1.6;
+  padding: 3px 0;
+  color: #cbd5e1;
+}
+
+/* ===== LOADING ===== */
+#loading {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: rgba(10,15,26,0.8);
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+  font-size: 14px;
+  color: #94a3b8;
+}
+
+/* ===== EMPTY STATE ===== */
+.empty-state {
+  text-align: center;
+  padding: 40px 20px;
+  color: #64748b;
+  font-size: 13px;
+}
+</style>
+</head>
+<body>
+
+<!-- Loading overlay -->
+<div id="loading">Loading...</div>
+
+<!-- Login Screen -->
+<div id="login-screen">
+  <h1>Language LAB</h1>
+  <p>BB10 Lite</p>
+  <input type="email" id="login-email" placeholder="Email">
+  <input type="password" id="login-password" placeholder="Password">
+  <button onclick="doLogin()">Sign In</button>
+  <div id="login-error"></div>
+</div>
+
+<!-- App Screen -->
+<div id="app-screen">
+  <div id="nav">
+    <div>
+      <div id="nav-title">Language LAB</div>
+      <div id="nav-user"></div>
+    </div>
+    <button onclick="doLogout()">Logout</button>
+  </div>
+
+  <div id="tabs">
+    <button class="tab-btn active" onclick="switchTab('notes')">Notes</button>
+    <button class="tab-btn" onclick="switchTab('review')">Review</button>
+  </div>
+
+  <div id="filter-bar">
+    <button class="filter-btn active" data-lang="english" onclick="setLang('english')">EN</button>
+    <button class="filter-btn" data-lang="japanese" onclick="setLang('japanese')">JP</button>
+  </div>
+
+  <!-- Notes tab -->
+  <div id="notes-tab" style="flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;">
+  </div>
+
+  <!-- Review tab -->
+  <div id="review-tab" style="display:none;flex:1;display:none;flex-direction:column;">
+    <div id="card-area">
+      <div id="card" onclick="flipCard()">
+        <div id="card-type"></div>
+        <div id="card-front"></div>
+        <div id="card-back"></div>
+      </div>
+    </div>
+    <div id="card-progress">
+      <span id="card-idx">0 / 0</span>
+      <div id="card-progress-bar"><div id="card-progress-fill"></div></div>
+    </div>
+    <div id="card-hint">Tap to flip &middot; Swipe to navigate</div>
+  </div>
+</div>
+
+<!-- Note Detail Screen -->
+<div id="detail-screen">
+  <div id="detail-nav">
+    <button onclick="closeDetail()">&larr; Back</button>
+    <div id="detail-title"></div>
+  </div>
+  <div id="detail-content"></div>
+</div>
+
+<script>
+// ===== CONFIG =====
+var PROXY_URL = '/api/bb10';
+var SUPABASE_URL = 'https://xdspwiqperxcvmmlzkve.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inhkc3B3aXFwZXJ4Y3ZtbWx6a3ZlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE1NDk2ODYsImV4cCI6MjA5NzEyNTY4Nn0.BJTiMiHrYEF8qcrtCSYawpbQfMFCDihRligjFiEa2H4';
+
+var accessToken = '';
+var currentUser = null;
+var allNotes = [];
+var currentLang = 'english';
+var currentTab = 'notes';
+var cards = [];
+var cardIndex = 0;
+var flipped = false;
+
+// Touch state
+var touchStartX = 0;
+var touchStartY = 0;
+
+// ===== PROXY REST =====
+function proxyRequest(payload, callback) {
+  var xhr = new XMLHttpRequest();
+  xhr.open('POST', PROXY_URL, true);
+  xhr.setRequestHeader('Content-Type', 'application/json');
+  xhr.onreadystatechange = function() {
+    if (xhr.readyState === 4) {
+      var data = null;
+      try { data = JSON.parse(xhr.responseText); } catch(e) {}
+      callback(xhr.status, data, xhr.responseText);
+    }
+  };
+  xhr.onerror = function() {
+    callback(0, null, 'Network error');
+  };
+  xhr.send(JSON.stringify(payload));
+}
+
+function supabaseRequest(method, path, body, callback) {
+  // DB queries go through proxy
+  proxyRequest({
+    action: 'query',
+    access_token: accessToken,
+    query: path.replace(/^\/rest\/v1\//, '')
+  }, callback);
+}
+
+// ===== AUTH =====
+function doLogin() {
+  var email = document.getElementById('login-email').value.trim();
+  var pass = document.getElementById('login-password').value;
+  if (!email || !pass) return;
+
+  showLoading();
+  document.getElementById('login-error').textContent = '';
+
+  proxyRequest({
+    action: 'login',
+    email: email,
+    password: pass
+  }, function(status, data, raw) {
+    hideLoading();
+    if (status === 200 && data && data.access_token) {
+      accessToken = data.access_token;
+      currentUser = data.user;
+      try {
+        localStorage.setItem('lab_token', data.access_token);
+        localStorage.setItem('lab_refresh', data.refresh_token || '');
+        localStorage.setItem('lab_user', JSON.stringify(data.user));
+      } catch(e) {}
+      showApp();
+    } else {
+      var msg = 'Status: ' + status + '\n';
+      if (data && data.error_description) msg += data.error_description;
+      else if (data && data.msg) msg += data.msg;
+      else if (data && data.error) msg += data.error;
+      else msg += raw || 'No response';
+      document.getElementById('login-error').textContent = msg;
+    }
+  });
+}
+
+function doLogout() {
+  accessToken = '';
+  currentUser = null;
+  try {
+    localStorage.removeItem('lab_token');
+    localStorage.removeItem('lab_refresh');
+    localStorage.removeItem('lab_user');
+  } catch(e) {}
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+function tryAutoLogin() {
+  try {
+    var refresh = localStorage.getItem('lab_refresh');
+    if (refresh) {
+      proxyRequest({ action: 'refresh', refresh_token: refresh }, function(status, data) {
+        if (status === 200 && data && data.access_token) {
+          accessToken = data.access_token;
+          currentUser = data.user;
+          localStorage.setItem('lab_token', data.access_token);
+          localStorage.setItem('lab_refresh', data.refresh_token || refresh);
+          localStorage.setItem('lab_user', JSON.stringify(data.user));
+          showApp();
+        } else {
+          localStorage.removeItem('lab_token');
+          localStorage.removeItem('lab_refresh');
+          localStorage.removeItem('lab_user');
+          document.getElementById('login-screen').style.display = 'flex';
+        }
+      });
+      return;
+    }
+  } catch(e) {}
+  document.getElementById('login-screen').style.display = 'flex';
+}
+
+// ===== APP =====
+function showApp() {
+  document.getElementById('login-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+  var name = '';
+  if (currentUser && currentUser.user_metadata) {
+    name = currentUser.user_metadata.full_name || currentUser.user_metadata.name || '';
+  }
+  document.getElementById('nav-user').textContent = name || (currentUser ? currentUser.email : '');
+  loadNotes();
+}
+
+function showLoading() { document.getElementById('loading').style.display = 'flex'; }
+function hideLoading() { document.getElementById('loading').style.display = 'none'; }
+
+// ===== TABS =====
+function switchTab(tab) {
+  currentTab = tab;
+  var btns = document.querySelectorAll('.tab-btn');
+  for (var i = 0; i < btns.length; i++) {
+    btns[i].className = 'tab-btn' + (btns[i].textContent.toLowerCase() === tab ? ' active' : '');
+  }
+
+  if (tab === 'notes') {
+    document.getElementById('notes-tab').style.display = 'block';
+    document.getElementById('review-tab').style.display = 'none';
+    renderNotes();
+  } else {
+    document.getElementById('notes-tab').style.display = 'none';
+    document.getElementById('review-tab').style.display = 'flex';
+    buildCards();
+  }
+}
+
+// ===== LANGUAGE FILTER =====
+function setLang(lang) {
+  currentLang = lang;
+  var btns = document.querySelectorAll('.filter-btn');
+  for (var i = 0; i < btns.length; i++) {
+    var isActive = btns[i].getAttribute('data-lang') === lang;
+    btns[i].className = 'filter-btn' + (isActive ? ' active' : '');
+  }
+  if (currentTab === 'notes') renderNotes();
+  else buildCards();
+}
+
+// ===== NOTES =====
+function loadNotes() {
+  showLoading();
+  var path = '/rest/v1/study_sessions?select=*&user_id=eq.' + currentUser.id +
+    '&order=study_date.desc,created_at.desc';
+  supabaseRequest('GET', path, null, function(status, data) {
+    hideLoading();
+    if (status === 200 && data) {
+      allNotes = data;
+    } else {
+      allNotes = [];
+    }
+    renderNotes();
+  });
+}
+
+function renderNotes() {
+  var container = document.getElementById('notes-tab');
+  var filtered = [];
+  for (var i = 0; i < allNotes.length; i++) {
+    if (allNotes[i].language === currentLang) filtered.push(allNotes[i]);
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="empty-state">No notes yet</div>';
+    return;
+  }
+
+  var html = '';
+  for (var i = 0; i < filtered.length; i++) {
+    var n = filtered[i];
+    var count = countCards(n);
+    html += '<div class="note-item" onclick="openDetail(\'' + n.id + '\')">' +
+      '<div class="note-title">' + escHtml(n.title || 'Untitled') + '</div>' +
+      '<div class="note-date">' + (n.study_date || '') + '</div>' +
+      '<div class="note-count">' + count + ' cards</div>' +
+      '</div>';
+  }
+  container.innerHTML = html;
+}
+
+function countCards(note) {
+  var c = 0;
+  if (note.stress_pronunciation) c += parseSentences(note.stress_pronunciation).length;
+  if (note.vocabulary) c += parseVocabulary(note.vocabulary).length;
+  if (note.sentence_grammar) c += parseSentences(note.sentence_grammar).length;
+  return c;
+}
+
+// ===== NOTE DETAIL =====
+function openDetail(id) {
+  var note = null;
+  for (var i = 0; i < allNotes.length; i++) {
+    if (allNotes[i].id === id) { note = allNotes[i]; break; }
+  }
+  if (!note) return;
+
+  document.getElementById('detail-title').textContent = note.title || 'Untitled';
+  var html = '';
+
+  if (note.stress_pronunciation) {
+    var lines = parseSentences(note.stress_pronunciation);
+    html += '<div class="section-card"><div class="section-label">Pronunciation</div>';
+    for (var i = 0; i < lines.length; i++) {
+      html += '<div class="section-line">' + escHtml(lines[i]) + '</div>';
+    }
+    html += '</div>';
+  }
+
+  if (note.vocabulary) {
+    var entries = parseVocabulary(note.vocabulary);
+    html += '<div class="section-card"><div class="section-label">Vocabulary</div>';
+    for (var i = 0; i < entries.length; i++) {
+      html += '<div class="section-line"><strong>' + escHtml(entries[i].term) + '</strong>';
+      if (entries[i].definition) html += ' = ' + escHtml(entries[i].definition);
+      if (entries[i].example) html += '<br><span style="color:#64748b;font-size:12px">e.g. ' + escHtml(entries[i].example) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  if (note.sentence_grammar) {
+    var sents = parseSentencesWithBack(note.sentence_grammar);
+    html += '<div class="section-card"><div class="section-label">Sentences</div>';
+    for (var i = 0; i < sents.length; i++) {
+      html += '<div class="section-line">' + escHtml(sents[i].front);
+      if (sents[i].back) html += '<br><span style="color:#64748b;font-size:12px">' + escHtml(sents[i].back) + '</span>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+
+  if (note.comment) {
+    html += '<div class="section-card"><div class="section-label">Comment</div>' +
+      '<div class="section-line">' + escHtml(note.comment) + '</div></div>';
+  }
+
+  if (!html) html = '<div class="empty-state">No content</div>';
+
+  document.getElementById('detail-content').innerHTML = html;
+  document.getElementById('app-screen').style.display = 'none';
+  document.getElementById('detail-screen').style.display = 'flex';
+}
+
+function closeDetail() {
+  document.getElementById('detail-screen').style.display = 'none';
+  document.getElementById('app-screen').style.display = 'flex';
+}
+
+// ===== REVIEW CARDS =====
+function buildCards() {
+  cards = [];
+  cardIndex = 0;
+  flipped = false;
+
+  for (var i = 0; i < allNotes.length; i++) {
+    var n = allNotes[i];
+    if (n.language !== currentLang) continue;
+
+    if (n.stress_pronunciation) {
+      var lines = parseSentences(n.stress_pronunciation);
+      for (var j = 0; j < lines.length; j++) {
+        cards.push({ front: lines[j], back: '', type: 'vocab' });
+      }
+    }
+
+    if (n.vocabulary) {
+      var entries = parseVocabulary(n.vocabulary);
+      for (var j = 0; j < entries.length; j++) {
+        var back = entries[j].definition || '';
+        if (entries[j].example) back += (back ? '\n' : '') + 'e.g. ' + entries[j].example;
+        cards.push({ front: entries[j].term, back: back, type: 'vocab' });
+      }
+    }
+
+    if (n.sentence_grammar) {
+      var sents = parseSentencesWithBack(n.sentence_grammar);
+      for (var j = 0; j < sents.length; j++) {
+        cards.push({ front: sents[j].front, back: sents[j].back, type: 'sentence' });
+      }
+    }
+  }
+
+  renderCard();
+}
+
+function renderCard() {
+  var el = document.getElementById('card');
+  var frontEl = document.getElementById('card-front');
+  var backEl = document.getElementById('card-back');
+  var typeEl = document.getElementById('card-type');
+  var idxEl = document.getElementById('card-idx');
+  var fillEl = document.getElementById('card-progress-fill');
+
+  flipped = false;
+  backEl.style.display = 'none';
+
+  if (cards.length === 0) {
+    frontEl.textContent = 'No cards to review';
+    typeEl.textContent = '';
+    idxEl.textContent = '0 / 0';
+    fillEl.style.width = '0%';
+    return;
+  }
+
+  var c = cards[cardIndex];
+  frontEl.textContent = c.front;
+  backEl.textContent = c.back || '';
+  typeEl.textContent = c.type;
+  idxEl.textContent = (cardIndex + 1) + ' / ' + cards.length;
+  fillEl.style.width = (((cardIndex + 1) / cards.length) * 100) + '%';
+}
+
+function flipCard() {
+  if (cards.length === 0) return;
+  var c = cards[cardIndex];
+  var backEl = document.getElementById('card-back');
+
+  if (!flipped && c.back) {
+    flipped = true;
+    backEl.style.display = 'block';
+  }
+}
+
+function nextCard() {
+  if (cardIndex < cards.length - 1) {
+    cardIndex++;
+    renderCard();
+  }
+}
+
+function prevCard() {
+  if (cardIndex > 0) {
+    cardIndex--;
+    renderCard();
+  }
+}
+
+// ===== TOUCH SWIPE (Card) =====
+document.addEventListener('touchstart', function(e) {
+  touchStartX = e.touches[0].clientX;
+  touchStartY = e.touches[0].clientY;
+}, false);
+
+document.addEventListener('touchend', function(e) {
+  if (currentTab !== 'review') return;
+  var dx = e.changedTouches[0].clientX - touchStartX;
+  var dy = Math.abs(e.changedTouches[0].clientY - touchStartY);
+  if (Math.abs(dx) > 60 && Math.abs(dx) > dy) {
+    if (dx < 0) nextCard();
+    else prevCard();
+  }
+}, false);
+
+// ===== PARSERS (simplified, matching main app) =====
+function parseSentences(text) {
+  if (!text) return [];
+  var lines = text.split('\n');
+  var result = [];
+  for (var i = 0; i < lines.length; i++) {
+    var t = lines[i].replace(/^\s+|\s+$/g, '');
+    if (t.length > 0 && !/^[-=]+$/.test(t)) result.push(t);
+  }
+  return result;
+}
+
+function parseSentencesWithBack(text) {
+  if (!text) return [];
+  var lines = parseSentences(text);
+  var result = [];
+  for (var i = 0; i < lines.length; i++) {
+    var parts = lines[i].split('|||');
+    result.push({
+      front: parts[0].replace(/^\s+|\s+$/g, ''),
+      back: (parts[1] || '').replace(/^\s+|\s+$/g, '')
+    });
+  }
+  return result;
+}
+
+function parseVocabulary(text) {
+  if (!text) return [];
+  var lines = text.split('\n');
+  var entries = [];
+  var current = null;
+
+  for (var i = 0; i < lines.length; i++) {
+    var t = lines[i].replace(/^\s+|\s+$/g, '');
+    if (!t) continue;
+
+    // Ex) or --> pattern (example for current entry)
+    if (/^[Ee]x\)\s*/.test(t) && current) {
+      var ex = t.replace(/^[Ee]x\)\s*/, '');
+      current.example = current.example ? current.example + '\n' + ex : ex;
+      continue;
+    }
+    if (/^-+>\s*/.test(t) && current) {
+      var ex = t.replace(/^-+>\s*/, '');
+      current.example = current.example ? current.example + '\n' + ex : ex;
+      continue;
+    }
+
+    // word (pos) = definition
+    var m1 = t.match(/^([^(=]+)\s*\(([^)]+)\)\s*[-=:]\s*(.+)/);
+    if (m1) {
+      if (current) entries.push(current);
+      current = { term: m1[1].replace(/^\s+|\s+$/g,'') + ' (' + m1[2].replace(/^\s+|\s+$/g,'') + ')', definition: m1[3].replace(/^\s+|\s+$/g,''), example: '' };
+      continue;
+    }
+
+    // word = definition
+    var m2 = t.match(/^(.+?)\s+[-=:]\s+(.+)/);
+    if (m2 && !/^-+>/.test(t)) {
+      if (current) entries.push(current);
+      current = { term: m2[1].replace(/^\s+|\s+$/g,''), definition: m2[2].replace(/^\s+|\s+$/g,''), example: '' };
+      continue;
+    }
+
+    // standalone
+    if (current) entries.push(current);
+    current = { term: t, definition: '', example: '' };
+  }
+  if (current) entries.push(current);
+  return entries;
+}
+
+function escHtml(s) {
+  if (!s) return '';
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// ===== INIT =====
+tryAutoLogin();
+</script>
+
+</body>
+</html>
