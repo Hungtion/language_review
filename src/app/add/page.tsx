@@ -168,7 +168,8 @@ function AddContent() {
 
         // Step 2: Parse
         setUploadStep(2);
-        let lines: string[];
+        let vocabLines: string[] = [];
+        let sentLines: string[] = [];
         if (extracted.length <= 5000) {
           const parseRes = await fetch("/api/ai", {
             method: "POST",
@@ -179,11 +180,31 @@ function AddContent() {
           const parseData = await parseRes.json();
           if (parseData.debug) console.log("[file-parse debug]", parseData.debug);
           if (abort.signal.aborted) return null;
-          lines = (parseData.result || "").split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+          const raw = (parseData.result || "") as string;
+
+          // Parse [VOCAB] and [SENT] sections
+          const vocabMatch = raw.match(/\[VOCAB\]\s*\n([\s\S]*?)(?=\[SENT\]|$)/);
+          const sentMatch = raw.match(/\[SENT\]\s*\n([\s\S]*?)$/);
+          if (vocabMatch) {
+            vocabLines = vocabMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0 && l !== "[SENT]");
+          }
+          if (sentMatch) {
+            sentLines = sentMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+          }
+          // Fallback: if no markers found, put everything in sentences
+          if (!vocabMatch && !sentMatch) {
+            sentLines = raw.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+          }
         } else {
           console.log("[file-parse] large file, using line split:", extracted.length, "chars");
-          lines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+          sentLines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
         }
+
+        // Convert vocab from "term|||def" to "term - def" format
+        const vocabText = vocabLines.map(l => {
+          const [term, def] = l.split("|||").map(s => s.trim());
+          return def ? `${term} - ${def}` : term;
+        }).join("\n");
 
         // Step 3: Save to DB
         setUploadStep(3);
@@ -192,8 +213,8 @@ function AddContent() {
           study_date: currentDate,
           title: currentTitle || file.name.replace(/\.[^.]+$/, ""),
           stress_pronunciation: null,
-          vocabulary: null,
-          sentence_grammar: lines.length > 0 ? lines.join("\n") : null,
+          vocabulary: vocabText || null,
+          sentence_grammar: sentLines.length > 0 ? sentLines.join("\n") : null,
           comment: null,
           raw_input: "",
           user_id: userId,
