@@ -128,9 +128,82 @@ function AddContent() {
     });
   }, [user, language]);
 
+  async function processOneFile(file: File, userId: string, lang: string, date: string, noteTitle: string, signal: AbortSignal): Promise<boolean> {
+    try {
+      // Step 1: Extract text
+      setUploadStep(1);
+      const formData = new FormData();
+      formData.append("file", file);
+      const res = await fetch("/api/upload", { method: "POST", body: formData, signal });
+      const data = await res.json();
+      if (data.debug) console.log("[upload debug]", file.name, data.debug);
+      if (signal.aborted) return false;
+      if (!res.ok) { console.warn("[upload fail]", file.name, data.error); return false; }
+
+      const extracted = data.text as string;
+      if (!extracted.trim()) return false;
+
+      // Step 2: Parse
+      setUploadStep(2);
+      let vocabLines: string[] = [];
+      let sentLines: string[] = [];
+      if (extracted.length <= 5000) {
+        const parseRes = await fetch("/api/ai", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "parse-file", rawInput: extracted, language: lang }),
+          signal,
+        });
+        const parseData = await parseRes.json();
+        if (parseData.debug) console.log("[file-parse debug]", file.name, parseData.debug);
+        if (signal.aborted) return false;
+        const raw = (parseData.result || "") as string;
+
+        const vocabMatch = raw.match(/\[VOCAB\]\s*\n([\s\S]*?)(?=\[SENT\]|$)/);
+        const sentMatch = raw.match(/\[SENT\]\s*\n([\s\S]*?)$/);
+        if (vocabMatch) {
+          vocabLines = vocabMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0 && l !== "[SENT]");
+        }
+        if (sentMatch) {
+          sentLines = sentMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+        }
+        if (!vocabMatch && !sentMatch) {
+          sentLines = raw.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+        }
+      } else {
+        sentLines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
+      }
+
+      const vocabText = vocabLines.map(l => {
+        const [term, def] = l.split("|||").map(s => s.trim());
+        return def ? `${term} - ${def}` : term;
+      }).join("\n");
+
+      // Step 3: Save
+      setUploadStep(3);
+      const { error } = await supabase.from("study_sessions").insert({
+        language: lang,
+        study_date: date,
+        title: noteTitle || file.name.replace(/\.[^.]+$/, ""),
+        stress_pronunciation: null,
+        vocabulary: vocabText || null,
+        sentence_grammar: sentLines.length > 0 ? sentLines.join("\n") : null,
+        comment: null,
+        raw_input: "",
+        user_id: userId,
+      });
+      if (error) { console.warn("[save fail]", file.name, error.message); return false; }
+      return true;
+    } catch (err) {
+      if (err instanceof DOMException && err.name === "AbortError") return false;
+      console.warn("[file error]", file.name, err);
+      return false;
+    }
+  }
+
   async function handleFileUpload(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
     e.target.value = "";
 
     if (!user) { router.push("/login"); return; }
@@ -150,88 +223,25 @@ function AddContent() {
     const currentDate = studyDate;
     const currentTitle = title;
     const userId = user!.id;
+    const totalFiles = files.length;
 
     const promise = (async (): Promise<{ language: string; studyDate: string; title: string; lines: string[]; userId: string } | null> => {
-      try {
-        // Step 1: Extract text from file
-        setUploadStep(1);
-        const formData = new FormData();
-        formData.append("file", file);
-        const res = await fetch("/api/upload", { method: "POST", body: formData, signal: abort.signal });
-        const data = await res.json();
-        if (data.debug) console.log("[upload debug]", data.debug);
-        if (abort.signal.aborted) return null;
-        if (!res.ok) { alert(data.error || "Upload failed"); return null; }
-
-        const extracted = data.text as string;
-        if (!extracted.trim()) { alert(locale === "ko" ? "파일에서 텍스트를 찾을 수 없습니다" : "No text found in file"); return null; }
-
-        // Step 2: Parse
-        setUploadStep(2);
-        let vocabLines: string[] = [];
-        let sentLines: string[] = [];
-        if (extracted.length <= 5000) {
-          const parseRes = await fetch("/api/ai", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ action: "parse-file", rawInput: extracted, language: currentLang }),
-            signal: abort.signal,
-          });
-          const parseData = await parseRes.json();
-          if (parseData.debug) console.log("[file-parse debug]", parseData.debug);
-          if (abort.signal.aborted) return null;
-          const raw = (parseData.result || "") as string;
-
-          // Parse [VOCAB] and [SENT] sections
-          const vocabMatch = raw.match(/\[VOCAB\]\s*\n([\s\S]*?)(?=\[SENT\]|$)/);
-          const sentMatch = raw.match(/\[SENT\]\s*\n([\s\S]*?)$/);
-          if (vocabMatch) {
-            vocabLines = vocabMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0 && l !== "[SENT]");
-          }
-          if (sentMatch) {
-            sentLines = sentMatch[1].split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-          }
-          // Fallback: if no markers found, put everything in sentences
-          if (!vocabMatch && !sentMatch) {
-            sentLines = raw.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-          }
-        } else {
-          console.log("[file-parse] large file, using line split:", extracted.length, "chars");
-          sentLines = extracted.split("\n").map((l: string) => l.trim()).filter((l: string) => l.length > 0);
-        }
-
-        // Convert vocab from "term|||def" to "term - def" format
-        const vocabText = vocabLines.map(l => {
-          const [term, def] = l.split("|||").map(s => s.trim());
-          return def ? `${term} - ${def}` : term;
-        }).join("\n");
-
-        // Step 3: Save to DB
-        setUploadStep(3);
-        const { error } = await supabase.from("study_sessions").insert({
-          language: currentLang,
-          study_date: currentDate,
-          title: currentTitle || file.name.replace(/\.[^.]+$/, ""),
-          stress_pronunciation: null,
-          vocabulary: vocabText || null,
-          sentence_grammar: sentLines.length > 0 ? sentLines.join("\n") : null,
-          comment: null,
-          raw_input: "",
-          user_id: userId,
-        });
-
-        if (error) { alert(error.message); return null; }
-        return { language: currentLang, studyDate: currentDate, title: currentTitle, lines, userId };
-      } catch (err) {
-        if (err instanceof DOMException && err.name === "AbortError") return null;
-        return null;
+      let successCount = 0;
+      for (let i = 0; i < totalFiles; i++) {
+        if (abort.signal.aborted) break;
+        const f = files[i];
+        setUploadFileName(`${f.name} (${i + 1}/${totalFiles})`);
+        const ok = await processOneFile(f, userId, currentLang, currentDate, totalFiles > 1 ? f.name.replace(/\.[^.]+$/, "") : currentTitle, abort.signal);
+        if (ok) successCount++;
       }
+      if (successCount === 0) return null;
+      return { language: currentLang, studyDate: currentDate, title: currentTitle, lines: [], userId };
     })();
 
-    activeUpload = { promise, abort, fileName: file.name };
+    activeUpload = { promise, abort, fileName: `${files[0].name}${totalFiles > 1 ? ` +${totalFiles - 1}` : ""}` };
     setUploading(true);
-    setUploadFileName(file.name);
-    setUploadStatus("uploading", file.name);
+    setUploadFileName(activeUpload.fileName);
+    setUploadStatus("uploading", activeUpload.fileName);
 
     const result = await promise;
     activeUpload = null;
@@ -572,6 +582,7 @@ function AddContent() {
           ref={fileInputRef}
           type="file"
           accept=".txt,.doc,.docx,.pdf,image/*"
+          multiple
           onChange={handleFileUpload}
           className="hidden"
         />
