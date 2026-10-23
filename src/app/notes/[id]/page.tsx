@@ -38,6 +38,8 @@ function NoteDetailContent() {
   const [splitAiConfirm, setSplitAiConfirm] = useState<{ field: string; lineIdx: number; text: string } | null>(null);
   const [splitNoResult, setSplitNoResult] = useState(false);
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [editingTitle, setEditingTitle] = useState(false);
+  const [titleDraft, setTitleDraft] = useState("");
   const [aiRemaining, setAiRemaining] = useState<number>(DAILY_LIMIT);
   const [showCreditModal, setShowCreditModal] = useState(false);
   const [userCredits, setUserCredits] = useState(0);
@@ -343,7 +345,48 @@ function NoteDetailContent() {
             </span>
             <span className="text-sm text-text-faint">{session.study_date}</span>
           </div>
-          {session.title && <h1 className="text-2xl font-bold">{session.title}</h1>}
+          {editingTitle ? (
+            <div className="flex items-center gap-2">
+              <input
+                autoFocus
+                value={titleDraft}
+                onChange={(e) => setTitleDraft(e.target.value)}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    const newTitle = titleDraft.trim() || null;
+                    if (user) {
+                      await supabase.from("study_sessions").update({ title: newTitle }).eq("id", params.id);
+                    }
+                    setSession((prev) => prev ? { ...prev, title: newTitle } : prev);
+                    setEditingTitle(false);
+                  } else if (e.key === "Escape") {
+                    setEditingTitle(false);
+                  }
+                }}
+                className="flex-1 text-2xl font-bold bg-bg-input border border-border rounded-lg px-2 py-1 outline-none focus:border-primary"
+              />
+              <button
+                onClick={async () => {
+                  const newTitle = titleDraft.trim() || null;
+                  if (user) {
+                    await supabase.from("study_sessions").update({ title: newTitle }).eq("id", params.id);
+                  }
+                  setSession((prev) => prev ? { ...prev, title: newTitle } : prev);
+                  setEditingTitle(false);
+                }}
+                className="text-primary text-sm"
+              >&#10003;</button>
+              <button onClick={() => setEditingTitle(false)} className="text-text-faint text-sm">&#10005;</button>
+            </div>
+          ) : (
+            <h1
+              className="text-2xl font-bold cursor-pointer hover:text-primary transition-colors"
+              onClick={() => { setTitleDraft(session.title || ""); setEditingTitle(true); }}
+              title={locale === "ko" ? "클릭하여 제목 수정" : "Click to edit title"}
+            >
+              {session.title || <span className="text-text-faint italic">{locale === "ko" ? "제목 없음 (클릭하여 추가)" : "No title (click to add)"}</span>}
+            </h1>
+          )}
         </div>
         <div className="flex items-center gap-1">
           <Link

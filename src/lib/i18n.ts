@@ -112,6 +112,10 @@ const translations = {
     engChannel: "English Channel Student",
     engChannelDesc: "Use structured format for English notes",
     aiFreeExtract: "LAB Extract (Free)",
+    liveDictation: "Note Convert",
+    converting: "Converting...",
+    saveConverted: "Save as Note",
+    livePlaceholder: "e.g.) 히사시부리\n아시타와 하야쿠 오키마스",
 
     // Home
     recentNotes: "Recent Notes",
@@ -266,6 +270,10 @@ const translations = {
     engChannel: "English Channel 수강생",
     engChannelDesc: "영어 노트에 정해진 양식 사용",
     aiFreeExtract: "LAB 추출 (무료)",
+    liveDictation: "필기 변환",
+    converting: "변환 중...",
+    saveConverted: "노트로 저장",
+    livePlaceholder: "예) 히사시부리\n아시타와 하야쿠 오키마스",
 
     // Home
     recentNotes: "최근 노트",

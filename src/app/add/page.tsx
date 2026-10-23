@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { supabase } from "@/lib/supabase";
 import { parseRawInput, extractMetadata } from "@/lib/parser";
@@ -92,6 +92,43 @@ function AddContent() {
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
   const [showTemplateModal, setShowTemplateModal] = useState(false);
   const [hasNotes, setHasNotes] = useState(true);
+
+  // Live dictation mode
+  const [liveMode, setLiveMode] = useState(false);
+  const [liveInput, setLiveInput] = useState("");
+  const [liveResults, setLiveResults] = useState<Array<{ original: string; japanese: string; meaning: string; isTitle: boolean }>>([]);
+  const [convertingLines, setConvertingLines] = useState(false);
+  const liveResultsRef = useRef<HTMLDivElement>(null);
+
+  const doConvert = useCallback(async () => {
+    const lines = liveInput.split("\n").map(l => l.trim()).filter(l => l.length > 0);
+    if (lines.length === 0) return;
+    setConvertingLines(true);
+    try {
+      const res = await fetch("/api/ai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "quick-convert", lines, language }),
+      });
+      const data = await res.json();
+      if (data.result?.results) {
+        const newResults = (data.result.results as Array<{ index: number; japanese?: string; english?: string; meaning: string; isTitle?: boolean }>).map((r, i) => ({
+          original: lines[i] || "",
+          japanese: r.japanese || r.english || "",
+          meaning: r.meaning,
+          isTitle: r.isTitle || false,
+        }));
+        setLiveResults(newResults);
+        setTimeout(() => {
+          liveResultsRef.current?.scrollTo({ top: liveResultsRef.current.scrollHeight, behavior: "smooth" });
+        }, 100);
+      }
+    } catch (e) {
+      console.error("Quick convert error:", e);
+    } finally {
+      setConvertingLines(false);
+    }
+  }, [liveInput]);
 
   useEffect(() => {
     document.body.style.overflow = "hidden";
@@ -424,19 +461,34 @@ function AddContent() {
         </div>
       </div>
 
-      {/* Template Button + Examples */}
+      {/* Template Button + Live Dictation Toggle */}
       <div data-guide="add-template" className="space-y-2">
-      <button
-        onClick={() => setShowTemplateModal(true)}
-        className={`w-full py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 ${
-          hasNotes
-            ? "bg-bg-card border border-border text-text-secondary hover:border-primary/50 hover:text-primary"
-            : "bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20"
-        }`}
-      >
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
-        {locale === "ko" ? "내 목표에 맞는 노트 추가하기" : "Add notes for your goal"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          onClick={() => setShowTemplateModal(true)}
+          className={`flex-1 py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 ${
+            hasNotes
+              ? "bg-bg-card border border-border text-text-secondary hover:border-primary/50 hover:text-primary"
+              : "bg-primary/10 border border-primary/30 text-primary hover:bg-primary/20"
+          }`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M4 19.5A2.5 2.5 0 016.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 014 19.5v-15A2.5 2.5 0 016.5 2z"/></svg>
+          {locale === "ko" ? "목표 노트" : "Goal Notes"}
+        </button>
+        <button
+          onClick={() => { setLiveMode(!liveMode); if (!liveMode) { setLiveInput(""); setLiveResults([]); } }}
+          className={`flex-1 py-3 rounded-xl text-sm transition-colors flex items-center justify-center gap-2 ${
+            liveMode
+              ? "bg-primary/20 border border-primary text-primary"
+              : "bg-bg-card border border-border text-text-secondary hover:border-primary/50 hover:text-primary"
+          }`}
+        >
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 113 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+          {t("liveDictation")}
+          <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
+        </button>
+      </div>
+      {!liveMode && (
       <div className="flex gap-2 flex-wrap items-center">
         <span className="text-xs text-text-faint">{locale === "ko" ? "예제:" : "Examples:"}</span>
         {TEMPLATES[language].map((tmpl, i) => (
@@ -453,6 +505,7 @@ function AddContent() {
           </button>
         ))}
       </div>
+      )}
       </div>
 
       {showTemplateModal && (
@@ -505,7 +558,55 @@ function AddContent() {
       )}
 
       </div>
-      {/* Raw Input */}
+      {/* Raw Input / Live Dictation */}
+      {liveMode ? (
+        <div className="flex-1 flex flex-col sm:flex-row gap-3 mt-4 min-h-0">
+          {/* Left/Top: Input */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <textarea
+              data-guide="add-textarea"
+              value={liveInput}
+              onChange={(e) => setLiveInput(e.target.value)}
+              placeholder={t("livePlaceholder")}
+              className="w-full flex-1 min-h-[100px] touch-auto bg-bg-card border border-border rounded-xl p-4 text-sm font-mono leading-relaxed focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none"
+            />
+          </div>
+          {/* Right/Bottom: Results */}
+          <div className="flex-1 flex flex-col min-h-0">
+            <div
+              ref={liveResultsRef}
+              className="flex-1 min-h-[100px] touch-auto bg-bg-card border border-border rounded-xl p-4 overflow-y-auto"
+            >
+              {liveResults.length === 0 && !convertingLines ? (
+                <p className="text-text-faint text-sm">
+                  {locale === "ko" ? "필기 후 변환 버튼을 눌러주세요" : "Write notes then press Convert"}
+                </p>
+              ) : (
+                <div className="space-y-2">
+                  {liveResults.map((r, i) => (
+                    <div key={i} className={`${r.isTitle ? "border-b border-border pb-2 mb-2" : ""}`}>
+                      {r.isTitle ? (
+                        <div className="font-bold text-primary text-sm">{r.japanese} <span className="text-text-faint font-normal text-xs">({r.meaning})</span></div>
+                      ) : (
+                        <div className="text-sm leading-relaxed">
+                          <span className="text-text font-medium">{r.japanese}</span>
+                          <span className="text-text-faint ml-2">- {r.meaning}</span>
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                  {convertingLines && (
+                    <div className="flex items-center gap-2 text-primary text-xs animate-pulse">
+                      <svg className="w-3 h-3 animate-spin" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="3" strokeDasharray="31.4 31.4" strokeLinecap="round" /></svg>
+                      {t("converting")}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      ) : (
       <div className="flex-1 flex flex-col mt-4">
         <div className="relative flex-1 flex flex-col">
           <textarea
@@ -559,55 +660,140 @@ function AddContent() {
           {rawInput.length.toLocaleString()}/{AI_PARSE_CHAR_LIMIT.toLocaleString()}
         </p>
       </div>
+      )}
 
       {/* Actions - fixed bottom above tab bar */}
       <div className="flex gap-3 items-center pt-3 pb-2 mt-auto">
-        {language === "english" && isEngChannel && (
-          <button
-            onClick={handlePreview}
-            className="px-4 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
-          >
-            {t("previewBtn")}
-          </button>
-        )}
-        <button
-          data-guide="add-actions"
-          onClick={handleSaveClick}
-          disabled={saving || !rawInput.trim()}
-          className="px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-lg text-sm font-medium transition-colors"
-        >
-          {saving ? t("saving") : t("save")}
-        </button>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".txt,.doc,.docx,.pdf,image/*"
-          multiple
-          onChange={handleFileUpload}
-          className="hidden"
-        />
-        {uploading ? (
-          <button
-            onClick={() => activeUpload?.abort.abort()}
-            className="ml-auto px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-              <span className="animate-pulse">{uploadFileName || (locale === "ko" ? "처리중..." : "Processing...")}</span>
-            </span>
-          </button>
+        {liveMode ? (
+          <>
+            <button
+              onClick={doConvert}
+              disabled={convertingLines || !liveInput.trim()}
+              className="px-4 py-2 bg-bg-input hover:bg-bg-hover disabled:opacity-50 rounded-lg text-sm transition-colors"
+            >
+              {convertingLines ? t("converting") : (locale === "ko" ? "변환" : "Convert")}
+            </button>
+            <button
+              data-guide="add-actions"
+              onClick={async () => {
+                if (liveResults.length === 0) return;
+                setSaving(true);
+                // Build note content from converted results
+                const vocabLines: string[] = [];
+                const sentLines: string[] = [];
+                let autoTitle = title;
+                for (const r of liveResults) {
+                  if (r.isTitle) {
+                    if (!autoTitle) autoTitle = r.japanese;
+                    continue;
+                  }
+                  // Short entries (1-2 words) → vocabulary uses " - ", sentences use "|||"
+                  if (r.original.length <= 10 && !r.original.includes(" ")) {
+                    vocabLines.push(`${r.japanese} - ${r.meaning}`);
+                  } else {
+                    sentLines.push(`${r.japanese}|||${r.meaning}`);
+                  }
+                }
+                const insertData = {
+                  language,
+                  study_date: studyDate,
+                  title: autoTitle || null,
+                  stress_pronunciation: null,
+                  vocabulary: vocabLines.length > 0 ? vocabLines.join("\n") : null,
+                  sentence_grammar: sentLines.length > 0 ? sentLines.join("\n") : null,
+                  comment: liveInput.trim(),
+                  raw_input: liveInput,
+                };
+
+                if (!user) {
+                  addGuestNote(insertData as any);
+                  setSaving(false);
+                  router.push("/notes");
+                  return;
+                }
+
+                const { error } = await supabase.from("study_sessions").insert({
+                  ...insertData,
+                  user_id: user.id,
+                });
+                setSaving(false);
+                if (error) {
+                  alert(t("saveFailed") + error.message);
+                } else {
+                  import("@/lib/streak").then(({ recordActivity }) => {
+                    recordActivity(user.id, "note_add").then((res) => {
+                      refreshCredits();
+                      if (res.leafEarned > 0) {
+                        import("@/components/Toast").then(({ toast }) => {
+                          toast(`+${res.leafEarned} Leaf`, "success");
+                        });
+                      }
+                    });
+                  });
+                  router.push("/notes");
+                }
+              }}
+              disabled={saving || liveResults.length === 0}
+              className="px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-lg text-sm font-medium transition-colors"
+            >
+              {saving ? t("saving") : t("saveConverted")}
+            </button>
+            {liveResults.length > 0 && (
+              <span className="ml-auto text-xs text-text-faint">
+                {liveResults.filter(r => !r.isTitle).length} {locale === "ko" ? "항목" : "items"}
+              </span>
+            )}
+          </>
         ) : (
-          <button
-            onClick={() => fileInputRef.current?.click()}
-            title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다" : "Extract text from file and AI-parse"}
-            className="ml-auto px-3 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
-          >
-            <span className="flex items-center gap-1.5">
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
-              🍃 {locale === "ko" ? "파일" : "File"}
-              <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
-            </span>
-          </button>
+          <>
+            {language === "english" && isEngChannel && (
+              <button
+                onClick={handlePreview}
+                className="px-4 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
+              >
+                {t("previewBtn")}
+              </button>
+            )}
+            <button
+              data-guide="add-actions"
+              onClick={handleSaveClick}
+              disabled={saving || !rawInput.trim()}
+              className="px-6 py-2 bg-primary hover:bg-primary-hover disabled:bg-bg-hover disabled:text-text-faint rounded-lg text-sm font-medium transition-colors"
+            >
+              {saving ? t("saving") : t("save")}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".txt,.doc,.docx,.pdf,image/*"
+              multiple
+              onChange={handleFileUpload}
+              className="hidden"
+            />
+            {uploading ? (
+              <button
+                onClick={() => activeUpload?.abort.abort()}
+                className="ml-auto px-3 py-2 bg-red-600/20 hover:bg-red-600/30 border border-red-500/30 text-red-400 rounded-lg text-sm transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                  <span className="animate-pulse">{uploadFileName || (locale === "ko" ? "처리중..." : "Processing...")}</span>
+                </span>
+              </button>
+            ) : (
+              <button
+                onClick={() => fileInputRef.current?.click()}
+                title={locale === "ko" ? "파일에서 텍스트를 추출하고 AI로 파싱합니다" : "Extract text from file and AI-parse"}
+                className="ml-auto px-3 py-2 bg-bg-input hover:bg-bg-hover rounded-lg text-sm transition-colors"
+              >
+                <span className="flex items-center gap-1.5">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 01-8.49-8.49l9.19-9.19a4 4 0 015.66 5.66l-9.2 9.19a2 2 0 01-2.83-2.83l8.49-8.48"/></svg>
+                  {locale === "ko" ? "파일" : "File"}
+                  <span className="text-[10px] px-1 py-0.5 bg-yellow-500/20 text-yellow-400 rounded">Beta</span>
+                </span>
+              </button>
+            )}
+          </>
         )}
       </div>
 

@@ -183,6 +183,76 @@ English sentence|||한국어 뜻
     }
   }
 
+  // Quick convert: handwritten notes → proper language with meaning
+  if (action === "quick-convert") {
+    const lines = (body.lines as string[]) || [];
+    const lang = body.language || "japanese";
+    if (lines.length === 0) {
+      return NextResponse.json({ error: "No lines provided" }, { status: 400 });
+    }
+
+    const numbered = lines.map((l: string, i: number) => `${i + 1}. ${l}`).join("\n");
+    const convertPrompt = lang === "japanese"
+      ? `You are a Japanese language expert. The user is a Korean speaker learning Japanese.
+They wrote Japanese words/sentences using Korean phonetic transcription (한글로 쓴 일본어 발음).
+
+Convert each line to proper Japanese. For each line, output a JSON object.
+
+Rules:
+- Convert Korean phonetic to the correct Japanese (kanji + hiragana/katakana as appropriate)
+- Add furigana in parentheses right after each kanji. Example: 久(ひさ)しぶり, 明日(あした)は早(はや)く起(お)きます
+- Provide a brief Korean meaning/translation that reflects the actual contextual meaning, NOT a literal word-by-word translation. For proper nouns or well-known terms (e.g. みどりの窓口 = JR 매표소), use the commonly understood meaning.
+- If a line is wrapped in brackets like [text], it's a section title - convert it too but mark it as isTitle: true
+- If the Korean phonetic is ambiguous, pick the most common/natural interpretation
+- Keep particle accuracy (は/が/を/に etc.)
+- IMPORTANT: You MUST convert ALL input lines. Do NOT skip or omit any line. The number of results must equal the number of input lines.
+
+Input lines:
+${numbered}
+
+Output: A JSON object with a "results" array. Each element has:
+- "index": line number (1-based)
+- "japanese": converted Japanese with furigana on kanji
+- "meaning": Korean meaning (brief, contextual)
+- "isTitle": true if it was a bracketed title, false otherwise
+
+Return ONLY valid JSON. No markdown, no code blocks.`
+      : `You are an English language expert. The user is a Korean speaker learning English.
+They wrote English words/sentences - possibly in Korean phonetic (한글 발음), abbreviated, or rough English.
+
+Convert each line to proper, natural English. For each line, output a JSON object.
+
+Rules:
+- If written in Korean phonetic (e.g. 아임 고잉 투), convert to proper English
+- If written in rough/abbreviated English (e.g. "im gonna go tmrw"), correct grammar and spelling
+- If already correct English, keep it as-is
+- Provide a brief Korean meaning/translation
+- If a line is wrapped in brackets like [text], it's a section title - mark it as isTitle: true
+
+Input lines:
+${numbered}
+
+Output: A JSON object with a "results" array. Each element has:
+- "index": line number (1-based)
+- "english": the corrected/converted English sentence
+- "meaning": Korean meaning (brief)
+- "isTitle": true if it was a bracketed title, false otherwise
+
+Return ONLY valid JSON. No markdown, no code blocks.`;
+
+    try {
+      const result = await callGemini(convertPrompt, 8192, true);
+      const parsed = robustJsonParse(result);
+      if (!parsed) {
+        return NextResponse.json({ error: "Failed to parse AI response" }, { status: 500 });
+      }
+      return NextResponse.json({ result: parsed });
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
+      return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
   // 문장 분할 (카드/노트에서 여러 문장이 합쳐진 경우 분리)
   if (action === "split-sentence") {
     const splitPrompt = `아래 텍스트를 개별 문장으로 분리해줘.
