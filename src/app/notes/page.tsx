@@ -54,6 +54,7 @@ function NotesContent() {
   const [swipeDir, setSwipeDir] = useState<"left" | "right" | null>(null);
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
   const [pinnedNoteIds, setPinnedNoteIds] = useState<Set<string>>(new Set());
+  const [showReference, setShowReference] = useState(false);
   const swipeStartX = useRef(0);
   const swipeStartY = useRef(0);
   const swipeCurrentX = useRef(0);
@@ -374,6 +375,13 @@ function NotesContent() {
               </Link>
             );
           })}
+          <button
+            onClick={() => setShowReference(true)}
+            className="bg-bg-card border border-border rounded-lg px-3 py-2.5 text-center hover:border-border-light transition-colors"
+          >
+            <div className="text-lg">📖</div>
+            <div className="text-[11px] font-medium text-text mt-0.5">{locale === "ko" ? "참고 자료" : "Reference"}</div>
+          </button>
         </div>
       )}
 
@@ -560,6 +568,21 @@ function NotesContent() {
               </button>
             </div>
           </div>
+        </div>
+      )}
+      {showReference && (
+        <div className="fixed inset-0 z-50 bg-black/70 flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 bg-bg-card border-b border-border" style={{ paddingTop: "calc(0.75rem + env(safe-area-inset-top))" }}>
+            <span className="text-sm font-medium">{locale === "ko" ? "참고 자료" : "Reference"}</span>
+            <button onClick={() => setShowReference(false)} className="p-1 text-text-faint hover:text-text">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+          <iframe
+            src="https://sites.google.com/view/language-lab-jp/full-page-embed"
+            className="flex-1 w-full bg-white"
+            style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          />
         </div>
       )}
     </div>
