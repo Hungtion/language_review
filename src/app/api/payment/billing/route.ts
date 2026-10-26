@@ -51,7 +51,6 @@ export async function POST(req: NextRequest) {
         amount: 1000,
         orderId,
         orderName: "Language LAB Pro 월 구독",
-        customerEmail: billingData.card?.ownerType === "개인" ? undefined : undefined,
       }),
     });
 

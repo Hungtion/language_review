@@ -17,22 +17,6 @@ const AI_PARSE_CHAR_LIMIT = 5000;
 import { addGuestNote } from "@/lib/guestStorage";
 import { setUploadStatus } from "@/lib/uploadStatus";
 
-const SAMPLE_EN = `Stress and Pronunciation
-apple- AE-pl
-
-Vocabulary
-brave (adjective) = not afraid of danger
-
---> She was brave enough to speak up
-
-Sentence Structure & Grammar
-I want to get better at English.
-
-It depends on the situation.
-
-Comment
-Practice makes perfect.`;
-
 const TEMPLATES = {
   english: [
     {
@@ -123,8 +107,8 @@ function AddContent() {
           liveResultsRef.current?.scrollTo({ top: liveResultsRef.current.scrollHeight, behavior: "smooth" });
         }, 100);
       }
-    } catch (e) {
-      console.error("Quick convert error:", e);
+    } catch {
+      // ignore
     } finally {
       setConvertingLines(false);
     }
@@ -173,9 +157,8 @@ function AddContent() {
       formData.append("file", file);
       const res = await fetch("/api/upload", { method: "POST", body: formData, signal });
       const data = await res.json();
-      if (data.debug) console.log("[upload debug]", file.name, data.debug);
       if (signal.aborted) return false;
-      if (!res.ok) { console.warn("[upload fail]", file.name, data.error); return false; }
+      if (!res.ok) return false;
 
       const extracted = data.text as string;
       if (!extracted.trim()) return false;
@@ -192,7 +175,6 @@ function AddContent() {
           signal,
         });
         const parseData = await parseRes.json();
-        if (parseData.debug) console.log("[file-parse debug]", file.name, parseData.debug);
         if (signal.aborted) return false;
         const raw = (parseData.result || "") as string;
 
@@ -229,11 +211,10 @@ function AddContent() {
         raw_input: "",
         user_id: userId,
       });
-      if (error) { console.warn("[save fail]", file.name, error.message); return false; }
+      if (error) return false;
       return true;
     } catch (err) {
       if (err instanceof DOMException && err.name === "AbortError") return false;
-      console.warn("[file error]", file.name, err);
       return false;
     }
   }
@@ -871,16 +852,16 @@ function AddContent() {
           </div>
           <div className="p-4 space-y-4">
             {preview.stress_pronunciation && (
-              <Section title="Stress & Pronunciation" content={preview.stress_pronunciation} color="purple" />
+              <Section title="Stress & Pronunciation" content={preview.stress_pronunciation} />
             )}
             {preview.vocabulary && (
-              <Section title="Vocabulary" content={preview.vocabulary} color="green" />
+              <Section title="Vocabulary" content={preview.vocabulary} />
             )}
             {preview.sentence_grammar && (
-              <Section title="Sentence Structure & Grammar" content={preview.sentence_grammar} color="blue" />
+              <Section title="Sentence Structure & Grammar" content={preview.sentence_grammar} />
             )}
             {preview.comment && (
-              <Section title="Comment" content={preview.comment} color="yellow" />
+              <Section title="Comment" content={preview.comment} />
             )}
           </div>
         </div>
@@ -897,16 +878,9 @@ export default function AddPage() {
   );
 }
 
-function Section({ title, content, color }: { title: string; content: string; color: string }) {
-  const colorMap: Record<string, string> = {
-    purple: "border-primary/30 text-primary",
-    green: "border-primary/30 text-primary",
-    blue: "border-primary/30 text-primary",
-    yellow: "border-primary/30 text-primary",
-  };
-
+function Section({ title, content }: { title: string; content: string }) {
   return (
-    <div className={`border-l-2 pl-4 ${colorMap[color]}`}>
+    <div className="border-l-2 pl-4 border-primary/30 text-primary">
       <h3 className="text-sm font-semibold mb-1">{title}</h3>
       <pre className="text-text-secondary text-sm whitespace-pre-wrap font-sans">{content}</pre>
     </div>

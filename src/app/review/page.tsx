@@ -59,7 +59,9 @@ function ReviewContent() {
     (typeof window !== "undefined" ? localStorage.getItem("review-cardType") as "all" | "vocab" | "sentence" : null) || "all"
   );
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
-  const [shuffled, setShuffled] = useState(false);
+  const [shuffled, setShuffled] = useState(() =>
+    typeof window !== "undefined" ? localStorage.getItem("review-shuffled") === "true" : false
+  );
   const preShuffleCard = useRef<{ front: string; sessionId?: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [aiResults, setAiResults] = useState<Record<number, string>>({});
@@ -216,10 +218,33 @@ function ReviewContent() {
       }
 
       if (shuffled) {
-        for (let i = filtered.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [filtered[i], filtered[j]] = [filtered[j], filtered[i]];
+        // Try to restore saved shuffle order
+        const savedOrder = localStorage.getItem(`review-shuffle-order-${filter}`);
+        let restored = false;
+        if (savedOrder) {
+          try {
+            const order: number[] = JSON.parse(savedOrder);
+            // Validate: same length, all indices valid
+            if (order.length === filtered.length && order.every(idx => idx >= 0 && idx < filtered.length)) {
+              const copy = [...filtered];
+              for (let i = 0; i < order.length; i++) filtered[i] = copy[order[i]];
+              restored = true;
+            }
+          } catch { /* ignore */ }
         }
+        if (!restored) {
+          // Fresh shuffle + save the order
+          const indices = filtered.map((_, i) => i);
+          for (let i = indices.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [indices[i], indices[j]] = [indices[j], indices[i]];
+          }
+          const copy = [...filtered];
+          for (let i = 0; i < indices.length; i++) filtered[i] = copy[indices[i]];
+          localStorage.setItem(`review-shuffle-order-${filter}`, JSON.stringify(indices));
+        }
+      } else {
+        localStorage.removeItem(`review-shuffle-order-${filter}`);
       }
 
       // Guest users limited to 20 cards
@@ -918,8 +943,14 @@ function ReviewContent() {
               if (!shuffled && cards[index]) {
                 preShuffleCard.current = { front: cards[index].front, sessionId: cards[index].sessionId };
               }
+              const next = !shuffled;
+              localStorage.setItem("review-shuffled", String(next));
+              if (next) {
+                // Clear saved order so a fresh shuffle happens
+                localStorage.removeItem(`review-shuffle-order-${filter}`);
+              }
               localStorage.removeItem("review-index");
-              setShuffled((s) => !s);
+              setShuffled(next);
             }}
             className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
               shuffled

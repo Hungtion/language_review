@@ -5,7 +5,6 @@ import Nav from "@/components/Nav";
 import BottomTab from "@/components/BottomTab";
 import AuthProvider from "@/components/AuthProvider";
 import InstallBanner from "@/components/InstallBanner";
-import EcAutoImport from "@/components/EcAutoImport";
 import ToastContainer from "@/components/Toast";
 
 const geistSans = Geist({ variable: "--font-geist-sans", subsets: ["latin"] });
@@ -67,8 +66,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
             {children}
           </main>
           <BottomTab />
-          {/* <EcAutoImport /> */}
-          <ToastContainer />
+<ToastContainer />
           <InstallBanner />
         </AuthProvider>
       </body>

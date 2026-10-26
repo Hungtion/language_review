@@ -63,7 +63,7 @@ function robustJsonParse(raw: string): Record<string, unknown> | null {
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
-  const { prompt, userEmail, action, rawInput, language, text, targetLangs, tone } = body;
+  const { prompt, action, rawInput, language, text, targetLangs, tone } = body;
 
   if (!GEMINI_API_KEY) {
     return NextResponse.json({ error: "API key not configured" }, { status: 500 });
@@ -72,8 +72,8 @@ export async function POST(req: NextRequest) {
   // AI 도우미 (카드 복습)
   if (action === "review") {
     try {
-      const text = await callGemini(prompt);
-      return NextResponse.json({ result: text });
+      const result = await callGemini(prompt);
+      return NextResponse.json({ result });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
       return NextResponse.json({ error: msg }, { status: 500 });
@@ -94,8 +94,8 @@ export async function POST(req: NextRequest) {
 ${rawInput}`;
 
     try {
-      const text = await callGemini(parsePrompt, 4096);
-      return NextResponse.json({ result: text });
+      const result = await callGemini(parsePrompt, 4096);
+      return NextResponse.json({ result });
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
       return NextResponse.json({ error: msg }, { status: 500 });
@@ -147,8 +147,8 @@ English sentence|||한국어 뜻
 
     try {
       if (rawInput.length <= CHUNK_SIZE) {
-        const text = await callGemini(`${baseInstruction}\n\n텍스트:\n${rawInput}`, 16384);
-        return NextResponse.json({ result: text, debug: { inputLen: rawInput.length, chunks: 1, time: `${Date.now() - t0}ms` } });
+        const result = await callGemini(`${baseInstruction}\n\n텍스트:\n${rawInput}`, 16384);
+        return NextResponse.json({ result, debug: { inputLen: rawInput.length, chunks: 1, time: `${Date.now() - t0}ms` } });
       }
 
       const lines = rawInput.split("\n");
