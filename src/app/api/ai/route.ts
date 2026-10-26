@@ -332,14 +332,14 @@ Example format:
   if (action === "quiz-hint") {
     const { question: questionText, answer: answerText, language: lang } = body;
     const hintPrompt = lang === "japanese"
-      ? `한국어 문장: "${questionText}"
-이 문장의 일본어 번역에 사용하면 좋은 관용표현이나 핵심 표현을 하나만 알려줘.
+      ? `정답 문장: "${answerText}"
+이 문장에서 가장 핵심적인 표현이나 관용구를 하나 골라서 힌트로 알려줘.
 형식: 표현 (읽기) - 한국어 뜻
-한 줄로만 답해. 다른 설명 없이.`
-      : `한국어 문장: "${questionText}"
-이 문장의 영어 번역에 사용하면 좋은 idiom이나 핵심 표현을 하나만 알려줘.
+반드시 정답 문장에 포함된 표현만 사용해. 한 줄로만 답해. 다른 설명 없이.`
+      : `정답 문장: "${answerText}"
+이 문장에서 가장 핵심적인 idiom이나 표현을 하나 골라서 힌트로 알려줘.
 형식: 영어 표현 - 한국어 뜻
-한 줄로만 답해. 다른 설명 없이.`;
+반드시 정답 문장에 포함된 표현만 사용해. 한 줄로만 답해. 다른 설명 없이.`;
 
     try {
       const result = await callGemini(hintPrompt, 256, false, true);

@@ -32,6 +32,7 @@ function ReviewContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const noteId = searchParams.get("noteId");
+  const wrongMode = searchParams.get("mode") === "wrong";
   const startIndexParam = searchParams.get("startIndex");
   const findCardParam = searchParams.get("findCard");
   const startIndexUsed = useRef(false);
@@ -81,7 +82,7 @@ function ReviewContent() {
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
   const [playing, setPlaying] = useState(false);
-  const [quizMode, setQuizMode] = useState(false);
+  const [quizMode, setQuizMode] = useState(() => searchParams.get("quiz") === "1");
   const playingRef = useRef(false);
   const [pressed, setPressed] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
@@ -109,6 +110,24 @@ function ReviewContent() {
 
   useEffect(() => {
     async function load() {
+      // Wrong answers mode - load from localStorage
+      if (wrongMode) {
+        try {
+          const wrongCards: { front: string; back: string; type: "vocab" | "sentence"; language: "english" | "japanese" }[] = JSON.parse(localStorage.getItem("wrong-cards") || "[]");
+          const filtered = wrongCards
+            .filter(c => c.language === filter)
+            .map(c => ({ ...c, sessionDate: "", sessionId: undefined, sourceField: undefined, lineIndex: undefined } as Card));
+          setCards(filtered);
+          setLoading(false);
+          filterRef.current = filter;
+          setIndex(0);
+        } catch {
+          setCards([]);
+          setLoading(false);
+        }
+        return;
+      }
+
       let data;
       if (!user) {
         const all = getGuestNotes();
@@ -239,7 +258,7 @@ function ReviewContent() {
       setLoading(false);
     }
     load();
-  }, [filter, cardType, shuffled, user, noteId]);
+  }, [filter, cardType, shuffled, user, noteId, wrongMode]);
 
   const goNext = useCallback(() => {
     if (index < cards.length - 1) {
@@ -773,6 +792,33 @@ function ReviewContent() {
           </button>
         </div>
       )}
+      {wrongMode && (
+        <div className="flex items-center justify-between px-4 pt-2 pb-1">
+          <span className="text-xs text-red-400">
+            {locale === "ko" ? "오답노트" : "Wrong Answers"}
+            {cards.length > 0 && ` (${cards.length})`}
+          </span>
+          <div className="flex items-center gap-3">
+            <button
+              onClick={() => {
+                if (confirm(locale === "ko" ? "오답노트를 초기화할까요?" : "Clear wrong answers?")) {
+                  localStorage.removeItem("wrong-cards");
+                  setCards([]);
+                }
+              }}
+              className="text-xs text-red-400/60 hover:text-red-400 transition-colors"
+            >
+              {locale === "ko" ? "초기화" : "Clear"}
+            </button>
+            <button
+              onClick={() => router.push("/review")}
+              className="text-xs text-text-faint hover:text-text-secondary transition-colors"
+            >
+              {locale === "ko" ? "전체 카드 보기" : "Show all cards"}
+            </button>
+          </div>
+        </div>
+      )}
       {/* Mode toggle + Filters */}
       <div className="flex items-center justify-between px-4 pt-3 pb-1">
         <div className="flex gap-1 bg-bg-card rounded-lg p-1">
@@ -855,7 +901,10 @@ function ReviewContent() {
       </div>
 
       {quizMode ? (
-        <QuizMode cards={cards} noteId={noteId} />
+        <QuizMode cards={cards} noteId={noteId} onExit={() => {
+          setQuizMode(false);
+          if (noteId) router.push(`/notes/${noteId}`);
+        }} />
       ) : (
       <>
       {/* Card + AI */}

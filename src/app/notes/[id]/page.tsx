@@ -390,6 +390,15 @@ function NoteDetailContent() {
         </div>
         <div className="flex items-center gap-1">
           <Link
+            href={`/review?noteId=${params.id}&quiz=1`}
+            title={locale === "ko" ? "이 노트로 퀴즈" : "Quiz this note"}
+            className="p-2 rounded-lg text-text-faint hover:text-primary transition-colors"
+          >
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+            </svg>
+          </Link>
+          <Link
             href={`/review?noteId=${params.id}`}
             title={locale === "ko" ? "이 노트 카드로 복습" : "Review this note as cards"}
             className="p-2 rounded-lg text-text-faint hover:text-primary transition-colors"

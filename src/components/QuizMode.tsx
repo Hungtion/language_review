@@ -100,7 +100,7 @@ function generateQuestions(cards: Card[], count: number): QuizQuestion[] {
   return shuffle(questions).slice(0, count);
 }
 
-export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: string | null }) {
+export default function QuizMode({ cards, noteId, onExit }: { cards: Card[]; noteId?: string | null; onExit?: () => void }) {
   const { locale } = useLocale();
   const [questions, setQuestions] = useState<QuizQuestion[]>([]);
   const [currentIdx, setCurrentIdx] = useState(0);
@@ -112,7 +112,7 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
   const [finished, setFinished] = useState(false);
   const [hint, setHint] = useState<string | null>(null);
   const [hintLoading, setHintLoading] = useState(false);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
     const count = noteId ? cards.length : Math.min(10, cards.length);
@@ -127,6 +127,27 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
   }, [cards, noteId]);
 
   const current = questions[currentIdx];
+
+  const saveWrongCard = useCallback((card: Card) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem("wrong-cards") || "[]");
+      const idx = existing.findIndex((c: Card & { wrongCount?: number }) => c.front === card.front && c.language === card.language);
+      if (idx >= 0) {
+        existing[idx].wrongCount = (existing[idx].wrongCount || 1) + 1;
+      } else {
+        existing.push({ ...card, wrongCount: 1 });
+      }
+      localStorage.setItem("wrong-cards", JSON.stringify(existing));
+    } catch {}
+  }, []);
+
+  const removeWrongCard = useCallback((card: Card) => {
+    try {
+      const existing = JSON.parse(localStorage.getItem("wrong-cards") || "[]");
+      const filtered = existing.filter((c: Card) => !(c.front === card.front && c.language === card.language));
+      localStorage.setItem("wrong-cards", JSON.stringify(filtered));
+    } catch {}
+  }, []);
 
   const checkTranslation = useCallback(async (userAnswer: string, correctAnswer: string): Promise<{ correct: boolean; score?: number; feedback?: string }> => {
     // Step 1: simple normalized comparison
@@ -161,15 +182,19 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
     setSelectedChoice(choice);
     setShowAnswer(true);
     const correct = choice === current.answer;
+    if (correct) removeWrongCard(current.card);
+    else saveWrongCard(current.card);
     setResults(prev => [...prev, { question: current, userAnswer: choice, correct }]);
-  }, [showAnswer, current]);
+  }, [showAnswer, current, saveWrongCard, removeWrongCard]);
 
   const handleTranslateSubmit = useCallback(async () => {
     if (showAnswer || aiChecking || !typedAnswer.trim()) return;
     const result = await checkTranslation(typedAnswer.trim(), current.answer);
+    if (result.correct) removeWrongCard(current.card);
+    else saveWrongCard(current.card);
     setResults(prev => [...prev, { question: current, userAnswer: typedAnswer.trim(), correct: result.correct, aiChecked: true, aiScore: result.score, aiFeedback: result.feedback }]);
     setShowAnswer(true);
-  }, [showAnswer, aiChecking, typedAnswer, current, checkTranslation]);
+  }, [showAnswer, aiChecking, typedAnswer, current, checkTranslation, saveWrongCard, removeWrongCard]);
 
   const handleNext = useCallback(() => {
     if (currentIdx + 1 >= questions.length) {
@@ -238,10 +263,15 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
   if (finished) {
     const correctCount = results.filter(r => r.correct).length;
     const total = results.length;
-    const pct = Math.round((correctCount / total) * 100);
+    const pct = total > 0 ? Math.round((correctCount / total) * 100) : 0;
     return (
       <div className="flex-1 flex flex-col items-center justify-center px-4">
         <div className="w-full max-w-lg space-y-6">
+          {total === 0 ? (
+            <div className="text-center text-text-muted text-sm">
+              {locale === "ko" ? "풀은 문제가 없습니다." : "No questions answered."}
+            </div>
+          ) : (
           <div className="text-center space-y-2">
             <div className="text-4xl font-bold">{correctCount}/{total}</div>
             <div className="text-lg text-text-muted">{pct}%</div>
@@ -252,6 +282,7 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
                (locale === "ko" ? "복습이 필요해요" : "Needs more review")}
             </div>
           </div>
+          )}
 
           {/* Wrong answers review */}
           {results.filter(r => !r.correct).length > 0 && (
@@ -275,12 +306,22 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
             </div>
           )}
 
-          <button
-            onClick={handleRestart}
-            className="w-full py-3 bg-primary hover:bg-primary-hover rounded-xl text-sm font-medium transition-colors"
-          >
-            {locale === "ko" ? "다시 풀기" : "Try Again"}
-          </button>
+          <div className="flex gap-2">
+            <button
+              onClick={handleRestart}
+              className="flex-1 py-3 bg-primary hover:bg-primary-hover rounded-xl text-sm font-medium transition-colors"
+            >
+              {locale === "ko" ? "다시 풀기" : "Try Again"}
+            </button>
+            {onExit && (
+              <button
+                onClick={onExit}
+                className="flex-1 py-3 bg-bg-card border border-border hover:border-primary/50 rounded-xl text-sm font-medium transition-colors text-text-muted"
+              >
+                {locale === "ko" ? "나가기" : "Exit"}
+              </button>
+            )}
+          </div>
         </div>
       </div>
     );
@@ -299,6 +340,12 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
           />
         </div>
         <span className="text-xs text-text-faint shrink-0">{currentIdx + 1}/{questions.length}</span>
+        <button
+          onClick={() => setFinished(true)}
+          className="text-xs text-text-faint hover:text-red-400 transition-colors shrink-0"
+        >
+          {locale === "ko" ? "그만하기" : "Quit"}
+        </button>
       </div>
 
       <div className="flex-1 flex flex-col items-center justify-center">
@@ -337,15 +384,19 @@ export default function QuizMode({ cards, noteId }: { cards: Card[]; noteId?: st
         ) : (
           /* Translation input */
           <div className="space-y-3">
-            <input
+            <textarea
               ref={inputRef}
-              type="text"
               value={typedAnswer}
-              onChange={(e) => setTypedAnswer(e.target.value)}
-              onKeyDown={(e) => { if (e.key === "Enter") handleTranslateSubmit(); }}
+              onChange={(e) => {
+                setTypedAnswer(e.target.value);
+                e.target.style.height = "auto";
+                e.target.style.height = e.target.scrollHeight + "px";
+              }}
+              onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleTranslateSubmit(); } }}
               disabled={showAnswer}
+              rows={1}
               placeholder={locale === "ko" ? "답을 입력하세요..." : "Type your answer..."}
-              className="w-full bg-bg-card border border-border rounded-xl px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none"
+              className="w-full bg-bg-card border border-border rounded-xl px-4 py-3 text-sm focus:border-primary focus:ring-1 focus:ring-primary outline-none resize-none overflow-hidden"
               autoFocus
             />
             {!showAnswer && (
