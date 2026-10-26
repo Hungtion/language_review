@@ -395,7 +395,7 @@ function NoteDetailContent() {
             className="p-2 rounded-lg text-text-faint hover:text-primary transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M17 3a2.83 2.83 0 114 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
+              <rect x="3" y="3" width="14" height="18" rx="2"/><path d="M8 7h4"/><path d="M8 11h4"/><path d="M8 15h2"/><path d="M18 10l3-3-2-2-3 3"/><path d="M16 12l-1.5 5.5L20 16"/>
             </svg>
           </Link>
           <Link

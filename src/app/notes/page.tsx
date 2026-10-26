@@ -335,7 +335,7 @@ function NotesContent() {
           <Link
             data-guide="notes-review"
             href="/review"
-            className="flex-1 flex items-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-4 h-[52px] hover:bg-primary/20 transition-colors"
+            className="flex-1 flex items-center justify-center gap-3 bg-primary/10 border border-primary/20 rounded-xl px-4 h-[52px] hover:bg-primary/20 transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-primary shrink-0">
               <rect x="2" y="1" width="11" height="15" rx="2" fill="currentColor" opacity={0.3} />
@@ -343,12 +343,12 @@ function NotesContent() {
               <rect x="8" y="7" width="11" height="15" rx="2" fill="currentColor" opacity={1} />
             </svg>
             <span className="text-sm text-primary font-medium">
-              {locale === "ko" ? "카드로 복습하기" : "Review Cards"}
+              {locale === "ko" ? "복습하기" : "Review"}
             </span>
           </Link>
           <Link
             href={`/wrong?lang=${filter}`}
-            className="flex-1 flex items-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 h-[52px] hover:bg-red-500/20 transition-colors"
+            className="flex-1 flex items-center justify-center gap-3 bg-red-500/10 border border-red-500/20 rounded-xl px-4 h-[52px] hover:bg-red-500/20 transition-colors"
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="text-red-400 shrink-0">
               <circle cx="12" cy="12" r="10"/>

@@ -167,8 +167,8 @@ function PricingContent() {
           className="w-full py-3 bg-primary hover:bg-primary-hover disabled:opacity-50 text-primary-text rounded-lg text-sm font-medium transition-colors"
         >
           {loading
-            ? (isKo ? "결제 준비 중..." : "Preparing...")
-            : (isKo ? "결제하기" : "Pay Now")}
+            ? (isKo ? "준비 중..." : "Preparing...")
+            : (isKo ? "후원하기" : "Support Us")}
         </button>
         <button
           onClick={() => router.back()}

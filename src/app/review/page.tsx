@@ -116,6 +116,7 @@ function ReviewContent() {
           const wrongCards: { front: string; back: string; type: "vocab" | "sentence"; language: "english" | "japanese" }[] = JSON.parse(localStorage.getItem("wrong-cards") || "[]");
           const filtered = wrongCards
             .filter(c => c.language === filter)
+            .filter(c => cardType === "all" || c.type === cardType)
             .map(c => ({ ...c, sessionDate: "", sessionId: undefined, sourceField: undefined, lineIndex: undefined } as Card));
           setCards(filtered);
           setLoading(false);
