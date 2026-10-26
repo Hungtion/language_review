@@ -348,7 +348,7 @@ export default function QuizMode({ cards, noteId, onExit }: { cards: Card[]; not
         </button>
       </div>
 
-      <div className="flex-1 flex flex-col items-center justify-center">
+      <div className="flex-1 flex flex-col items-center pt-4">
       <div className="w-full max-w-lg space-y-6">
         {/* Question */}
         <div className="bg-bg-card border border-border rounded-xl p-6 text-center">
