@@ -15,6 +15,7 @@ import GuideOverlay from "@/components/GuideOverlay";
 import CreditModal from "@/components/CreditModal";
 import CelebrationModal from "@/components/CelebrationModal";
 import PronunciationCheck, { type PronResult } from "@/components/PronunciationCheck";
+import QuizMode from "@/components/QuizMode";
 
 type Card = {
   front: string;
@@ -42,7 +43,7 @@ function ReviewContent() {
   const setIndex = useCallback((v: number | ((prev: number) => number)) => {
     setIndexRaw((prev) => {
       const next = typeof v === "function" ? v(prev) : v;
-      if (filterRef.current) sessionStorage.setItem(`review-index-${filterRef.current}`, String(next));
+      if (filterRef.current) localStorage.setItem(`review-index-${filterRef.current}`, String(next));
       return next;
     });
   }, []);
@@ -53,7 +54,9 @@ function ReviewContent() {
     if (typeof window === "undefined") return "english";
     return (localStorage.getItem("lang-filter") as "english" | "japanese") || "english";
   });
-  const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">("all");
+  const [cardType, setCardType] = useState<"all" | "vocab" | "sentence">(() =>
+    (typeof window !== "undefined" ? localStorage.getItem("review-cardType") as "all" | "vocab" | "sentence" : null) || "all"
+  );
   const isEngChannel = typeof window !== "undefined" && localStorage.getItem("eng-channel") === "true";
   const [shuffled, setShuffled] = useState(false);
   const preShuffleCard = useRef<{ front: string; sessionId?: string } | null>(null);
@@ -78,6 +81,7 @@ function ReviewContent() {
     typeof window !== "undefined" ? localStorage.getItem("tts-autoplay") === "true" : false
   );
   const [playing, setPlaying] = useState(false);
+  const [quizMode, setQuizMode] = useState(false);
   const playingRef = useRef(false);
   const [pressed, setPressed] = useState(false);
   const [swipeX, setSwipeX] = useState(0);
@@ -224,7 +228,7 @@ function ReviewContent() {
         startIndex = found >= 0 ? found : 0;
         preShuffleCard.current = null;
       } else {
-        const saved = parseInt(sessionStorage.getItem(`review-index-${filter}`) || "0", 10) || 0;
+        const saved = parseInt(localStorage.getItem(`review-index-${filter}`) || "0", 10) || 0;
         startIndex = saved < filtered.length ? saved : 0;
       }
       setIndex(startIndex);
@@ -603,6 +607,7 @@ function ReviewContent() {
   }, []);
 
   useEffect(() => {
+    if (quizMode) return;
     let animating = false;
     function handleKey(e: KeyboardEvent) {
       if (e.key === " " || e.key === "Enter") {
@@ -636,7 +641,7 @@ function ReviewContent() {
     }
     window.addEventListener("keydown", handleKey);
     return () => window.removeEventListener("keydown", handleKey);
-  }, [goNext, goPrev]);
+  }, [goNext, goPrev, quizMode]);
 
   function handleTouchStart(e: React.TouchEvent) {
     touchStartX.current = e.touches[0].clientX;
@@ -768,37 +773,56 @@ function ReviewContent() {
           </button>
         </div>
       )}
-      {/* Filters */}
-      <div className="relative flex items-center justify-end px-4 pt-3 pb-3">
-        <div data-guide="review-autoplay" className="absolute left-1/2 -translate-x-1/2">
-        <button
-          data-guide-tab="발음 바로 듣기" data-guide-tab-en={"Auto\nPronounce"}
-          title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
-          onClick={() => {
-            const next = !autoplay;
-            setAutoplay(next);
-            localStorage.setItem("tts-autoplay", String(next));
-          }}
-          className={`w-14 h-6 rounded-full transition-colors relative shrink-0 ${
-            autoplay ? "bg-primary" : "bg-bg-hover"
-          }`}
-        >
-          <span
-            className={`absolute top-0.5 left-0.5 w-6 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
-              autoplay ? "translate-x-7 bg-white text-primary" : "translate-x-0 bg-gray-500 text-text-secondary"
+      {/* Mode toggle + Filters */}
+      <div className="flex items-center justify-between px-4 pt-3 pb-1">
+        <div className="flex gap-1 bg-bg-card rounded-lg p-1">
+          <button
+            onClick={() => setQuizMode(false)}
+            className={`px-3 py-1 rounded-md text-sm transition-colors ${
+              !quizMode ? "bg-bg-hover text-text" : "text-text-muted hover:text-text"
             }`}
           >
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="4"/><path d="M9 13c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/><path d="M16 8.5a2.5 2.5 0 010 3"/><path d="M19 7a5 5 0 010 6"/></svg>
-          </span>
-        </button>
+            {locale === "ko" ? "복습" : "Review"}
+          </button>
+          <button
+            onClick={() => setQuizMode(true)}
+            className={`px-3 py-1 rounded-md text-sm transition-colors ${
+              quizMode ? "bg-bg-hover text-text" : "text-text-muted hover:text-text"
+            }`}
+          >
+            {locale === "ko" ? "퀴즈" : "Quiz"}
+          </button>
         </div>
-
+        {!quizMode && (
+          <div data-guide="review-autoplay">
+            <button
+              data-guide-tab="발음 바로 듣기" data-guide-tab-en={"Auto\nPronounce"}
+              title={locale === "ko" ? "카드를 넘기면 자동으로 발음이 재생됩니다" : "Automatically plays pronunciation when flipping cards"}
+              onClick={() => {
+                const next = !autoplay;
+                setAutoplay(next);
+                localStorage.setItem("tts-autoplay", String(next));
+              }}
+              className={`w-14 h-6 rounded-full transition-colors relative shrink-0 ${
+                autoplay ? "bg-primary" : "bg-bg-hover"
+              }`}
+            >
+              <span
+                className={`absolute top-0.5 left-0.5 w-6 h-5 rounded-full transition-transform flex items-center justify-center text-[9px] font-bold ${
+                  autoplay ? "translate-x-7 bg-white text-primary" : "translate-x-0 bg-gray-500 text-text-secondary"
+                }`}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="9" cy="9" r="4"/><path d="M9 13c-4 0-7 2-7 4v1h14v-1c0-2-3-4-7-4z"/><path d="M16 8.5a2.5 2.5 0 010 3"/><path d="M19 7a5 5 0 010 6"/></svg>
+              </span>
+            </button>
+          </div>
+        )}
         <div data-guide="review-filter-lang" className="flex gap-1 bg-bg-card rounded-lg p-1 shrink-0">
           {(["english", "japanese"] as const).map((f) => (
             <button
               key={f}
               title={f === "english" ? (locale === "ko" ? "영어 카드 보기" : "Show English cards") : (locale === "ko" ? "일본어 카드 보기" : "Show Japanese cards")}
-              onClick={() => { sessionStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
+              onClick={() => { localStorage.removeItem("review-index"); setFilter(f); localStorage.setItem("lang-filter", f); }}
               className={`px-3 py-1 rounded-md text-sm transition-colors ${
                 filter === f
                   ? "bg-bg-hover text-text"
@@ -811,6 +835,29 @@ function ReviewContent() {
         </div>
       </div>
 
+      {/* Type filter - always visible */}
+      <div className="px-4 pb-2">
+        <div className="flex items-center justify-center gap-1 bg-bg-card rounded-lg p-1 w-fit mx-auto">
+          {(["all", "vocab", "sentence"] as const).map((ct) => (
+            <button
+              key={ct}
+              onClick={() => { localStorage.removeItem("review-index"); setCardType(ct); localStorage.setItem("review-cardType", ct); }}
+              className={`px-3 py-1 rounded-md text-sm transition-colors ${
+                cardType === ct
+                  ? "bg-bg-hover text-text"
+                  : "text-text-muted hover:text-text"
+              }`}
+            >
+              {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {quizMode ? (
+        <QuizMode cards={cards} noteId={noteId} />
+      ) : (
+      <>
       {/* Card + AI */}
       <div className="flex-1 px-4 flex flex-col items-center justify-center">
         <div data-guide="review-filters-right" className="flex items-center justify-between mb-3 w-full max-w-lg">
@@ -821,7 +868,7 @@ function ReviewContent() {
               if (!shuffled && cards[index]) {
                 preShuffleCard.current = { front: cards[index].front, sessionId: cards[index].sessionId };
               }
-              sessionStorage.removeItem("review-index");
+              localStorage.removeItem("review-index");
               setShuffled((s) => !s);
             }}
             className={`px-3 py-1 rounded-lg text-base transition-colors shrink-0 ${
@@ -832,22 +879,6 @@ function ReviewContent() {
           >
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><rect x="1" y="4" width="12" height="16" rx="1.5" transform="rotate(-8 7 12)"/><rect x="11" y="4" width="12" height="16" rx="1.5" transform="rotate(8 17 12)"/><path d="M8 20l4-3m0 0l4 3m-4-3v-4" /></svg>
           </button>
-
-          <div data-guide="review-filter-type" className="flex gap-1 bg-bg-card rounded-lg p-1">
-            {(["all", "vocab", "sentence"] as const).map((ct) => (
-              <button
-                key={ct}
-                onClick={() => { sessionStorage.removeItem("review-index"); setCardType(ct); }}
-                className={`px-3 py-1 rounded-md text-sm transition-colors ${
-                  cardType === ct
-                    ? "bg-bg-hover text-text"
-                    : "text-text-muted hover:text-text"
-                }`}
-              >
-                {ct === "all" ? t("all") : ct === "vocab" ? t("vocab") : t("sentence")}
-              </button>
-            ))}
-          </div>
 
           <button
             title={locale === "ko" ? "연속 재생" : "Auto play all"}
@@ -1410,6 +1441,8 @@ function ReviewContent() {
           />
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

@@ -3,13 +3,16 @@ import { NextRequest, NextResponse } from "next/server";
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
 export const maxDuration = 60;
 
-async function callGemini(prompt: string, maxTokens = 1024, jsonMode = false) {
+async function callGemini(prompt: string, maxTokens = 1024, jsonMode = false, noThinking = false) {
   const generationConfig: Record<string, unknown> = {
     temperature: 0.3,
     maxOutputTokens: maxTokens,
   };
   if (jsonMode) {
     generationConfig.responseMimeType = "application/json";
+  }
+  if (noThinking) {
+    generationConfig.thinkingConfig = { thinkingBudget: 0 };
   }
 
   const res = await fetch(
@@ -322,6 +325,62 @@ Example format:
     } catch (e: unknown) {
       const msg = e instanceof Error ? e.message : "Failed to call Gemini API";
       return NextResponse.json({ error: msg }, { status: 500 });
+    }
+  }
+
+  // Quiz hint - suggest a relevant idiom/expression
+  if (action === "quiz-hint") {
+    const { question: questionText, answer: answerText, language: lang } = body;
+    const hintPrompt = lang === "japanese"
+      ? `한국어 문장: "${questionText}"
+이 문장의 일본어 번역에 사용하면 좋은 관용표현이나 핵심 표현을 하나만 알려줘.
+형식: 표현 (읽기) - 한국어 뜻
+한 줄로만 답해. 다른 설명 없이.`
+      : `한국어 문장: "${questionText}"
+이 문장의 영어 번역에 사용하면 좋은 idiom이나 핵심 표현을 하나만 알려줘.
+형식: 영어 표현 - 한국어 뜻
+한 줄로만 답해. 다른 설명 없이.`;
+
+    try {
+      const result = await callGemini(hintPrompt, 256, false, true);
+      return NextResponse.json({ result: result.trim() });
+    } catch {
+      return NextResponse.json({ result: "" });
+    }
+  }
+
+  // Quiz answer check
+  if (action === "quiz-check") {
+    const { userAnswer, correctAnswer, question: questionText } = body;
+    const checkPrompt = `You are a language quiz grader. A student was asked to translate:
+Question (Korean): "${questionText}"
+Model answer: "${correctAnswer}"
+Student's answer: "${userAnswer}"
+
+Score the student's answer from 0 to 100:
+- 90~100: Meaning is essentially the same. Minor wording/grammar differences are OK.
+- 70~89: Meaning is mostly conveyed but with noticeable differences (e.g. missing nuance, slightly different expression).
+- 40~69: Partially correct. Some meaning is conveyed but significant parts are wrong or missing.
+- 0~39: Mostly wrong or nonsensical.
+
+Also provide a brief feedback in Korean (1 sentence):
+- Compare the student's answer with the model answer
+- Point out what was good or what key expression/nuance was missed
+- Mention the better expression from the model answer when relevant
+
+IMPORTANT: You MUST return BOTH "score" and "feedback" fields. Never omit "feedback".
+Return ONLY a JSON object: {"score": <number>, "feedback": "<korean feedback>"}
+Example: {"score": 85, "feedback": "의미는 잘 전달되지만, 'feeling blue'가 '우울하다'에 더 자연스러운 관용표현이에요."}`;
+
+    try {
+      const result = await callGemini(checkPrompt, 512, true, true);
+      const parsed = robustJsonParse(result);
+      if (!parsed || typeof parsed.score !== "number") {
+        return NextResponse.json({ result: { score: 0, feedback: "채점 실패" } });
+      }
+      return NextResponse.json({ result: parsed });
+    } catch {
+      return NextResponse.json({ result: { score: 0, feedback: "채점 실패" } });
     }
   }
 
